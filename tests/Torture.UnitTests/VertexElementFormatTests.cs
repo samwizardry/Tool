@@ -49,8 +49,7 @@ public class VertexElementFormatTests
     {
         uint actualBytes = format.ByteSize();
 
-        actualBytes.Should().Be(expectedBytes,
-            because: $"format {format} must occupy exactly {expectedBytes} bytes in GPU memory");
+        actualBytes.Should().Be(expectedBytes);
     }
 
     [Fact]
@@ -58,16 +57,15 @@ public class VertexElementFormatTests
     {
         var allFormats = Enum.GetValues<VertexElementFormat>();
 
-        allFormats.Should().NotBeEmpty(because: "VertexElementFormat enum must contain defined formats");
+        allFormats.Should().NotBeEmpty();
 
         foreach (var format in allFormats)
         {
             var act = () => format.ByteSize();
-            act.Should().NotThrow(because: $"format {format} must be handled by the switch expression");
+            act.Should().NotThrow();
 
             uint width = format.ByteSize();
-            width.Should().BeOneOf([2u, 4u, 8u, 12u, 16u],
-                because: $"byte width ({width}) for format {format} must be a hardware-valid size for the GPU input assembler");
+            width.Should().BeOneOf([2u, 4u, 8u, 12u, 16u]);
         }
     }
 }

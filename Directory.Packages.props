@@ -26,7 +26,4 @@
     <PackageVersion Include="Vortice.Vulkan" Version="3.3.0" />
     <PackageVersion Include="Vortice.VulkanMemoryAllocator" Version="1.8.0" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TortureTargetOS)' == 'macOS'">
-    <PackageVersion Include="SDL3-CS.MacOS" Version="3.4.20" />
-  </ItemGroup>
 </Project>

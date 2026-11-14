@@ -1,4 +1,6 @@
-﻿using Vortice.Direct3D;
+﻿using Torture.Core.Diagnostics;
+
+using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.Direct3D11.Debug;
 using Vortice.DXGI;
@@ -28,19 +30,21 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
     private readonly ID3D11Device5 _device;
     private readonly ID3D11DeviceContext4 _imContext;
     private readonly IDXGISwapChain1 _swapChain;
-#if DEBUG
     private readonly ID3D11InfoQueue? _infoQueue;
-#endif
     private ID3D11Texture2D _rtvBackBuffer = null!;
     private ID3D11RenderTargetView _renderTargetView = null!;
     private ID3D11Texture2D _depthStencilBuffer = null!;
     private ID3D11DepthStencilView _depthStencilView = null!;
 
-    public D3D11GraphicsDevice(nint hwnd, SizeI clientSize, Format colorFormat = Format.B8G8R8A8_UNorm, Format depthStencilFormat = Format.D24_UNorm_S8_UInt)
+    public D3D11GraphicsDevice(Core.Graphics.GraphicsDeviceOptions options,
+        nint hwnd, SizeI clientSize, Format colorFormat = Format.B8G8R8A8_UNorm, Format depthStencilFormat = Format.D24_UNorm_S8_UInt)
+        : base(options)
     {
-#if DEBUG
-        SharpGen.Runtime.Configuration.EnableObjectTracking = true;
-#endif
+        // Global SharpGen switch: must be set before the first COM wrapper is created.
+        if (options.EnableObjectTracking)
+        {
+            SharpGen.Runtime.Configuration.EnableObjectTracking = true;
+        }
 
         try
         {
@@ -80,12 +84,19 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
             {
                 DeviceCreationFlags deviceCreationFlags = DeviceCreationFlags.BgraSupport;
 
-#if DEBUG
-                if (SdkLayersAvailable())
+                if (options.EnableValidation)
                 {
-                    deviceCreationFlags |= DeviceCreationFlags.Debug;
+                    if (SdkLayersAvailable())
+                    {
+                        deviceCreationFlags |= DeviceCreationFlags.Debug;
+                    }
+                    else
+                    {
+                        Log.Warning("D3D11", "Validation requested, but D3D11 SDK layers are not installed " +
+                                             "(Settings > System > Optional features > Graphics Tools).");
+                    }
                 }
-#endif
+
                 ID3D11Device? device = null;
                 ID3D11DeviceContext? imContext = null;
 
@@ -126,14 +137,17 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
                 }
             }
 
-#if DEBUG
-            _infoQueue = _device.QueryInterfaceOrNull<ID3D11InfoQueue>();
+            // QueryInterface returns null when the device was created without the debug layer.
+            _infoQueue = options.EnableValidation ? _device.QueryInterfaceOrNull<ID3D11InfoQueue>() : null;
             if (_infoQueue != null)
             {
-                _infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, true);
-                _infoQueue.SetBreakOnSeverity(MessageSeverity.Error, true);
+                Log.Info("D3D11", "Debug layer enabled.");
+                if (options.BreakOnError && System.Diagnostics.Debugger.IsAttached)
+                {
+                    _infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, true);
+                    _infoQueue.SetBreakOnSeverity(MessageSeverity.Error, true);
+                }
             }
-#endif
 
             _swapChainFlags = SwapChainFlags.None;
             if (_tearingSupported)
@@ -454,8 +468,7 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
 
         _swapChain?.Dispose();
 
-#if DEBUG
-        if (_device != null)
+        if (_infoQueue != null && _device != null)
         {
             if (_device.QueryInterfaceOrNull<ID3D11Debug>() is ID3D11Debug d3d11Debug)
             {
@@ -466,32 +479,17 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
         }
 
         _infoQueue?.Dispose();
-#endif
-
         _device?.Dispose();
         _factory?.Dispose();
 
-#if DEBUG
-        if (DXGIGetDebugInterface1(out IDXGIDebug1? dxgiDebug).Success && dxgiDebug != null)
+        if (Options.EnableValidation)
         {
-            if (DXGIGetDebugInterface1(out IDXGIInfoQueue? dxgiInfoQueue).Success && dxgiInfoQueue != null)
-            {
-                dxgiInfoQueue.ClearStoredMessages(DebugAll);
-                dxgiDebug.ReportLiveObjects(DebugAll, ReportLiveObjectFlags.Detail | ReportLiveObjectFlags.IgnoreInternal);
-
-                ulong count = dxgiInfoQueue.GetNumStoredMessages(DebugAll);
-                for (ulong i = 0; i < count; i++)
-                {
-                    InfoQueueMessage msg = dxgiInfoQueue.GetMessage(DebugAll, i);
-                    Console.WriteLine($"[DXGI {msg.Severity}] ({msg.Id}): {msg.Description}");
-                }
-                dxgiInfoQueue.Dispose();
-            }
-            dxgiDebug.Dispose();
+            ReportDxgiLiveObjects();
         }
-
-        ReportSharpGenLeaks();
-#endif
+        if (Options.EnableObjectTracking)
+        {
+            ReportSharpGenLeaks();
+        }
 
         _disposed = true;
     }
@@ -541,60 +539,69 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
         // TBD:
     }
 
-    [System.Diagnostics.Conditional("DEBUG")]
     private void FlushDebugMessages()
     {
-#if DEBUG
-        if (_infoQueue == null || _infoQueue.NativePointer == nint.Zero)
+        if (_infoQueue is null || _infoQueue.NativePointer == nint.Zero)
         {
             return;
         }
-
         ulong count = _infoQueue.NumStoredMessages;
         for (ulong i = 0; i < count; i++)
         {
             Message msg = _infoQueue.GetMessage(i);
-            ConsoleColor prevColor = Console.ForegroundColor;
-            Console.ForegroundColor = msg.Severity switch
+            switch (msg.Severity)
             {
-                MessageSeverity.Corruption or MessageSeverity.Error => ConsoleColor.Red,
-                MessageSeverity.Warning => ConsoleColor.Yellow,
-                _ => ConsoleColor.Gray
-            };
-            Console.WriteLine($"[D3D11 {msg.Severity}] ({msg.Id}): {msg.Description}");
-            Console.ForegroundColor = prevColor;
+                case MessageSeverity.Corruption:
+                case MessageSeverity.Error:
+                    Log.Error("D3D11", $"({msg.Id}): {msg.Description}");
+                    break;
+                case MessageSeverity.Warning:
+                    Log.Warning("D3D11", $"({msg.Id}): {msg.Description}");
+                    break;
+                default:
+                    Log.Info("D3D11", $"({msg.Id}): {msg.Description}");
+                    break;
+            }
         }
         _infoQueue.ClearStoredMessages();
-#endif
     }
 
-    [System.Diagnostics.Conditional("DEBUG")]
-    private static void ReportSharpGenLeaks()
+    private static void ReportDxgiLiveObjects()
     {
-#if DEBUG
-        var leaks = SharpGen.Runtime.Diagnostics.ObjectTracker.FindActiveObjects();
-        if (leaks.Count == 0)
+        if (DXGIGetDebugInterface1(out IDXGIDebug1? dxgiDebug).Failure || dxgiDebug is null)
         {
             return;
         }
-        ConsoleColor prevColor = Console.ForegroundColor;
-        Console.ForegroundColor = ConsoleColor.Yellow;
+        if (DXGIGetDebugInterface1(out IDXGIInfoQueue? dxgiInfoQueue).Success && dxgiInfoQueue != null)
+        {
+            dxgiInfoQueue.ClearStoredMessages(DebugAll);
+            dxgiDebug.ReportLiveObjects(DebugAll, ReportLiveObjectFlags.Detail | ReportLiveObjectFlags.IgnoreInternal);
+            ulong count = dxgiInfoQueue.GetNumStoredMessages(DebugAll);
+            for (ulong i = 0; i < count; i++)
+            {
+                InfoQueueMessage msg = dxgiInfoQueue.GetMessage(DebugAll, i);
+                Log.Warning("DXGI", $"{msg.Severity} ({msg.Id}): {msg.Description}");
+            }
+            dxgiInfoQueue.Dispose();
+        }
+        dxgiDebug.Dispose();
+    }
+
+    private static void ReportSharpGenLeaks()
+    {
+        var leaks = SharpGen.Runtime.Diagnostics.ObjectTracker.FindActiveObjects();
         foreach (var leak in leaks)
         {
             if (leak.TryGetTarget(out var target))
             {
-                string typeName = target.GetType().Name;
-                nint ptr = target.NativePointer;
-                // Вывод в едином стиле D3D11/DXGI: [SharpGen WARNING] (0x000001DF...): Live Blob
-                Console.WriteLine($"[SharpGen WARNING] (0x{ptr:X16}): Live instance of {typeName} was not disposed.");
+                // Same style as D3D11/DXGI output: [SharpGen Warning] (0x000001DF...): Live instance of ...
+                Log.Warning("SharpGen", $"(0x{target.NativePointer:X16}): Live instance of {target.GetType().Name} was not disposed.");
             }
             else
             {
-                Console.WriteLine("[SharpGen WARNING]: Active tracking reference with already collected target.");
+                Log.Warning("SharpGen", "Active tracking reference with an already collected target.");
             }
         }
-        Console.ForegroundColor = prevColor;
-#endif
     }
 
     #endregion

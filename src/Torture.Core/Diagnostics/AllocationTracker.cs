@@ -4,15 +4,14 @@ using System.Text;
 namespace Torture.Core.Diagnostics;
 
 /// <summary>
-/// Покадровый трекер управляемых аллокаций главного потока.
-/// Вызовы вырезаются компилятором, если не определён TRACK_ALLOCATIONS.
+/// Per-frame managed allocation tracker for the main thread.
+/// Calls are stripped unless TRACK_ALLOCATIONS is defined.
 /// </summary>
 public static class AllocationTracker
 {
-    private const string Symbol = "TRACK_ALLOCATIONS";
     private const int MaxMarks = 32;
     private const int MaxDetailedLinesPerSecond = 5;
-    private static readonly long WarmupTicks = Stopwatch.Frequency * 2; // 2 секунды на прогрев JIT
+    private static readonly long WarmupTicks = Stopwatch.Frequency * 2; // 2 seconds of JIT warm-up
 
     private static readonly string[] s_labels = new string[MaxMarks];
     private static readonly long[] s_bytes = new long[MaxMarks];
@@ -35,8 +34,8 @@ public static class AllocationTracker
     public static long LastFrameBytes { get; private set; }
     public static long BytesLastSecond { get; private set; }
 
-    /// <summary>Вызывать один раз перед стартом цикла (после загрузки и полного GC).</summary>
-    [Conditional(Symbol)]
+    /// <summary>Call once before the main loop starts (after loading and the full GC).</summary>
+    [Conditional("TRACK_ALLOCATIONS")]
     public static void Reset()
     {
         s_startTimestamp = s_secondStart = Stopwatch.GetTimestamp();
@@ -49,21 +48,21 @@ public static class AllocationTracker
         s_gen2 = GC.CollectionCount(2);
     }
 
-    [Conditional(Symbol)]
+    [Conditional("TRACK_ALLOCATIONS")]
     public static void BeginFrame()
     {
         s_count = 0;
         s_last = GC.GetAllocatedBytesForCurrentThread();
 
-        // Всё, что выделилось между кадрами (AppEvent и т.п.).
+        // Everything allocated between frames (AppEvent, etc.).
         if (s_frameEnd >= 0)
         {
             Record("Events", s_last - s_frameEnd);
         }
     }
 
-    /// <summary>Байты с предыдущей отметки записываются под этим именем. Используйте только строковые литералы.</summary>
-    [Conditional(Symbol)]
+    /// <summary>Attributes bytes allocated since the previous mark to this label. Use string literals only.</summary>
+    [Conditional("TRACK_ALLOCATIONS")]
     public static void Mark(string label)
     {
         long now = GC.GetAllocatedBytesForCurrentThread();
@@ -71,7 +70,7 @@ public static class AllocationTracker
         s_last = now;
     }
 
-    [Conditional(Symbol)]
+    [Conditional("TRACK_ALLOCATIONS")]
     public static void EndFrame()
     {
         long total = 0;
@@ -116,7 +115,7 @@ public static class AllocationTracker
             s_bytesThisSecond = 0;
         }
 
-        // Строго последней строкой: аллокации логгера не попадут в следующий кадр.
+        // Must be the last statement: logger allocations must not leak into the next frame.
         s_frameEnd = GC.GetAllocatedBytesForCurrentThread();
     }
 

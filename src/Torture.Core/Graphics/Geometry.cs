@@ -195,11 +195,6 @@ public static class Geometry
     {
         NativeList<VertexPositionNormalTexture> vertices = [];
         NativeList<ushort> indices = [.. OctahedronIndices];
-
-        // Makes an undirected edge. Rather than overloading comparison operators to give us the (a,b)==(b,a) property,
-        // we'll just ensure that the larger of the two goes first. This'll simplify things greatly.
-        static (ushort, ushort) MakeUndirectedEdge(ushort a, ushort b) => (System.Math.Max(a, b), System.Math.Min(a, b));
-
         float radius = diameter * 0.5f;
 
         // Start with an octahedron; copy the data into the vertex/index collection.

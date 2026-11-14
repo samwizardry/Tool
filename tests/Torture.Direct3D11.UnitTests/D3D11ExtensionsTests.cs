@@ -36,8 +36,7 @@ public class D3D11ExtensionsTests
     {
         var actual = coreFormat.ToDXGIFormat();
 
-        actual.Should().Be(expectedDxgiFormat,
-            because: $"Core Format {coreFormat} must map to DXGI.Format {expectedDxgiFormat}");
+        actual.Should().Be(expectedDxgiFormat);
     }
 
     [Fact]
@@ -47,8 +46,7 @@ public class D3D11ExtensionsTests
         foreach (CoreFormat coreFormat in Enum.GetValues<CoreFormat>())
         {
             var dxgiFormat = coreFormat.ToDXGIFormat();
-            ((uint)dxgiFormat).Should().Be((uint)coreFormat,
-                because: $"underlying enum integer value of {coreFormat} ({(uint)coreFormat}) must match DXGI format value ({(uint)dxgiFormat})");
+            ((uint)dxgiFormat).Should().Be((uint)coreFormat);
         }
     }
 
@@ -63,8 +61,7 @@ public class D3D11ExtensionsTests
     {
         var actual = coreFormat.ToDXGIFormat();
 
-        actual.Should().Be(expectedDXGIFormat,
-            because: $"Core IndexFormat {coreFormat} must map to DXGI {expectedDXGIFormat}");
+        actual.Should().Be(expectedDXGIFormat);
     }
 
     #endregion
@@ -115,8 +112,7 @@ public class D3D11ExtensionsTests
     {
         var actual = format.ToDXGIFormat();
 
-        actual.Should().Be(expectedDXGIFormat,
-            because: $"VertexElementFormat.{format} must map directly to DXGI.Format.{expectedDXGIFormat}");
+        actual.Should().Be(expectedDXGIFormat);
     }
 
     [Fact]
@@ -125,11 +121,10 @@ public class D3D11ExtensionsTests
         foreach (var format in Enum.GetValues<CoreGraphics.VertexElementFormat>())
         {
             var act = () => format.ToDXGIFormat();
-            act.Should().NotThrow(because: $"all defined VertexElementFormat values must have a valid DXGI mapping ({format})");
+            act.Should().NotThrow();
 
             var dxgiFormat = format.ToDXGIFormat();
-            dxgiFormat.Should().NotBe(DxgiFormat.Unknown,
-                because: $"format {format} cannot map to DXGI.Format.Unknown");
+            dxgiFormat.Should().NotBe(DxgiFormat.Unknown);
         }
     }
 
@@ -149,8 +144,7 @@ public class D3D11ExtensionsTests
     {
         var actual = semantic.ToD3D11SemanticName();
 
-        actual.Should().Be(expectedName,
-            because: $"semantic {semantic} must match the HLSL standard input semantic '{expectedName}'");
+        actual.Should().Be(expectedName);
     }
 
     [Fact]
@@ -159,8 +153,7 @@ public class D3D11ExtensionsTests
         var countSemantic = CoreGraphics.VertexElementSemantic.Count;
         var act = () => countSemantic.ToD3D11SemanticName();
 
-        act.Should().Throw<NotSupportedException>(
-            because: "the internal sentinel value VertexElementSemantic.Count is not a valid HLSL semantic and must throw");
+        act.Should().Throw<NotSupportedException>();
     }
 
     #endregion
@@ -179,8 +172,7 @@ public class D3D11ExtensionsTests
     {
         var actual = topology.ToD3D11PrimitiveTopology();
 
-        actual.Should().Be(expectedD3DTopology,
-            because: $"Core PrimitiveTopology.{topology} must map directly to Direct3D PrimitiveTopology.{expectedD3DTopology}");
+        actual.Should().Be(expectedD3DTopology);
     }
 
     #endregion

@@ -1,0 +1,15 @@
+{
+  "profiles": {
+    "Luna": {
+      "commandName": "Project"
+    },
+    "Luna (GPU validation)": {
+      "commandName": "Project",
+      "commandLineArgs": "--gfx-debug --no-gfx-track-objects"
+    },
+    "Luna (clean perf)": {
+      "commandName": "Project",
+      "commandLineArgs": "--no-gfx-debug --no-gfx-track-objects"
+    }
+  }
+}

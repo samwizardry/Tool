@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Runtime;
 
 using SDL3;
 
@@ -165,17 +164,34 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
     protected virtual void Cleanup() { }
 
     /// <summary>
-    /// Creates the platform-specific graphics device instance.
+    /// Builds graphics device options from build defaults and command-line switches:
+    /// --gfx-debug / --no-gfx-debug and --gfx-track-objects / --no-gfx-track-objects.
     /// </summary>
-    protected abstract GraphicsDevice CreateGraphicsDevice(GraphicsAPI api, NativeWindowInfo window);
+    protected virtual GraphicsDeviceOptions CreateGraphicsDeviceOptions(string[] args)
+    {
+        var options = new GraphicsDeviceOptions();
+        if (ReadSwitch(args, "--gfx-debug", "--no-gfx-debug") is bool validation)
+        {
+            options = options with { EnableValidation = validation };
+        }
+        if (ReadSwitch(args, "--gfx-track-objects", "--no-gfx-track-objects") is bool tracking)
+        {
+            options = options with { EnableObjectTracking = tracking };
+        }
+        Log.Info("Graphics", $"Validation={options.EnableValidation}, ObjectTracking={options.EnableObjectTracking}");
+        return options;
+    }
+
+    /// <summary>Creates the platform-specific graphics device instance.</summary>
+    protected abstract GraphicsDevice CreateGraphicsDevice(GraphicsAPI api, NativeWindowInfo window, GraphicsDeviceOptions options);
 
     public static SDL.AppResult AppInit(out TApp? appState, string[] args)
     {
         appState = new TApp();
-        return appState.InternalInit();
+        return appState.InternalInit(args);
     }
 
-    private SDL.AppResult InternalInit()
+    private SDL.AppResult InternalInit(string[] args)
     {
         SDL.SetAppMetadata(Title, Version, Identifier);
 
@@ -194,7 +210,8 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
             return SDL.AppResult.Failure;
         }
 
-        GraphicsDevice = CreateGraphicsDevice(PreferredGraphicsAPI, GetNativeWindowInfo(Window));
+        GraphicsDeviceOptions graphicsOptions = CreateGraphicsDeviceOptions(args);
+        GraphicsDevice = CreateGraphicsDevice(PreferredGraphicsAPI, GetNativeWindowInfo(Window), graphicsOptions);
 
         // Initialize systems
         Keyboard.Initialize();
@@ -342,6 +359,37 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         SDL.Quit();
     }
 
+    protected NativeWindowInfo GetNativeWindowInfo(nint window)
+    {
+        uint props = SDL.GetWindowProperties(window);
+        if (props == 0)
+        {
+            throw new InvalidOperationException("Couldn't get window properties.");
+        }
+
+        if (!SDL.GetWindowSizeInPixels(window, out int w, out int h))
+        {
+            throw new InvalidOperationException("Couldn't get window size in pixels.");
+        }
+
+        if (!SDL.GetWindowPosition(window, out int x, out int y))
+        {
+            throw new InvalidOperationException("Couldn't get window position.");
+        }
+
+        var size = new SizeI(w, h);
+        var bounds = new RectI(x, y, w, h);
+
+#if PLATFORM_WINDOWS
+        nint hwnd = SDL.GetPointerProperty(props, SDL.Props.WindowWin32HWNDPointer, IntPtr.Zero);
+        return hwnd == IntPtr.Zero
+            ? throw new InvalidOperationException("Couldn't get Win32 HWND.")
+            : new NativeWindowInfo(window, hwnd, size, bounds);
+#else
+        return new NativeWindowInfo(window, IntPtr.Zero, size, bounds);
+#endif
+    }
+
     private SDL.WindowFlags BuildInitialWindowFlags()
     {
         SDL.WindowFlags flags = 0;
@@ -387,34 +435,21 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         }
     }
 
-    protected NativeWindowInfo GetNativeWindowInfo(nint window)
+    /// <summary>Returns true/false if the on/off switch is present (the last one wins), otherwise null.</summary>
+    private static bool? ReadSwitch(string[] args, string on, string off)
     {
-        uint props = SDL.GetWindowProperties(window);
-        if (props == 0)
+        bool? result = null;
+        foreach (string arg in args)
         {
-            throw new InvalidOperationException("Couldn't get window properties.");
+            if (arg.Equals(on, StringComparison.OrdinalIgnoreCase))
+            {
+                result = true;
+            }
+            else if (arg.Equals(off, StringComparison.OrdinalIgnoreCase))
+            {
+                result = false;
+            }
         }
-
-        if (!SDL.GetWindowSizeInPixels(window, out int w, out int h))
-        {
-            throw new InvalidOperationException("Couldn't get window size in pixels.");
-        }
-
-        if (!SDL.GetWindowPosition(window, out int x, out int y))
-        {
-            throw new InvalidOperationException("Couldn't get window position.");
-        }
-
-        var size = new SizeI(w, h);
-        var bounds = new RectI(x, y, w, h);
-
-#if PLATFORM_WINDOWS
-        nint hwnd = SDL.GetPointerProperty(props, SDL.Props.WindowWin32HWNDPointer, IntPtr.Zero);
-        return hwnd == IntPtr.Zero
-            ? throw new InvalidOperationException("Couldn't get Win32 HWND.")
-            : new NativeWindowInfo(window, hwnd, size, bounds);
-#else
-        return new NativeWindowInfo(window, IntPtr.Zero, size, bounds);
-#endif
+        return result;
     }
 }
