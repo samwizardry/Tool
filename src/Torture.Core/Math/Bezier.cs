@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 namespace Torture.Core.Math;
 
 /// <summary>
-/// Helper routines for evaluating cubic Bézier curves and bicubic Bézier patches.
+/// Helper routines for evaluating cubic Bezier curves and bicubic Bezier patches.
 /// Matches Microsoft DirectX Tool Kit (DirectXTK) Bezier.h.
 /// </summary>
 public static class Bezier
@@ -75,7 +75,7 @@ public static class Bezier
     {
         if (patch.Length < 16)
         {
-            throw new ArgumentException("Bézier patch must have at least 16 control points.", nameof(patch));
+            throw new ArgumentException("Bezier patch must have at least 16 control points.", nameof(patch));
         }
 
         // Evaluate four horizontal bezier curves.
@@ -95,7 +95,7 @@ public static class Bezier
     {
         if (patch.Length < 16)
         {
-            throw new ArgumentException("Bézier patch must have at least 16 control points.", nameof(patch));
+            throw new ArgumentException("Bezier patch must have at least 16 control points.", nameof(patch));
         }
 
         // Evaluate four horizontal bezier curve tangents.
@@ -115,7 +115,7 @@ public static class Bezier
     {
         if (patch.Length < 16)
         {
-            throw new ArgumentException("Bézier patch must have at least 16 control points.", nameof(patch));
+            throw new ArgumentException("Bezier patch must have at least 16 control points.", nameof(patch));
         }
 
         // Evaluate four horizontal bezier curves.
@@ -156,7 +156,7 @@ public static class Bezier
     {
         if (patch.Length < 16)
         {
-            throw new ArgumentException("Bézier patch must have at least 16 control points.", nameof(patch));
+            throw new ArgumentException("Bezier patch must have at least 16 control points.", nameof(patch));
         }
 
         // Evaluate four horizontal curves for position & TangentV

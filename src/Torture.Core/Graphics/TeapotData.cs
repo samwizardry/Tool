@@ -4,7 +4,7 @@ using System.Numerics;
 namespace Torture.Core.Graphics;
 
 /// <summary>
-/// Bicubic Bézier patch data for the Utah Teapot (Martin Newell, 1975).
+/// Bicubic Bezier patch data for the Utah Teapot (Martin Newell, 1975).
 /// Evaluates and expands the 32 bicubic patches (16 control points each) in DirectX coordinates (Y-up, centered at origin).
 /// </summary>
 internal static class TeapotData
@@ -13,7 +13,7 @@ internal static class TeapotData
     public const int ControlPointsPerPatch = 16;
 
     /// <summary>
-    /// All 32 bicubic Bézier patches (32 patches * 16 control points = 512 Vector3 control points).
+    /// All 32 bicubic Bezier patches (32 patches * 16 control points = 512 Vector3 control points).
     /// </summary>
     private static readonly Vector3[] Patches = new Vector3[PatchCount * ControlPointsPerPatch];
 
@@ -246,7 +246,7 @@ internal static class TeapotData
     }
 
     /// <summary>
-    /// Gets the 16 control points for the specified Bézier patch index (0 to 31).
+    /// Gets the 16 control points for the specified Bezier patch index (0 to 31).
     /// </summary>
     public static ReadOnlySpan<Vector3> GetPatch(int patchIndex)
     {

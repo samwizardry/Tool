@@ -2,13 +2,14 @@
 
 using Brutal.Collections;
 
+using Torture.Core.Collections;
 using Torture.Core.Math;
 
 namespace Torture.Core.Graphics;
 
 public static class Geometry
 {
-    private static readonly Vector3[] BoxFaceNormals = [
+    private static readonly Vector3[] FaceNormals = [
         new(0, 0, 1),
         new(0, 0, -1),
         new(1, 0, 0),
@@ -16,7 +17,7 @@ public static class Geometry
         new(0, 1, 0),
         new(0, -1, 0)];
 
-    private static readonly Vector2[] BoxTexCoords = [
+    private static readonly Vector2[] TexCoords = [
         new(1, 0),
         new(1, 1),
         new(0, 1),
@@ -25,12 +26,12 @@ public static class Geometry
     private static readonly Vector3[] OctahedronVertices =
     [
         // when looking down the negative z-axis (into the screen)
-        new Vector3(0, 1, 0),  // 0 top
-        new Vector3(0, 0, -1), // 1 front
-        new Vector3(1, 0, 0),  // 2 right
-        new Vector3(0, 0, 1),  // 3 back
-        new Vector3(-1, 0, 0), // 4 left
-        new Vector3(0, -1, 0), // 5 bottom
+        new(0, 1, 0),  // 0 top
+        new(0, 0, -1), // 1 front
+        new(1, 0, 0),  // 2 right
+        new(0, 0, 1),  // 3 back
+        new(-1, 0, 0), // 4 left
+        new(0, -1, 0), // 5 bottom
     ];
 
     private static readonly ushort[] OctahedronIndices =
@@ -68,7 +69,7 @@ public static class Geometry
 
         for (int i = 0; i < faceCount; ++i)
         {
-            Vector3 normal = BoxFaceNormals[i];
+            Vector3 normal = FaceNormals[i];
 
             // Get two vectors perpendicular both to the face normal and to each other.
             Vector3 basis = i >= 4 ? Vector3.UnitZ : Vector3.UnitY;
@@ -87,13 +88,13 @@ public static class Geometry
 
             // Four vertices per face.
             // (normal - side1 - side2) * tsize // normal // t0
-            vertices.Add(new((normal - side1 - side2) * tsize, normal, BoxTexCoords[0]));
+            vertices.Add(new((normal - side1 - side2) * tsize, normal, TexCoords[0]));
             // (normal - side1 + side2) * tsize // normal // t1
-            vertices.Add(new((normal - side1 + side2) * tsize, normal, BoxTexCoords[1]));
+            vertices.Add(new((normal - side1 + side2) * tsize, normal, TexCoords[1]));
             // (normal + side1 + side2) * tsize // normal // t2
-            vertices.Add(new((normal + side1 + side2) * tsize, normal, BoxTexCoords[2]));
+            vertices.Add(new((normal + side1 + side2) * tsize, normal, TexCoords[2]));
             // (normal + side1 - side2) * tsize // normal // t3
-            vertices.Add(new((normal + side1 - side2) * tsize, normal, BoxTexCoords[3]));
+            vertices.Add(new((normal + side1 - side2) * tsize, normal, TexCoords[3]));
         }
 
         // Build RH above
@@ -202,7 +203,7 @@ public static class Geometry
         float radius = diameter * 0.5f;
 
         // Start with an octahedron; copy the data into the vertex/index collection.
-        List<Vector3> vertexPositions = [.. OctahedronVertices];
+        using NativeList<Vector3> vertexPositions = [.. OctahedronVertices];
 
         // We know these values by looking at the above index list for the octahedron. Despite the subdivisions that are
         // about to go on, these values aren't ever going to change because the vertices don't move around in the array.
@@ -216,13 +217,13 @@ public static class Geometry
                 throw new InvalidOperationException("Indices count must be a multiple of 3.");
 
             // We use this to keep track of which edges have already been subdivided.
-            Dictionary<(ushort, ushort), ushort> subdividedEdges = [];
+            int triangleCount = indices.Count / 3;
+            using NativeEdgeMap subdividedEdges = new(triangleCount * 3);
 
             // The new index collection after subdivision.
             NativeList<ushort> newIndices = [];
             newIndices.EnsureCapacity(indices.Count * 4);
 
-            int triangleCount = indices.Count / 3;
             for (int iTriangle = 0; iTriangle < triangleCount; ++iTriangle)
             {
                 // For each edge on this triangle, create a new vertex in the middle of that edge.
@@ -236,21 +237,23 @@ public static class Geometry
                 // Function that, when given the index of two vertices, creates a new vertex at the midpoint of those vertices.
                 void DivideEdge(ushort i0, ushort i1, out ushort outIndex)
                 {
-                    (ushort, ushort) edge = MakeUndirectedEdge(i0, i1);
+                    ushort high = System.Math.Max(i0, i1);
+                    ushort low = System.Math.Min(i0, i1);
+                    uint edgeKey = ((uint)high << 16) | low;
 
                     // Check to see if we've already generated this vertex
-                    if (!subdividedEdges.TryGetValue(edge, out outIndex))
+                    if (!subdividedEdges.TryGetValue(edgeKey, out outIndex))
                     {
                         // Haven't generated this vertex before: so add it now
                         Vector3 outVertex = (vertexPositions[i0] + vertexPositions[i1]) * 0.5f;
 
                         CheckIndexOverflow((uint)vertexPositions.Count);
 
-                        outIndex = (ushort)vertexPositions.Count;
+                        outIndex = (ushort)vertexPositions.Count.Value;
                         vertexPositions.Add(outVertex);
 
                         // Now add it to the map.
-                        subdividedEdges.Add(edge, outIndex);
+                        subdividedEdges.Add(edgeKey, outIndex);
                     }
                 }
 
@@ -496,8 +499,8 @@ public static class Geometry
             Vector3 sideOffset = normal * radius;
             float u = 1.0f - (i / (float)tessellation);
 
-            vertices.Add(new(sideOffset + topOffset, normal, new Vector2(u, 0)));
-            vertices.Add(new(sideOffset - topOffset, normal, new Vector2(u, 1)));
+            vertices.Add(new(sideOffset + topOffset, normal, new(u, 0)));
+            vertices.Add(new(sideOffset - topOffset, normal, new(u, 1)));
         }
 
         // Fill index buffer for side of cylinder
@@ -525,7 +528,7 @@ public static class Geometry
             Vector3 yOffset = normal * halfHeight;
             int centerIndex = vertices.Count;
 
-            vertices.Add(new(yOffset, normal, new Vector2(0.5f, 0.5f)));
+            vertices.Add(new(yOffset, normal, new(0.5f, 0.5f)));
 
             // Create a ring of vertices around the outside of the cap.
             for (int i = 0; i <= tessellation; ++i)
@@ -600,7 +603,7 @@ public static class Geometry
         Vector3 bottomNormal = -Vector3.UnitY;
         Vector3 bottomCenter = new(0, -halfHeight, 0);
 
-        vertices.Add(new(bottomCenter, bottomNormal, new Vector2(0.5f, 0.5f)));
+        vertices.Add(new(bottomCenter, bottomNormal, new(0.5f, 0.5f)));
 
         int baseRimStart = vertices.Count;
         for (int i = 0; i <= tessellation; ++i)
@@ -631,10 +634,10 @@ public static class Geometry
             (float sin, float cos) = MathF.SinCos(angle);
 
             Vector3 pos = new(cos * radius, -halfHeight, sin * radius);
-            Vector3 normal = Vector3.Normalize(new Vector3(cos, normalSlope, sin));
+            Vector3 normal = Vector3.Normalize(new(cos, normalSlope, sin));
             float u = 1.0f - (i / (float)tessellation);
 
-            vertices.Add(new(pos, normal, new Vector2(u, 1.0f)));
+            vertices.Add(new(pos, normal, new(u, 1.0f)));
         }
 
         Vector3 topApex = new(0, halfHeight, 0);
@@ -643,11 +646,11 @@ public static class Geometry
             float midAngle = (i + 0.5f) * MathF.Tau / tessellation;
             (float midSin, float midCos) = MathF.SinCos(midAngle);
 
-            Vector3 apexNormal = Vector3.Normalize(new Vector3(midCos, normalSlope, midSin));
+            Vector3 apexNormal = Vector3.Normalize(new(midCos, normalSlope, midSin));
             float uMid = 1.0f - ((i + 0.5f) / tessellation);
 
             int apexIndex = vertices.Count;
-            vertices.Add(new(topApex, apexNormal, new Vector2(uMid, 0.0f)));
+            vertices.Add(new(topApex, apexNormal, new(uMid, 0.0f)));
 
             IndexPushBack(indices, apexIndex);
             IndexPushBack(indices, mantleRimStart + i + 1);
