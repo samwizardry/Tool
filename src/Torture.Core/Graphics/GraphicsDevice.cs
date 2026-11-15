@@ -68,6 +68,8 @@ public abstract class GraphicsDevice : IDisposable
 
     public abstract Texture CreateTexture(in TextureDescription desc);
 
+    public abstract Sampler CreateSampler(in SamplerDescription desc);
+
     public abstract void UpdateBuffer<T>(Buffer buffer, ReadOnlySpan<T> data, uint byteOffset = 0)
         where T : unmanaged;
 
@@ -92,6 +94,8 @@ public abstract class GraphicsDevice : IDisposable
     public abstract void SetInputLayout(InputLayout inputLayout);
 
     public abstract void SetTexture(Texture texture, ShaderType stage, uint slot);
+
+    public abstract void SetSampler(Sampler sampler, ShaderType stage, uint slot);
 
     #endregion
 

@@ -14,11 +14,8 @@ cbuffer PerFrameBuffer : register(b0)
 //};
 
 Texture2D gDiffuseMap : register(t0);
-SamplerState smp
-{
-    AddressU = Clamp;
-    AddressV = Wrap;
-};
+Texture2D gSpecularMap : register(t1);
+SamplerState gSampler : register(s0);
 
 struct VSInput
 {
@@ -47,6 +44,6 @@ PSInput VSMain(VSInput input)
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-    float4 color = gDiffuseMap.Sample(smp, input.Texture);
+    float4 color = gSpecularMap.Sample(gSampler, input.Texture);
     return color;
 }

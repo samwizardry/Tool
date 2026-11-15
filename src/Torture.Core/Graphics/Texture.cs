@@ -9,23 +9,31 @@ namespace Torture.Core.Graphics;
 /// </summary>
 public abstract class Texture : IDisposable
 {
+    protected readonly TextureDescription _desc;
     protected bool _disposed;
 
-    public uint Width { get; protected init; }
+    protected Texture(in TextureDescription desc)
+    {
+        _desc = desc;
+    }
 
-    public uint Height { get; protected init; }
+    public ref readonly TextureDescription Desc => ref _desc;
 
-    public uint Depth { get; protected init; }
+    public uint Width => _desc.Width;
 
-    public uint ArraySize { get; protected init; }
+    public uint Height => _desc.Height;
 
-    public uint MipLevels { get; protected init; }
+    public uint Depth => _desc.Depth;
 
-    public Format Format { get; protected init; }
+    public uint ArraySize => _desc.ArraySize;
 
-    public TextureDimension Dimension { get; protected init; }
+    public uint MipLevels => _desc.MipLevels;
 
-    public TextureUsage Usage { get; protected init; }
+    public Format Format => _desc.Format;
+
+    public TextureDimension Dimension => _desc.Dimension;
+
+    public TextureUsage Usage => _desc.Usage;
 
     public abstract void Dispose();
 }

@@ -1,4 +1,10 @@
-﻿using Vortice.Direct3D11;
+﻿// Portions of this file are derived from NVRHI (https://github.com/NVIDIA-RTX/NVRHI)
+// Copyright (c) 2014-2026 NVIDIA Corporation. All rights reserved.
+// Licensed under the MIT License. See THIRD-PARTY-NOTICES.md in the project root for license information.
+
+using Vortice.Direct3D;
+using Vortice.Direct3D11;
+using Vortice.DXGI;
 
 using CoreGfx = Torture.Core.Graphics;
 
@@ -6,7 +12,8 @@ namespace Torture.Graphics.Direct3D11;
 
 internal sealed class D3D11Texture : CoreGfx.Texture
 {
-    public D3D11Texture(ID3D11Resource texture, ID3D11ShaderResourceView? srv)
+    public D3D11Texture(in CoreGfx.TextureDescription desc, ID3D11Resource texture, ID3D11ShaderResourceView? srv)
+        : base(desc)
     {
         Native = texture;
         Srv = srv;
@@ -19,151 +26,218 @@ internal sealed class D3D11Texture : CoreGfx.Texture
     public static unsafe D3D11Texture Create<T>(ID3D11Device5 device, ReadOnlySpan<T> data, in CoreGfx.TextureDescription desc)
         where T : unmanaged
     {
-        ID3D11Resource texture = default!;
-        ID3D11ShaderResourceView? srv = null;
-
         fixed (T* dataPtr = data)
         {
-            SubresourceData initialData = new((nint)dataPtr, rowPitch: desc.Width * 4u, slicePitch: 0);
-            switch (desc.Dimension)
-            {
-                case CoreGfx.TextureDimension.Unknown:
-                    break;
-                case CoreGfx.TextureDimension.Texture1D:
-                    break;
-                case CoreGfx.TextureDimension.Texture1DArray:
-                    break;
-
-                case CoreGfx.TextureDimension.Texture2D:
-                    var tex2d = device.CreateTexture2D(ToD3DTexture2DDescription(desc, true), initialData);
-                    texture = tex2d;
-
-                    if ((desc.Usage & CoreGfx.TextureUsage.ShaderResource) == CoreGfx.TextureUsage.ShaderResource)
-                    {
-                        srv = device.CreateShaderResourceView(
-                            tex2d,
-                            new ShaderResourceViewDescription(
-                                tex2d,
-                                Vortice.Direct3D.ShaderResourceViewDimension.Texture2D));
-                    }
-
-                    break;
-
-                case CoreGfx.TextureDimension.Texture2DArray:
-                    break;
-                case CoreGfx.TextureDimension.TextureCube:
-                    break;
-                case CoreGfx.TextureDimension.TextureCubeArray:
-                    break;
-                case CoreGfx.TextureDimension.Texture2DMS:
-                    break;
-                case CoreGfx.TextureDimension.Texture2DMSArray:
-                    break;
-                case CoreGfx.TextureDimension.Texture3D:
-                    break;
-                default:
-                    throw new NotSupportedException();
-            }
+            CoreGfx.FormatInfo.GetSurfaceInfo(desc.Format, desc.Width, desc.Height, out uint rowPitch, out uint slicePitch);
+            SubresourceData initialData = new((nint)dataPtr, rowPitch, slicePitch);
+            return CreateCore(device, in desc, &initialData);
         }
-
-        return new D3D11Texture(texture, srv);
     }
 
-    public static D3D11Texture Create(ID3D11Device5 device, in CoreGfx.TextureDescription desc)
+    public static unsafe D3D11Texture Create(ID3D11Device5 device, in CoreGfx.TextureDescription desc)
     {
-        ID3D11Resource texture = default!;
+        return CreateCore(device, in desc, null);
+    }
+
+    private static unsafe D3D11Texture CreateCore(ID3D11Device5 device, in CoreGfx.TextureDescription desc, SubresourceData* initialData)
+    {
+        ref readonly var formatMapping = ref desc.Format.GetDxgiFormatMapping();
+        bool isDepthStencil = (desc.Usage & CoreGfx.TextureUsage.DepthStencil) != 0;
+        var format = isDepthStencil ? formatMapping.ResourceFormat : formatMapping.SrvFormat;
+        BindFlags bindFlags = GetBindFlags(desc.Usage);
+        GetResourceUsageAndCpuAccess(desc, initialData != null, out ResourceUsage usage, out CpuAccessFlags cpuAccess);
+        ResourceOptionFlags miscFlags = GetMiscFlags(desc.Dimension);
+
+        ID3D11Resource texture;
+        switch (desc.Dimension)
+        {
+            case CoreGfx.TextureDimension.Texture1D:
+            case CoreGfx.TextureDimension.Texture1DArray:
+                {
+                    Texture1DDescription d3dDesc = new(
+                        format: format,
+                        width: desc.Width,
+                        arraySize: desc.ArraySize,
+                        mipLevels: desc.MipLevels,
+                        bindFlags: bindFlags,
+                        usage: usage,
+                        cpuAccessFlags: cpuAccess,
+                        miscFlags: miscFlags);
+                    texture = initialData != null
+                        ? device.CreateTexture1D(d3dDesc, new Span<SubresourceData>(initialData, 1))
+                        : device.CreateTexture1D(d3dDesc);
+                    break;
+                }
+            case CoreGfx.TextureDimension.Texture2D:
+            case CoreGfx.TextureDimension.Texture2DArray:
+            case CoreGfx.TextureDimension.TextureCube:
+            case CoreGfx.TextureDimension.TextureCubeArray:
+            case CoreGfx.TextureDimension.Texture2DMS:
+            case CoreGfx.TextureDimension.Texture2DMSArray:
+                {
+                    Texture2DDescription d3dDesc = new(
+                        format: format,
+                        width: desc.Width,
+                        height: desc.Height,
+                        arraySize: desc.ArraySize,
+                        mipLevels: desc.MipLevels,
+                        bindFlags: bindFlags,
+                        usage: usage,
+                        cpuAccessFlags: cpuAccess,
+                        sampleCount: desc.SampleCount,
+                        sampleQuality: desc.SampleQuality,
+                        miscFlags: miscFlags);
+                    texture = initialData != null
+                        ? device.CreateTexture2D(d3dDesc, new Span<SubresourceData>(initialData, 1))
+                        : device.CreateTexture2D(d3dDesc);
+                    break;
+                }
+            case CoreGfx.TextureDimension.Texture3D:
+                {
+                    Texture3DDescription d3dDesc = new(
+                        format: format,
+                        width: desc.Width,
+                        height: desc.Height,
+                        depth: desc.Depth,
+                        mipLevels: desc.MipLevels,
+                        bindFlags: bindFlags,
+                        usage: usage,
+                        cpuAccessFlags: cpuAccess,
+                        miscFlags: miscFlags);
+                    texture = initialData != null
+                        ? device.CreateTexture3D(d3dDesc, new Span<SubresourceData>(initialData, 1))
+                        : device.CreateTexture3D(d3dDesc);
+                    break;
+                }
+            default:
+                throw new NotSupportedException();
+        }
+
         ID3D11ShaderResourceView? srv = null;
+        if ((desc.Usage & CoreGfx.TextureUsage.ShaderResource) != 0)
+        {
+            srv = CreateSrv(device, texture, in desc, formatMapping.SrvFormat);
+        }
+
+        return new D3D11Texture(in desc, texture, srv);
+    }
+
+    private static ID3D11ShaderResourceView? CreateSrv(ID3D11Device5 device, ID3D11Resource texture, in CoreGfx.TextureDescription desc, Format srvFormat)
+    {
+        ShaderResourceViewDescription srvDesc = new() { Format = srvFormat };
 
         switch (desc.Dimension)
         {
-            case CoreGfx.TextureDimension.Unknown:
-                break;
             case CoreGfx.TextureDimension.Texture1D:
+                srvDesc.ViewDimension = ShaderResourceViewDimension.Texture1D;
+                srvDesc.Texture1D = new Texture1DShaderResourceView { MostDetailedMip = 0, MipLevels = desc.MipLevels };
                 break;
             case CoreGfx.TextureDimension.Texture1DArray:
-                break;
-
-            case CoreGfx.TextureDimension.Texture2D:
-                var tex2d = device.CreateTexture2D(ToD3DTexture2DDescription(desc, true));
-                texture = tex2d;
-
-                if ((desc.Usage & CoreGfx.TextureUsage.ShaderResource) == CoreGfx.TextureUsage.ShaderResource)
+                srvDesc.ViewDimension = ShaderResourceViewDimension.Texture1DArray;
+                srvDesc.Texture1DArray = new Texture1DArrayShaderResourceView
                 {
-                    srv = device.CreateShaderResourceView(
-                        tex2d,
-                        new ShaderResourceViewDescription(
-                            tex2d,
-                            Vortice.Direct3D.ShaderResourceViewDimension.Texture2D));
-                }
-
+                    MostDetailedMip = 0,
+                    MipLevels = desc.MipLevels,
+                    FirstArraySlice = 0,
+                    ArraySize = desc.ArraySize
+                };
                 break;
-
+            case CoreGfx.TextureDimension.Texture2D:
+                srvDesc.ViewDimension = ShaderResourceViewDimension.Texture2D;
+                srvDesc.Texture2D = new Texture2DShaderResourceView { MostDetailedMip = 0, MipLevels = desc.MipLevels };
+                break;
             case CoreGfx.TextureDimension.Texture2DArray:
+                srvDesc.ViewDimension = ShaderResourceViewDimension.Texture2DArray;
+                srvDesc.Texture2DArray = new Texture2DArrayShaderResourceView
+                {
+                    MostDetailedMip = 0,
+                    MipLevels = desc.MipLevels,
+                    FirstArraySlice = 0,
+                    ArraySize = desc.ArraySize
+                };
                 break;
             case CoreGfx.TextureDimension.TextureCube:
+                srvDesc.ViewDimension = ShaderResourceViewDimension.TextureCube;
+                srvDesc.TextureCube = new TextureCubeShaderResourceView { MostDetailedMip = 0, MipLevels = desc.MipLevels };
                 break;
             case CoreGfx.TextureDimension.TextureCubeArray:
+                srvDesc.ViewDimension = ShaderResourceViewDimension.TextureCubeArray;
+                srvDesc.TextureCubeArray = new TextureCubeArrayShaderResourceView
+                {
+                    MostDetailedMip = 0,
+                    MipLevels = desc.MipLevels,
+                    First2DArrayFace = 0,
+                    NumCubes = desc.ArraySize / 6
+                };
                 break;
             case CoreGfx.TextureDimension.Texture2DMS:
+                srvDesc.ViewDimension = ShaderResourceViewDimension.Texture2DMultisampled;
                 break;
             case CoreGfx.TextureDimension.Texture2DMSArray:
+                srvDesc.ViewDimension = ShaderResourceViewDimension.Texture2DMultisampledArray;
+                srvDesc.Texture2DMSArray = new Texture2DMultisampledArrayShaderResourceView
+                {
+                    FirstArraySlice = 0,
+                    ArraySize = desc.ArraySize
+                };
                 break;
             case CoreGfx.TextureDimension.Texture3D:
+                srvDesc.ViewDimension = ShaderResourceViewDimension.Texture3D;
+                srvDesc.Texture3D = new Texture3DShaderResourceView { MostDetailedMip = 0, MipLevels = desc.MipLevels };
                 break;
             default:
                 throw new NotSupportedException();
         }
 
-        return new D3D11Texture(texture, srv);
+        return device.CreateShaderResourceView(texture, srvDesc);
     }
 
-    private static Texture2DDescription ToD3DTexture2DDescription(in CoreGfx.TextureDescription desc, bool hasInitialData)
+    private static BindFlags GetBindFlags(CoreGfx.TextureUsage usage)
     {
-        BindFlags bindFlags = BindFlags.None;
-        if ((desc.Usage & CoreGfx.TextureUsage.ShaderResource) == CoreGfx.TextureUsage.ShaderResource)
-        {
-            bindFlags |= BindFlags.ShaderResource;
-        }
-        if ((desc.Usage & CoreGfx.TextureUsage.RenderTarget) == CoreGfx.TextureUsage.RenderTarget)
-        {
-            bindFlags |= BindFlags.RenderTarget;
-        }
-        if ((desc.Usage & CoreGfx.TextureUsage.DepthStencil) == CoreGfx.TextureUsage.DepthStencil)
-        {
-            bindFlags |= BindFlags.DepthStencil;
-        }
-        if ((desc.Usage & CoreGfx.TextureUsage.UnorderedAccess) == CoreGfx.TextureUsage.UnorderedAccess)
-        {
-            bindFlags |= BindFlags.UnorderedAccess;
-        }
+        BindFlags flags = BindFlags.None;
+        if ((usage & CoreGfx.TextureUsage.ShaderResource) == CoreGfx.TextureUsage.ShaderResource)
+            flags |= BindFlags.ShaderResource;
+        if ((usage & CoreGfx.TextureUsage.RenderTarget) == CoreGfx.TextureUsage.RenderTarget)
+            flags |= BindFlags.RenderTarget;
+        if ((usage & CoreGfx.TextureUsage.DepthStencil) == CoreGfx.TextureUsage.DepthStencil)
+            flags |= BindFlags.DepthStencil;
+        if ((usage & CoreGfx.TextureUsage.UnorderedAccess) == CoreGfx.TextureUsage.UnorderedAccess)
+            flags |= BindFlags.UnorderedAccess;
+        return flags;
+    }
 
-        ResourceUsage usage = ResourceUsage.Default;
-        CpuAccessFlags cpuAccessFlags;
+    private static void GetResourceUsageAndCpuAccess(
+        in CoreGfx.TextureDescription desc,
+        bool hasInitialData,
+        out ResourceUsage usage,
+        out CpuAccessFlags cpuAccessFlags)
+    {
+        bool isGpuWritable = (desc.Usage & (CoreGfx.TextureUsage.RenderTarget | CoreGfx.TextureUsage.DepthStencil | CoreGfx.TextureUsage.UnorderedAccess)) != 0;
         switch (desc.CpuAccess)
         {
             case CoreGfx.CpuAccess.None:
-                usage |= hasInitialData ? ResourceUsage.Immutable : ResourceUsage.Default;
+                usage = (hasInitialData && !isGpuWritable && desc.MipLevels == 1 && desc.ArraySize == 1)
+                    ? ResourceUsage.Immutable
+                    : ResourceUsage.Default;
                 cpuAccessFlags = CpuAccessFlags.None;
                 break;
             case CoreGfx.CpuAccess.Write:
-                usage |= ResourceUsage.Dynamic;
+                usage = ResourceUsage.Dynamic;
                 cpuAccessFlags = CpuAccessFlags.Write;
                 break;
             case CoreGfx.CpuAccess.Read:
-                usage |= ResourceUsage.Staging;
+                usage = ResourceUsage.Staging;
                 cpuAccessFlags = CpuAccessFlags.Read;
                 break;
             default:
                 throw new NotSupportedException();
         }
-
-        return new Texture2DDescription(desc.Format.ToDXGIFormat(),
-            desc.Width, desc.Height,
-            arraySize: desc.ArraySize, mipLevels: desc.MipLevels,
-            bindFlags: bindFlags, usage: usage, cpuAccessFlags: cpuAccessFlags,
-            sampleCount: desc.SampleCount, sampleQuality: desc.SampleQuality,
-            miscFlags: ResourceOptionFlags.None);
     }
+
+    private static ResourceOptionFlags GetMiscFlags(CoreGfx.TextureDimension dimension) =>
+        dimension is CoreGfx.TextureDimension.TextureCube or CoreGfx.TextureDimension.TextureCubeArray
+            ? ResourceOptionFlags.TextureCube
+            : ResourceOptionFlags.None;
 
     public override void Dispose()
     {

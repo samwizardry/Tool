@@ -46,6 +46,7 @@ public sealed partial class Luna : Application<Luna>
     InputLayout _inputLayout;
     Texture _container;
     Texture _containerSpecular;
+    Sampler _sampler;
 
     protected override void Initialize()
     {
@@ -93,10 +94,13 @@ public sealed partial class Luna : Application<Luna>
             _container = GraphicsDevice.CreateTexture(image.Data.AsSpan(), TextureDescription.Texture2D((uint)image.Width, (uint)image.Height));
         }
 
-        //using (var stream = File.OpenRead("resources/textures/container2_specular.png"))
-        //{
-        //    ImageResult image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
-        //}
+        using (var stream = File.OpenRead("resources/textures/container2_specular.png"))
+        {
+            ImageResult image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
+            _containerSpecular = GraphicsDevice.CreateTexture(image.Data.AsSpan(), TextureDescription.Texture2D((uint)image.Width, (uint)image.Height));
+        }
+
+        _sampler = GraphicsDevice.CreateSampler(SamplerDescription.LinearWrap);
     }
 
     protected override unsafe void Update(GameTime gameTime)
@@ -136,6 +140,8 @@ public sealed partial class Luna : Application<Luna>
         GraphicsDevice.SetInputLayout(_inputLayout);
         GraphicsDevice.SetConstantBuffer(_cb, ShaderType.Vertex, 0);
         GraphicsDevice.SetTexture(_container, ShaderType.Pixel, 0);
+        GraphicsDevice.SetTexture(_containerSpecular, ShaderType.Pixel, 1u);
+        GraphicsDevice.SetSampler(_sampler, ShaderType.Pixel, 0);
         GraphicsDevice.SetVertexBuffer(_vb);
         GraphicsDevice.SetIndexBuffer(_ib);
         GraphicsDevice.SetPrimitiveTopology(PrimitiveTopology.TriangleList);
@@ -152,6 +158,7 @@ public sealed partial class Luna : Application<Luna>
         _vb?.Dispose();
         _container?.Dispose();
         _containerSpecular?.Dispose();
+        _sampler?.Dispose();
     }
 
     protected override void Cleanup()

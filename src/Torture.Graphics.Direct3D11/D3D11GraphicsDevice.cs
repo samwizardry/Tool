@@ -358,6 +358,12 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
     }
 
     /// <inheritdoc />
+    public override CoreGfx.Sampler CreateSampler(in CoreGfx.SamplerDescription desc)
+    {
+        return new D3D11Sampler(_device, in desc);
+    }
+
+    /// <inheritdoc />
     public override unsafe void UpdateBuffer<T>(CoreGfx.Buffer buffer, ReadOnlySpan<T> data, uint byteOffset = 0)
     {
 #if GRAPHICS_DEBUG
@@ -382,7 +388,7 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
             MapMode mode = byteOffset == 0 ? MapMode.WriteDiscard : MapMode.WriteNoOverwrite;
             var map = _imContext.Map(d3dBuffer.Native, 0, mode, Vortice.Direct3D11.MapFlags.None);
 
-            T* dstPtr = (T*)map.DataPointer + byteOffset;
+            byte* dstPtr = (byte*)map.DataPointer + byteOffset;
             Buffer.MemoryCopy(srcPtr, dstPtr, d3dBuffer.ByteSize - byteOffset, dataByteSize);
 
             _imContext.Unmap(d3dBuffer.Native, 0);
@@ -410,9 +416,19 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override void UpdateTexture<T>(CoreGfx.Texture texture, ReadOnlySpan<T> data, uint mipLevel = 0, uint arraySlice = 0)
+    public override unsafe void UpdateTexture<T>(CoreGfx.Texture texture, ReadOnlySpan<T> data, uint mipLevel = 0, uint arraySlice = 0)
     {
-        throw new NotImplementedException();
+        var d3dTexture = (D3D11Texture)texture;
+
+        uint mipWidth = Math.Max(1u, d3dTexture.Width >> (int)mipLevel);
+        uint mipHeight = Math.Max(1u, d3dTexture.Height >> (int)mipLevel);
+        uint subresource = mipLevel + (arraySlice * d3dTexture.MipLevels);
+        CoreGfx.FormatInfo.GetSurfaceInfo(d3dTexture.Format, mipWidth, mipHeight, out uint rowPitch, out uint slicePitch);
+
+        fixed (T* srcPtr = data)
+        {
+            _imContext.UpdateSubresource(d3dTexture.Native, subresource, null, (nint)srcPtr, rowPitch, slicePitch);
+        }
     }
 
     /// <inheritdoc />
@@ -491,27 +507,58 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
 
         if ((stage & CoreGfx.ShaderType.Vertex) == CoreGfx.ShaderType.Vertex)
         {
-            _imContext.VSSetShaderResource(slot, d3dTexture?.Srv);
+            _imContext.VSSetShaderResource(slot, d3dTexture.Srv);
         }
         if ((stage & CoreGfx.ShaderType.Hull) == CoreGfx.ShaderType.Hull)
         {
-            _imContext.HSSetShaderResource(slot, d3dTexture?.Srv);
+            _imContext.HSSetShaderResource(slot, d3dTexture.Srv);
         }
         if ((stage & CoreGfx.ShaderType.Domain) == CoreGfx.ShaderType.Domain)
         {
-            _imContext.DSSetShaderResource(slot, d3dTexture?.Srv);
+            _imContext.DSSetShaderResource(slot, d3dTexture.Srv);
         }
         if ((stage & CoreGfx.ShaderType.Geometry) == CoreGfx.ShaderType.Geometry)
         {
-            _imContext.GSSetShaderResource(slot, d3dTexture?.Srv);
+            _imContext.GSSetShaderResource(slot, d3dTexture.Srv);
         }
         if ((stage & CoreGfx.ShaderType.Pixel) == CoreGfx.ShaderType.Pixel)
         {
-            _imContext.PSSetShaderResource(slot, d3dTexture?.Srv!);
+            _imContext.PSSetShaderResource(slot, d3dTexture.Srv!);
         }
         if ((stage & CoreGfx.ShaderType.Compute) == CoreGfx.ShaderType.Compute)
         {
-            _imContext.CSSetShaderResource(slot, d3dTexture?.Srv);
+            _imContext.CSSetShaderResource(slot, d3dTexture.Srv);
+        }
+    }
+
+    /// <inheritdoc />
+    public override void SetSampler(CoreGfx.Sampler sampler, CoreGfx.ShaderType stage, uint slot)
+    {
+        var d3dSampler = (D3D11Sampler)sampler;
+
+        if ((stage & CoreGfx.ShaderType.Vertex) == CoreGfx.ShaderType.Vertex)
+        {
+            _imContext.VSSetSampler(slot, d3dSampler.Native);
+        }
+        if ((stage & CoreGfx.ShaderType.Hull) == CoreGfx.ShaderType.Hull)
+        {
+            _imContext.HSSetSampler(slot, d3dSampler.Native);
+        }
+        if ((stage & CoreGfx.ShaderType.Domain) == CoreGfx.ShaderType.Domain)
+        {
+            _imContext.DSSetSampler(slot, d3dSampler.Native);
+        }
+        if ((stage & CoreGfx.ShaderType.Geometry) == CoreGfx.ShaderType.Geometry)
+        {
+            _imContext.GSSetSampler(slot, d3dSampler.Native);
+        }
+        if ((stage & CoreGfx.ShaderType.Pixel) == CoreGfx.ShaderType.Pixel)
+        {
+            _imContext.PSSetSampler(slot, d3dSampler.Native);
+        }
+        if ((stage & CoreGfx.ShaderType.Compute) == CoreGfx.ShaderType.Compute)
+        {
+            _imContext.CSSetSampler(slot, d3dSampler.Native);
         }
     }
 
