@@ -23,30 +23,70 @@ internal sealed class D3D11Texture : CoreGfx.Texture
 
     public ID3D11ShaderResourceView? Srv { get; }
 
-    public static unsafe D3D11Texture Create<T>(ID3D11Device5 device, ReadOnlySpan<T> data, in CoreGfx.TextureDescription desc)
+    public static unsafe D3D11Texture Create<T>(ID3D11Device5 device,
+        ID3D11DeviceContext4 imContext,
+        ReadOnlySpan<T> data,
+        in CoreGfx.TextureDescription desc)
         where T : unmanaged
     {
         fixed (T* dataPtr = data)
         {
             CoreGfx.FormatInfo.GetSurfaceInfo(desc.Format, desc.Width, desc.Height, out uint rowPitch, out uint slicePitch);
-            SubresourceData initialData = new((nint)dataPtr, rowPitch, slicePitch);
-            return CreateCore(device, in desc, &initialData);
+
+#if GRAPHICS_DEBUG
+            uint expectedBytes = slicePitch * desc.Depth;
+            uint actualBytes = (uint)(sizeof(T) * data.Length);
+            if (actualBytes < expectedBytes)
+            {
+                throw new ArgumentOutOfRangeException(nameof(data),
+                    $"Provided data size ({actualBytes} bytes) is smaller than the required surface size ({expectedBytes} bytes).");
+            }
+#endif
+
+            if (desc.MipLevels == 1 && desc.ArraySize == 1)
+            {
+                SubresourceData initialData = new((nint)dataPtr, rowPitch, slicePitch);
+                return CreateCore(device, in desc, &initialData, generateMips: false);
+            }
+            else
+            {
+                var texture = CreateCore(device, in desc, null, true);
+
+                imContext.UpdateSubresource(texture.Native, 0, null, (nint)dataPtr, rowPitch, slicePitch);
+                imContext.GenerateMips(texture.Srv);
+
+                return texture;
+            }
         }
     }
 
     public static unsafe D3D11Texture Create(ID3D11Device5 device, in CoreGfx.TextureDescription desc)
     {
-        return CreateCore(device, in desc, null);
+        return CreateCore(device, in desc, null, false);
     }
 
-    private static unsafe D3D11Texture CreateCore(ID3D11Device5 device, in CoreGfx.TextureDescription desc, SubresourceData* initialData)
+    private static unsafe D3D11Texture CreateCore(ID3D11Device5 device,
+        in CoreGfx.TextureDescription desc,
+        SubresourceData* initialData,
+        bool generateMips)
     {
         ref readonly var formatMapping = ref desc.Format.GetDxgiFormatMapping();
         bool isDepthStencil = (desc.Usage & CoreGfx.TextureUsage.DepthStencil) != 0;
         var format = isDepthStencil ? formatMapping.ResourceFormat : formatMapping.SrvFormat;
+
         BindFlags bindFlags = GetBindFlags(desc.Usage);
-        GetResourceUsageAndCpuAccess(desc, initialData != null, out ResourceUsage usage, out CpuAccessFlags cpuAccess);
+        if (generateMips)
+        {
+            bindFlags |= BindFlags.ShaderResource | BindFlags.RenderTarget;
+        }
+
+        GetResourceUsageAndCpuAccess(desc, initialData != null && !generateMips, out ResourceUsage usage, out CpuAccessFlags cpuAccess);
+
         ResourceOptionFlags miscFlags = GetMiscFlags(desc.Dimension);
+        if (generateMips)
+        {
+            miscFlags |= ResourceOptionFlags.GenerateMips;
+        }
 
         ID3D11Resource texture;
         switch (desc.Dimension)
@@ -114,7 +154,7 @@ internal sealed class D3D11Texture : CoreGfx.Texture
         }
 
         ID3D11ShaderResourceView? srv = null;
-        if ((desc.Usage & CoreGfx.TextureUsage.ShaderResource) != 0)
+        if ((desc.Usage & CoreGfx.TextureUsage.ShaderResource) != 0 || generateMips)
         {
             srv = CreateSrv(device, texture, in desc, formatMapping.SrvFormat);
         }

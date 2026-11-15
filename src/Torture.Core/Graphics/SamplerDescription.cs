@@ -46,13 +46,23 @@ public readonly record struct SamplerDescription
         BorderColor = borderColor ?? new Color4(1.0f, 1.0f, 1.0f, 1.0f);
     }
 
-    public static SamplerDescription PointClamp => new(false, false, false, SamplerAddressMode.Clamp, SamplerAddressMode.Clamp, SamplerAddressMode.Clamp);
+    public static SamplerDescription PointClamp => new(false, false, false,
+        SamplerAddressMode.Clamp, SamplerAddressMode.Clamp, SamplerAddressMode.Clamp);
 
-    public static SamplerDescription PointWrap => new(false, false, false, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap);
+    public static SamplerDescription PointWrap => new(false, false, false,
+        SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap);
 
-    public static SamplerDescription LinearClamp => new(true, true, true, SamplerAddressMode.Clamp, SamplerAddressMode.Clamp, SamplerAddressMode.Clamp);
+    public static SamplerDescription LinearClamp => new(true, true, true,
+        SamplerAddressMode.Clamp, SamplerAddressMode.Clamp, SamplerAddressMode.Clamp);
 
-    public static SamplerDescription LinearWrap => new(true, true, true, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap);
+    /// <summary>
+    /// Trilinear.
+    /// </summary>
+    public static SamplerDescription LinearWrap => new(true, true, true,
+        SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap);
+
+    public static SamplerDescription Bilinear => new(true, true, false,
+        SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap);
 
     public static SamplerDescription AnisotropicWrap(float maxAnisotropy = 16.0f) =>
         new(true, true, true, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, maxAnisotropy);

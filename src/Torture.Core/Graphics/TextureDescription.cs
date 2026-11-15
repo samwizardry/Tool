@@ -2,6 +2,8 @@
 // Copyright (c) 2014-2026 NVIDIA Corporation. All rights reserved.
 // Licensed under the MIT License. See THIRD-PARTY-NOTICES.md in the project root for license information.
 
+using System.Numerics;
+
 namespace Torture.Core.Graphics;
 
 /// <summary>
@@ -40,7 +42,7 @@ public readonly record struct TextureDescription
         Height = height;
         Depth = depth;
         ArraySize = arraySize;
-        MipLevels = mipLevels;
+        MipLevels = mipLevels == 0 ? CalculateMipLevels(width, height, depth) : mipLevels;
         SampleCount = sampleCount;
         SampleQuality = sampleQuality;
         Format = format;
@@ -113,4 +115,10 @@ public readonly record struct TextureDescription
             usage: usage,
             cpuAccess: CpuAccess.None,
             debugName: debugName);
+
+    /// <summary>
+    /// Calculates the full mipmap chain count down to 1x1x1 for the given dimensions.
+    /// </summary>
+    public static uint CalculateMipLevels(uint width, uint height, uint depth = 1) =>
+        (uint)BitOperations.Log2(System.Math.Max(System.Math.Max(width, height), depth)) + 1u;
 }

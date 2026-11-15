@@ -1,5 +1,4 @@
 ﻿using System.Numerics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 using StbImageSharp;
@@ -47,6 +46,8 @@ public sealed partial class Luna : Application<Luna>
     Texture _container;
     Texture _containerSpecular;
     Sampler _sampler;
+    Sampler _bilinear;
+    Sampler _anisotropic16;
 
     protected override void Initialize()
     {
@@ -58,9 +59,7 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void LoadContent()
     {
-
-        //_modelData = Geometry.ComputeGeoSphere(1.0f, 5, false, false);
-        _modelData = Geometry.ComputeTeapot(2.0f, 5, false, false);
+        _modelData = Geometry.ComputeBox(Vector3.One * 4.0f, true, false);
 
         _cb = GraphicsDevice.CreateBuffer(BufferDescription.Constant<MatrixBufferType>());
         _vb = GraphicsDevice.CreateBuffer(_modelData.Vertices.AsSpan(), BufferDescription.Vertex(0, 0));
@@ -91,17 +90,25 @@ public sealed partial class Luna : Application<Luna>
         using (var stream = File.OpenRead("resources/textures/container2.png"))
         {
             ImageResult image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
-            _container = GraphicsDevice.CreateTexture(image.Data.AsSpan(), TextureDescription.Texture2D((uint)image.Width, (uint)image.Height));
+            _container = GraphicsDevice.CreateTexture(
+                image.Data.AsSpan(),
+                TextureDescription.Texture2D((uint)image.Width, (uint)image.Height, mipLevels: 0));
         }
 
         using (var stream = File.OpenRead("resources/textures/container2_specular.png"))
         {
             ImageResult image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
-            _containerSpecular = GraphicsDevice.CreateTexture(image.Data.AsSpan(), TextureDescription.Texture2D((uint)image.Width, (uint)image.Height));
+            _containerSpecular = GraphicsDevice.CreateTexture(
+                image.Data.AsSpan(),
+                TextureDescription.Texture2D((uint)image.Width, (uint)image.Height, mipLevels: 0));
         }
 
-        _sampler = GraphicsDevice.CreateSampler(SamplerDescription.LinearWrap);
+        _bilinear = GraphicsDevice.CreateSampler(SamplerDescription.Bilinear);
+        _anisotropic16 = GraphicsDevice.CreateSampler(SamplerDescription.AnisotropicWrap(16.0f));
+        _sampler = _bilinear;
     }
+
+    float _angle = 0.0f;
 
     protected override unsafe void Update(GameTime gameTime)
     {
@@ -117,16 +124,26 @@ public sealed partial class Luna : Application<Luna>
             if (_elapsedSeconds >= 1.0f)
             {
                 double fps = _frameCount / _elapsedSeconds;
-                Console.WriteLine($"Luna | FPS: {fps:F1}");
+                //Console.WriteLine($"Luna | FPS: {fps:F1}");
                 _elapsedSeconds -= 1.0f;
                 _frameCount = 0;
             }
         }
 
+        if (Keyboard.IsKeyPressed(KeyboardKey.A))
+        {
+            _sampler = _bilinear;
+        }
+        if (Keyboard.IsKeyPressed(KeyboardKey.S))
+        {
+            _sampler = _anisotropic16;
+        }
+
+        _angle += 10.0f * gameTime.DeltaSeconds;
         MatrixBufferType mvp = new()
         {
-            World = Matrix4x4.Identity,
-            View = Matrix4x4.CreateLookAt(new Vector3(.0f, .0f, -5.0f), Vector3.UnitZ, Vector3.UnitY),
+            World = Matrix4x4.CreateRotationY(float.DegreesToRadians(_angle)) * Matrix4x4.CreateRotationX(0.4f),
+            View = Matrix4x4.CreateLookAt(new Vector3(0.0f, 0.0f, -5.0f), Vector3.UnitZ, Vector3.UnitY),
             Proj = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(85.0f), 1280.0f / 720.0f, 0.1f, 1000.0f)
         };
 
@@ -158,7 +175,8 @@ public sealed partial class Luna : Application<Luna>
         _vb?.Dispose();
         _container?.Dispose();
         _containerSpecular?.Dispose();
-        _sampler?.Dispose();
+        _bilinear?.Dispose();
+        _anisotropic16?.Dispose();
     }
 
     protected override void Cleanup()

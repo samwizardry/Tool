@@ -44,6 +44,6 @@ PSInput VSMain(VSInput input)
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-    float4 color = gSpecularMap.Sample(gSampler, input.Texture);
+    float4 color = gDiffuseMap.Sample(gSampler, input.Texture * 6.0f);
     return color;
 }

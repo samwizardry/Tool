@@ -1,4 +1,6 @@
-﻿using Vortice.Direct3D;
+﻿using SharpGen.Runtime;
+
+using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.Direct3D11.Debug;
 using Vortice.DXGI;
@@ -15,11 +17,13 @@ namespace Torture.Graphics.Direct3D11;
 /// <inheritdoc />
 public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
 {
+    private const int BufferCount = 2;
+
     private static readonly FeatureLevel[] FeatureLevels = [
         FeatureLevel.Level_11_1,
         FeatureLevel.Level_11_0];
 
-    private const int BufferCount = 2;
+    private readonly EventHandler<System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs>? _onFirstChanceException;
 
     private readonly bool _tearingSupported;
     private readonly SwapChainFlags _swapChainFlags;
@@ -148,6 +152,16 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
                     _infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, true);
                     _infoQueue.SetBreakOnSeverity(MessageSeverity.Error, true);
                 }
+
+                _onFirstChanceException = (_, args) =>
+                {
+                    if (args.Exception is SharpGenException)
+                    {
+                        FlushDebugMessages();
+                    }
+                };
+
+                AppDomain.CurrentDomain.FirstChanceException += _onFirstChanceException;
             }
 
             _swapChainFlags = SwapChainFlags.None;
@@ -348,7 +362,7 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
     /// <inheritdoc />
     public override CoreGfx.Texture CreateTexture<T>(ReadOnlySpan<T> data, in CoreGfx.TextureDescription desc)
     {
-        return D3D11Texture.Create(_device, data, in desc);
+        return D3D11Texture.Create(_device, _imContext, data, in desc);
     }
 
     /// <inheritdoc />
@@ -420,10 +434,32 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
     {
         var d3dTexture = (D3D11Texture)texture;
 
+#if GRAPHICS_DEBUG
+        if (mipLevel >= d3dTexture.MipLevels)
+        {
+            throw new ArgumentOutOfRangeException(nameof(mipLevel), "Mip level exceeds texture mip count.");
+        }
+        if (arraySlice >= d3dTexture.ArraySize)
+        {
+            throw new ArgumentOutOfRangeException(nameof(arraySlice), "Array slice exceeds texture array size.");
+        }
+#endif
+
         uint mipWidth = Math.Max(1u, d3dTexture.Width >> (int)mipLevel);
         uint mipHeight = Math.Max(1u, d3dTexture.Height >> (int)mipLevel);
+        uint mipDepth = Math.Max(1u, d3dTexture.Depth >> (int)mipLevel);
         uint subresource = mipLevel + (arraySlice * d3dTexture.MipLevels);
         CoreGfx.FormatInfo.GetSurfaceInfo(d3dTexture.Format, mipWidth, mipHeight, out uint rowPitch, out uint slicePitch);
+
+#if GRAPHICS_DEBUG
+        uint expectedBytes = slicePitch * mipDepth;
+        uint actualBytes = (uint)(sizeof(T) * data.Length);
+        if (actualBytes < expectedBytes)
+        {
+            throw new ArgumentOutOfRangeException(nameof(data),
+                $"Provided data size ({actualBytes} bytes) is smaller than the target mip level size ({expectedBytes} bytes).");
+        }
+#endif
 
         fixed (T* srcPtr = data)
         {
@@ -637,6 +673,11 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
         if (_disposed)
             return;
 
+        if (_onFirstChanceException != null)
+        {
+            AppDomain.CurrentDomain.FirstChanceException -= _onFirstChanceException;
+        }
+
         _depthStencilView?.Dispose();
         _depthStencilBuffer?.Dispose();
         _renderTargetView?.Dispose();
@@ -669,6 +710,7 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
         {
             ReportDxgiLiveObjects();
         }
+
         if (Options.EnableObjectTracking)
         {
             ReportSharpGenLeaks();

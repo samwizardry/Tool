@@ -20,5 +20,5 @@ public sealed record GraphicsDeviceOptions
     /// </summary>
     public bool EnableObjectTracking { get; init; } = DebugByDefault;
     /// <summary>Breaks into the debugger on validation errors. Ignored when no debugger is attached.</summary>
-    public bool BreakOnError { get; init; } = true;
+    public bool BreakOnError { get; init; } = false;
 }
