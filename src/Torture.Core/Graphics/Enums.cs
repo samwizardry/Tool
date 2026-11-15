@@ -165,10 +165,13 @@ public enum Format : uint
     A4B4G4R4_UNorm = 191u
 }
 
+/// <summary>
+/// The value of an element is equal to the byte stride of the index buffer.
+/// </summary>
 public enum IndexFormat : byte
 {
-    UInt32,
-    UInt16
+    UInt32 = 4,
+    UInt16 = 2,
 }
 
 [Flags]

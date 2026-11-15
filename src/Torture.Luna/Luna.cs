@@ -1,8 +1,9 @@
 ﻿using System.Numerics;
-
-using Brutal.Collections;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 using Torture.Core;
+using Torture.Core.Collections;
 using Torture.Core.Graphics;
 using Torture.Core.Input;
 
@@ -13,6 +14,14 @@ namespace Torture.Luna;
 [SDL3.SDL.GenerateMain]
 public sealed partial class Luna : Application<Luna>
 {
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
+    struct MatrixBufferType
+    {
+        public Matrix4x4 World;
+        public Matrix4x4 View;
+        public Matrix4x4 Proj;
+    };
+
     private readonly bool _showFpsInTitle = true;
     private float _elapsedSeconds;
     private int _frameCount;
@@ -25,9 +34,10 @@ public sealed partial class Luna : Application<Luna>
         WindowMode = WindowMode.Windowed;
     }
 
-    (NativeList<VertexPositionNormalTexture> Vertices, NativeList<ushort> Indices) _modelData;
+    (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) _modelData;
     Core.Graphics.Buffer _vb;
     Core.Graphics.Buffer _ib;
+    Core.Graphics.Buffer _cb;
     Shader _vs;
     Shader _ps;
     InputLayout _inputLayout;
@@ -42,13 +52,12 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void LoadContent()
     {
-        _modelData = Geometry.ComputeTeapot(1.0f, 25, true, false);
+        //_modelData = Geometry.ComputeGeoSphere(1.0f, 5, false, false);
+        _modelData = Geometry.ComputeTeapot(2.0f, 5, false, false);
 
+        _cb = GraphicsDevice.CreateBuffer(BufferDescription.Constant<MatrixBufferType>());
         _vb = GraphicsDevice.CreateBuffer(_modelData.Vertices.AsSpan(), BufferDescription.Vertex(0, 0));
         _ib = GraphicsDevice.CreateBuffer(_modelData.Indices.AsSpan(), BufferDescription.Index(0));
-
-        _modelData.Vertices.Dispose();
-        _modelData.Indices.Dispose();
 
         var triangleCode = File.ReadAllBytes(Path.Combine("Assets", "Triangle.hlsl"));
 
@@ -56,6 +65,7 @@ public sealed partial class Luna : Application<Luna>
             ShaderType.Vertex,
             triangleCode,
             "VSMain",
+            true,
             false,
             "Triangle_VS"));
 
@@ -63,13 +73,14 @@ public sealed partial class Luna : Application<Luna>
             ShaderType.Pixel,
             triangleCode,
             "PSMain",
+            true,
             false,
             "Triangle_PS"));
 
         _inputLayout = GraphicsDevice.CreateInputLayout(VertexPositionNormalTexture.Layout, _vs);
     }
 
-    protected override void Update(GameTime gameTime)
+    protected override unsafe void Update(GameTime gameTime)
     {
         if (Keyboard.IsKeyPressed(KeyboardKey.Escape))
         {
@@ -88,6 +99,15 @@ public sealed partial class Luna : Application<Luna>
                 _frameCount = 0;
             }
         }
+
+        MatrixBufferType mvp = new()
+        {
+            World = Matrix4x4.Identity,
+            View = Matrix4x4.CreateLookAt(new Vector3(.0f, .0f, -5.0f), Vector3.UnitZ, Vector3.UnitY),
+            Proj = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(85.0f), 1280.0f / 720.0f, 0.1f, 1000.0f)
+        };
+
+        GraphicsDevice.UpdateBuffer(_cb, ref mvp);
     }
 
     protected override void Draw(GameTime gameTime)
@@ -96,8 +116,9 @@ public sealed partial class Luna : Application<Luna>
         GraphicsDevice.SetVertexShader(_vs);
         GraphicsDevice.SetPixelShader(_ps);
         GraphicsDevice.SetInputLayout(_inputLayout);
-        GraphicsDevice.SetVertexBuffer(_vb, _vb.ByteStride, 0, 0);
-        GraphicsDevice.SetIndexBuffer(_ib, IndexFormat.UInt16, 0);
+        GraphicsDevice.SetConstantBuffer(_cb, ShaderType.Vertex, 0);
+        GraphicsDevice.SetVertexBuffer(_vb);
+        GraphicsDevice.SetIndexBuffer(_ib);
         GraphicsDevice.DrawIndexed(_ib.Count, 0, 0);
     }
 
@@ -105,6 +126,7 @@ public sealed partial class Luna : Application<Luna>
     {
         _inputLayout?.Dispose();
         _ps?.Dispose();
+        _cb?.Dispose();
         _vs?.Dispose();
         _ib?.Dispose();
         _vb?.Dispose();

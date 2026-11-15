@@ -28,15 +28,15 @@
     <GraphicsDebug Condition="'$(GraphicsDebug)' == ''">$(_TortureDebugConfig)</GraphicsDebug>
     <TortureLog Condition="'$(TortureLog)' == ''">$(_TortureDebugConfig)</TortureLog>
   </PropertyGroup>
-  
+
   <PropertyGroup Condition="'$(TrackAllocations)' == 'true'">
     <DefineConstants>$(DefineConstants);TRACK_ALLOCATIONS</DefineConstants>
   </PropertyGroup>
-  
+
   <PropertyGroup Condition="'$(GraphicsDebug)' == 'true'">
     <DefineConstants>$(DefineConstants);GRAPHICS_DEBUG</DefineConstants>
   </PropertyGroup>
-  
+
   <PropertyGroup Condition="'$(TortureLog)' == 'true'">
     <DefineConstants>$(DefineConstants);TORTURE_LOG</DefineConstants>
   </PropertyGroup>

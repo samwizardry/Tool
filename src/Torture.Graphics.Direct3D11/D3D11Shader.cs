@@ -8,25 +8,30 @@ using Vortice.Direct3D11;
 
 namespace Torture.Graphics.Direct3D11;
 
-public sealed unsafe class D3D11Shader : Shader
+internal sealed unsafe class D3D11Shader : Shader
 {
-    public D3D11Shader(ID3D11Device5 device, in ShaderDescription description)
+    public D3D11Shader(ID3D11Device5 device, in ShaderDescription desc)
     {
         Blob code = default!;
         Blob errorMsgs = default!;
 
         try
         {
-            string profile = description.ShaderType switch
+            string profile = desc.ShaderType switch
             {
                 ShaderType.Vertex => "vs_5_0",
                 ShaderType.Pixel => "ps_5_0",
-                _ => throw new NotSupportedException($"Shader type {description.ShaderType} not supported.")
+                _ => throw new NotSupportedException($"Shader type {desc.ShaderType} not supported.")
             };
 
             ShaderFlags flags = ShaderFlags.None;
 
-            if (description.Debug)
+            if (desc.PackAsRowMajor)
+            {
+                flags |= ShaderFlags.PackMatrixRowMajor;
+            }
+
+            if (desc.Debug)
             {
                 flags |= ShaderFlags.Debug;
             }
@@ -37,16 +42,16 @@ public sealed unsafe class D3D11Shader : Shader
 
             Result result;
 
-            fixed (byte* srcData = description.ShaderSource)
+            fixed (byte* srcData = desc.ShaderSource)
             {
-                // sourceName в который передается DebugName может принимать значение null
+                // sourceName (receiving DebugName) can accept a null value
                 result = Compiler.Compile(
                     srcData,
-                    (uint)description.ShaderSource.Length,
-                    description.DebugName!,
+                    (uint)desc.ShaderSource.Length,
+                    desc.DebugName!,
                     null,
                     null,
-                    description.EntryPoint,
+                    desc.EntryPoint,
                     profile,
                     flags,
                     EffectFlags.None,
@@ -56,14 +61,14 @@ public sealed unsafe class D3D11Shader : Shader
             if (result.Failure)
             {
                 string error = errorMsgs != null ? errorMsgs.AsString() : "Unknown shader compilation error.";
-                throw new InvalidOperationException($"Shader compilation failed ({description.DebugName}): {error}");
+                throw new InvalidOperationException($"Shader compilation failed ({desc.DebugName}): {error}");
             }
 
-            Native = description.ShaderType switch
+            Native = desc.ShaderType switch
             {
                 ShaderType.Vertex => device.CreateVertexShader(code),
                 ShaderType.Pixel => device.CreatePixelShader(code),
-                _ => throw new NotSupportedException($"Shader type {description.ShaderType} not supported."),
+                _ => throw new NotSupportedException($"Shader type {desc.ShaderType} not supported."),
             };
 
             Bytecode = code.AsBytes();

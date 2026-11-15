@@ -4,16 +4,15 @@ using Vortice.Direct3D11;
 
 namespace Torture.Graphics.Direct3D11;
 
-
-public sealed class D3D11InputLayout : InputLayout
+internal sealed class D3D11InputLayout : InputLayout
 {
-    public D3D11InputLayout(ID3D11Device5 device, in VertexLayout description, D3D11Shader shader)
+    public D3D11InputLayout(ID3D11Device5 device, in VertexLayout layout, D3D11Shader shader)
     {
-        InputElementDescription[] nativeDescription = new InputElementDescription[description.Elements.Length];
+        InputElementDescription[] nativeDescription = new InputElementDescription[layout.Elements.Length];
 
-        for (int i = 0; i < description.Elements.Length; ++i)
+        for (int i = 0; i < layout.Elements.Length; ++i)
         {
-            VertexElement element = description.Elements[i];
+            VertexElement element = layout.Elements[i];
 
             nativeDescription[i].SemanticName = element.SemanticName.ToD3D11SemanticName();
             nativeDescription[i].SemanticIndex = element.SemanticIndex;

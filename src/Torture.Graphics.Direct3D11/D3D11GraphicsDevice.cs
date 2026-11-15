@@ -1,4 +1,9 @@
-﻿using Torture.Core.Diagnostics;
+﻿using System.Diagnostics;
+using System.Numerics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+
+using SharpGen.Runtime;
 
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
@@ -10,10 +15,12 @@ using Vortice.Mathematics;
 using static Vortice.Direct3D11.D3D11;
 using static Vortice.DXGI.DXGI;
 
+using CoreGraphics = Torture.Core.Graphics;
+
 namespace Torture.Graphics.Direct3D11;
 
 /// <inheritdoc />
-public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
+public sealed class D3D11GraphicsDevice : CoreGraphics.GraphicsDevice
 {
     private static readonly FeatureLevel[] FeatureLevels = [
         FeatureLevel.Level_11_1,
@@ -36,7 +43,7 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
     private ID3D11Texture2D _depthStencilBuffer = null!;
     private ID3D11DepthStencilView _depthStencilView = null!;
 
-    public D3D11GraphicsDevice(Core.Graphics.GraphicsDeviceOptions options,
+    public D3D11GraphicsDevice(CoreGraphics.GraphicsDeviceOptions options,
         nint hwnd, SizeI clientSize, Format colorFormat = Format.B8G8R8A8_UNorm, Format depthStencilFormat = Format.D24_UNorm_S8_UInt)
         : base(options)
     {
@@ -49,30 +56,31 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
         try
         {
             ClientSize = clientSize;
-            
+
             /*
-             * Родной формат для Windows (DWM и Direct2D): оконный менеджер Windows (Desktop Window Manager) внутри себя работает именно в BGRA8
-             * Для SwapChain (буфера экрана) всегда берём B8G8R8A8_UNorm.
+             * Native format for Windows (DWM and Direct2D): the Desktop Window Manager internally operates in BGRA8.
+             * Always prefer B8G8R8A8_UNorm for the swap chain back buffer.
              */
             _colorFormat = colorFormat;
 
             /*
-             * Буфер глубины и трафарета (Depth-Stencil Buffer) решает две задачи:
-             * Depth (Z-буфер): хранит расстояние от камеры до каждого пикселя в диапазоне [0.0 .. 1.0], чтобы близкие объекты перекрывали дальние.
-             * Stencil (Трафарет): хранит 8-битное целое число (0..255) на каждый пиксель. Используется для спецэффектов: масок интерфейса, обводки выделенных объектов (Outlines), порталов, декалей.
+             * Depth-Stencil Buffer serves two purposes:
+             * Depth (Z-buffer): stores distance from camera to each pixel in range [0.0 .. 1.0] so closer objects occlude farther ones.
+             * Stencil: stores an 8-bit integer (0..255) per pixel. Used for masking, outlines, portals, decals.
              *
-             * Формат                       Разрядность Depth   Разрядность Stencil
-             * Format.D24_UNorm_S8_UInt     24 бита             8 бит (0..255)
-             *      Классический универсальный выбор, если тебе нужен Stencil (трафарет) и сцена небольшая/средняя.
+             * Format                       Depth Precision     Stencil Precision
+             * Format.D24_UNorm_S8_UInt     24 bits             8 bits (0..255)
+             *      Classic versatile choice when stencil is required for small/medium scenes.
              *
-             * Format.D32_Float             32 бита             Нет (0 бит)
-             *      Современный стандарт для 3D-движков и больших открытых пространств, когда Stencil не нужен. За те же 4 байта на пиксель даёт гораздо более высокую точность глубины и спасает от мерцания текстур вдалеке (Z-fighting).
+             * Format.D32_Float             32 bits             None (0 bits)
+             *      Modern standard for 3D engines and large open spaces when stencil is not needed.
+             *      Provides higher depth precision for the same 4 bytes/pixel, preventing distant Z-fighting.
              *
-             * Format.D32_Float_S8X24_UInt  32 бита             8 бит (+24 бита пустых для выравнивания)
-             *      Когда нужно и 32-битная точность глубины, и Stencil, но весит в 2 раза больше (8 байт на пиксель).
+             * Format.D32_Float_S8X24_UInt  32 bits             8 bits (+24 alignment padding bits)
+             *      When both 32-bit depth precision and stencil are required (8 bytes per pixel).
              *
-             * Format.Unknown               Нет                 Нет
-             *      Для чистых 2D-игр без проверки глубины (экономит видеопамять).
+             * Format.Unknown               None                None
+             *      For pure 2D rendering without depth testing (conserves VRAM).
              */
             _depthStencilFormat = depthStencilFormat;
 
@@ -92,7 +100,7 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
                     }
                     else
                     {
-                        Log.Warning("D3D11", "Validation requested, but D3D11 SDK layers are not installed " +
+                        Core.Diagnostics.Log.Warning("D3D11", "Validation requested, but D3D11 SDK layers are not installed " +
                                              "(Settings > System > Optional features > Graphics Tools).");
                     }
                 }
@@ -141,7 +149,7 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
             _infoQueue = options.EnableValidation ? _device.QueryInterfaceOrNull<ID3D11InfoQueue>() : null;
             if (_infoQueue != null)
             {
-                Log.Info("D3D11", "Debug layer enabled.");
+                Core.Diagnostics.Log.Info("D3D11", "Debug layer enabled.");
                 if (options.BreakOnError && System.Diagnostics.Debugger.IsAttached)
                 {
                     _infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, true);
@@ -195,7 +203,7 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override Core.Graphics.GraphicsAPI API => Core.Graphics.GraphicsAPI.D3D11;
+    public override CoreGraphics.GraphicsAPI API => CoreGraphics.GraphicsAPI.D3D11;
 
     /// <inheritdoc />
     public override SizeI ClientSize { get; protected set; }
@@ -301,9 +309,12 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
             presentFlags |= PresentFlags.AllowTearing;
         }
 
-        var result = _swapChain.Present(syncInterval, presentFlags);
+#if GRAPHICS_DEBUG
+        _swapChain.Present(syncInterval, presentFlags).CheckError();
+#else
+        _swapChain.Present(syncInterval, presentFlags);
+#endif
         FlushDebugMessages();
-        result.CheckError();
         return true;
     }
 
@@ -313,68 +324,147 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
         _imContext.Flush();
     }
 
-    #endregion
+#endregion
 
     #region Resource Creation & Binding
 
     /// <inheritdoc />
-    public override Core.Graphics.Buffer CreateBuffer<T>(ReadOnlySpan<T> data, in Core.Graphics.BufferDescription desc)
+    public override CoreGraphics.Buffer CreateBuffer<T>(ReadOnlySpan<T> data, in CoreGraphics.BufferDescription desc)
     {
         return D3D11Buffer.Create(_device, data, desc);
     }
 
     /// <inheritdoc />
-    public override Core.Graphics.Buffer CreateBuffer(in Core.Graphics.BufferDescription desc)
+    public override CoreGraphics.Buffer CreateBuffer(in CoreGraphics.BufferDescription desc)
     {
         return D3D11Buffer.Create(_device, desc);
     }
 
     /// <inheritdoc />
-    public override Core.Graphics.Shader CreateShader(in Core.Graphics.ShaderDescription desc)
+    public override CoreGraphics.Shader CreateShader(in CoreGraphics.ShaderDescription desc)
     {
         return new D3D11Shader(_device, desc);
     }
 
     /// <inheritdoc />
-    public override Core.Graphics.InputLayout CreateInputLayout(in Core.Graphics.VertexLayout desc, Core.Graphics.Shader shader)
+    public override CoreGraphics.InputLayout CreateInputLayout(in CoreGraphics.VertexLayout layout, CoreGraphics.Shader shader)
     {
-        return new D3D11InputLayout(_device, desc, (D3D11Shader)shader);
+        return new D3D11InputLayout(_device, layout, (D3D11Shader)shader);
     }
 
     /// <inheritdoc />
-    public override void SetVertexBuffer(Core.Graphics.Buffer buffer, uint byteStride, uint slot = 0, uint byteOffset = 0)
+    public override unsafe void UpdateBuffer<T>(CoreGraphics.Buffer buffer, ReadOnlySpan<T> data, uint byteOffset = 0)
+    {
+#if GRAPHICS_DEBUG
+        if (data.IsEmpty)
+        {
+            throw new ArgumentException("Data was empty.", nameof(data));
+        }
+#endif
+
+        var d3dBuffer = (D3D11Buffer)buffer;
+        uint dataByteSize = (uint)(sizeof(T) * data.Length);
+
+#if GRAPHICS_DEBUG
+        if (byteOffset + dataByteSize > d3dBuffer.ByteSize)
+        {
+            throw new ArgumentOutOfRangeException(nameof(data), "Data size exceeds buffer capacity.");
+        }
+#endif
+
+        fixed (T* srcPtr = data)
+        {
+            MapMode mode = byteOffset == 0 ? MapMode.WriteDiscard : MapMode.WriteNoOverwrite;
+            var map = _imContext.Map(d3dBuffer.Native, 0, mode, Vortice.Direct3D11.MapFlags.None);
+
+            T* dstPtr = (T*)map.DataPointer + byteOffset;
+            Buffer.MemoryCopy(srcPtr, dstPtr, d3dBuffer.ByteSize - byteOffset, dataByteSize);
+
+            _imContext.Unmap(d3dBuffer.Native, 0);
+        }
+    }
+
+    public override unsafe void UpdateBuffer<T>(CoreGraphics.Buffer buffer, ref T data, uint byteOffset = 0)
     {
         var d3dBuffer = (D3D11Buffer)buffer;
-        _imContext.IASetVertexBuffer(slot, d3dBuffer.Native, byteStride, byteOffset);
+
+#if GRAPHICS_DEBUG
+        if (byteOffset + (uint)sizeof(T) > d3dBuffer.ByteSize)
+        {
+            throw new ArgumentOutOfRangeException(nameof(data), "Data size exceeds buffer capacity.");
+        }
+#endif
+
+        MapMode mode = byteOffset == 0 ? MapMode.WriteDiscard : MapMode.WriteNoOverwrite;
+        var map = _imContext.Map(d3dBuffer.Native, 0, mode, Vortice.Direct3D11.MapFlags.None);
+
+        *(T*)((byte*)map.DataPointer + byteOffset) = data;
+
+        _imContext.Unmap(d3dBuffer.Native, 0);
     }
 
     /// <inheritdoc />
-    public override void SetIndexBuffer(Core.Graphics.Buffer buffer, Core.Graphics.IndexFormat format = Core.Graphics.IndexFormat.UInt32, uint byteOffset = 0)
+    public override void SetVertexBuffer(CoreGraphics.Buffer buffer, uint slot = 0, uint byteOffset = 0)
     {
         var d3dBuffer = (D3D11Buffer)buffer;
-        _imContext.IASetIndexBuffer(d3dBuffer.Native, format.ToDXGIFormat(), byteOffset);
+        _imContext.IASetVertexBuffer(slot, d3dBuffer.Native, d3dBuffer.ByteStride, byteOffset);
     }
 
     /// <inheritdoc />
-    public override void SetVertexShader(Core.Graphics.Shader shader)
+    public override void SetIndexBuffer(CoreGraphics.Buffer buffer, uint byteOffset = 0)
+    {
+        var d3dBuffer = (D3D11Buffer)buffer;
+        _imContext.IASetIndexBuffer(d3dBuffer.Native, ((CoreGraphics.IndexFormat)d3dBuffer.ByteStride).ToDXGIFormat(), byteOffset);
+    }
+
+    public override void SetConstantBuffer(CoreGraphics.Buffer buffer, CoreGraphics.ShaderType stage, uint slot)
+    {
+        var d3dBuffer = (D3D11Buffer)buffer;
+        switch (stage)
+        {
+            case CoreGraphics.ShaderType.Vertex:
+                _imContext.VSSetConstantBuffer(slot, d3dBuffer.Native);
+                break;
+            case CoreGraphics.ShaderType.Hull:
+                _imContext.HSSetConstantBuffer(slot, d3dBuffer.Native);
+                break;
+            case CoreGraphics.ShaderType.Domain:
+                _imContext.DSSetConstantBuffer(slot, d3dBuffer.Native);
+                break;
+            case CoreGraphics.ShaderType.Geometry:
+                _imContext.GSSetConstantBuffer(slot, d3dBuffer.Native);
+                break;
+            case CoreGraphics.ShaderType.Pixel:
+                _imContext.PSSetConstantBuffer(slot, d3dBuffer.Native);
+                break;
+            case CoreGraphics.ShaderType.Compute:
+                _imContext.CSSetConstantBuffer(slot, d3dBuffer.Native);
+                break;
+            default:
+                throw new NotSupportedException();
+        }
+    }
+
+    /// <inheritdoc />
+    public override void SetVertexShader(CoreGraphics.Shader shader)
     {
         _imContext.VSSetShader((ID3D11VertexShader)((D3D11Shader)shader).Native);
     }
 
     /// <inheritdoc />
-    public override void SetPixelShader(Core.Graphics.Shader shader)
+    public override void SetPixelShader(CoreGraphics.Shader shader)
     {
         _imContext.PSSetShader((ID3D11PixelShader)((D3D11Shader)shader).Native);
     }
 
     /// <inheritdoc />
-    public override void SetInputLayout(Core.Graphics.InputLayout inputLayout)
+    public override void SetInputLayout(CoreGraphics.InputLayout inputLayout)
     {
         _imContext.IASetInputLayout(((D3D11InputLayout)inputLayout).Native);
     }
 
     /// <inheritdoc />
-    public override void SetPrimitiveTopology(Core.Graphics.PrimitiveTopology primitiveTopology)
+    public override void SetPrimitiveTopology(CoreGraphics.PrimitiveTopology primitiveTopology)
     {
         _imContext.IASetPrimitiveTopology(primitiveTopology.ToD3D11PrimitiveTopology());
     }
@@ -417,13 +507,13 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override void DrawIndirect(Core.Graphics.Buffer buffer, uint alignedByteOffset = 0)
+    public override void DrawIndirect(CoreGraphics.Buffer buffer, uint alignedByteOffset = 0)
     {
         _imContext.DrawInstancedIndirect(((D3D11Buffer)buffer).Native, alignedByteOffset);
     }
 
     /// <inheritdoc />
-    public override void DrawIndexedIndirect(Core.Graphics.Buffer buffer, uint alignedByteOffset = 0)
+    public override void DrawIndexedIndirect(CoreGraphics.Buffer buffer, uint alignedByteOffset = 0)
     {
         _imContext.DrawIndexedInstancedIndirect(((D3D11Buffer)buffer).Native, alignedByteOffset);
     }
@@ -439,7 +529,7 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override void DispatchIndirect(Core.Graphics.Buffer buffer, uint alignedByteOffset = 0)
+    public override void DispatchIndirect(CoreGraphics.Buffer buffer, uint alignedByteOffset = 0)
     {
         _imContext.DispatchIndirect(((D3D11Buffer)buffer).Native, alignedByteOffset);
     }
@@ -545,6 +635,7 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
         {
             return;
         }
+
         ulong count = _infoQueue.NumStoredMessages;
         for (ulong i = 0; i < count; i++)
         {
@@ -553,16 +644,17 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
             {
                 case MessageSeverity.Corruption:
                 case MessageSeverity.Error:
-                    Log.Error("D3D11", $"({msg.Id}): {msg.Description}");
+                    Core.Diagnostics.Log.Error("D3D11", $"({msg.Id}): {msg.Description}");
                     break;
                 case MessageSeverity.Warning:
-                    Log.Warning("D3D11", $"({msg.Id}): {msg.Description}");
+                    Core.Diagnostics.Log.Warning("D3D11", $"({msg.Id}): {msg.Description}");
                     break;
                 default:
-                    Log.Info("D3D11", $"({msg.Id}): {msg.Description}");
+                    Core.Diagnostics.Log.Info("D3D11", $"({msg.Id}): {msg.Description}");
                     break;
             }
         }
+
         _infoQueue.ClearStoredMessages();
     }
 
@@ -572,18 +664,22 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
         {
             return;
         }
+
         if (DXGIGetDebugInterface1(out IDXGIInfoQueue? dxgiInfoQueue).Success && dxgiInfoQueue != null)
         {
             dxgiInfoQueue.ClearStoredMessages(DebugAll);
             dxgiDebug.ReportLiveObjects(DebugAll, ReportLiveObjectFlags.Detail | ReportLiveObjectFlags.IgnoreInternal);
+
             ulong count = dxgiInfoQueue.GetNumStoredMessages(DebugAll);
             for (ulong i = 0; i < count; i++)
             {
                 InfoQueueMessage msg = dxgiInfoQueue.GetMessage(DebugAll, i);
-                Log.Warning("DXGI", $"{msg.Severity} ({msg.Id}): {msg.Description}");
+                Core.Diagnostics.Log.Warning("DXGI", $"{msg.Severity} ({msg.Id}): {msg.Description}");
             }
+
             dxgiInfoQueue.Dispose();
         }
+
         dxgiDebug.Dispose();
     }
 
@@ -595,11 +691,11 @@ public sealed class D3D11GraphicsDevice : Core.Graphics.GraphicsDevice
             if (leak.TryGetTarget(out var target))
             {
                 // Same style as D3D11/DXGI output: [SharpGen Warning] (0x000001DF...): Live instance of ...
-                Log.Warning("SharpGen", $"(0x{target.NativePointer:X16}): Live instance of {target.GetType().Name} was not disposed.");
+                Core.Diagnostics.Log.Warning("SharpGen", $"(0x{target.NativePointer:X16}): Live instance of {target.GetType().Name} was not disposed.");
             }
             else
             {
-                Log.Warning("SharpGen", "Active tracking reference with an already collected target.");
+                Core.Diagnostics.Log.Warning("SharpGen", "Active tracking reference with an already collected target.");
             }
         }
     }

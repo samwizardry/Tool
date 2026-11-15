@@ -19,8 +19,5 @@ public abstract class Buffer : IDisposable
     /// </summary>
     public uint Count => ByteSize / ByteStride;
 
-    public abstract void UpdateBuffer<T>(ReadOnlySpan<T> data, uint byteOffset = 0)
-        where T : unmanaged;
-
     public abstract void Dispose();
 }

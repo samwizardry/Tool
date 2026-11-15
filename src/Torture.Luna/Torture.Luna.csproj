@@ -2,12 +2,12 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <!-- Workstation GC: для клиентской игры это правильно. Server GC = куча на каждое ядро,
-       больше памяти, его потоки конкурируют с потоками игры/рендера. -->
+    <!-- Workstation GC: suitable for client games. Server GC allocates a heap per core,
+       consumes more memory, and its threads contend with game/render threads. -->
     <ServerGarbageCollection>false</ServerGarbageCollection>
-    <!-- Background GC: gen2 идёт параллельно с кадром. Без него SustainedLowLatency бесполезен. -->
+    <!-- Background GC: Gen2 collections run concurrently with frames. SustainedLowLatency is ineffective without it. -->
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
-    <!-- Не отдавать освобождённые сегменты ОС, а держать их про запас: меньше скачков при повторном росте кучи. -->
+    <!-- Retain committed segments instead of returning them to the OS to minimize latency spikes during heap growth. -->
     <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
   </PropertyGroup>
 

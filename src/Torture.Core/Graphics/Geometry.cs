@@ -1,7 +1,5 @@
 ﻿using System.Numerics;
 
-using Brutal.Collections;
-
 using Torture.Core.Collections;
 using Torture.Core.Math;
 
@@ -51,11 +49,11 @@ public static class Geometry
     /// <summary>
     /// Cube (aka a Hexahedron) or Box.
     /// </summary>
-    public static (NativeList<VertexPositionNormalTexture> Vertices, NativeList<ushort> Indices) ComputeBox(
+    public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeBox(
         Vector3 size, bool rhcoords, bool invertn)
     {
-        NativeList<VertexPositionNormalTexture> vertices = [];
-        NativeList<ushort> indices = [];
+        List<VertexPositionNormalTexture> vertices = [];
+        List<ushort> indices = [];
 
         // A box has six faces, each one pointing in a different direction.
         const int faceCount = 6;
@@ -99,7 +97,9 @@ public static class Geometry
 
         // Build RH above
         if (!rhcoords)
+        {
             ReverseWinding(indices.AsSpan(), vertices.AsSpan());
+        }
 
         if (invertn)
             InvertNormals(vertices.AsSpan());
@@ -110,14 +110,14 @@ public static class Geometry
     /// <summary>
     /// Sphere.
     /// </summary>
-    public static (NativeList<VertexPositionNormalTexture> Vertices, NativeList<ushort> Indices) ComputeSphere(
+    public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeSphere(
         float diameter, int tessellation, bool rhcoords, bool invertn)
     {
         if (tessellation < 3)
             throw new ArgumentException("Tessellation parameter must be at least 3.", nameof(tessellation));
 
-        NativeList<VertexPositionNormalTexture> vertices = [];
-        NativeList<ushort> indices = [];
+        List<VertexPositionNormalTexture> vertices = [];
+        List<ushort> indices = [];
 
         int verticalSegments = tessellation;
         int horizontalSegments = tessellation * 2;
@@ -190,15 +190,20 @@ public static class Geometry
     /// <summary>
     /// Geodesic sphere.
     /// </summary>
-    public static (NativeList<VertexPositionNormalTexture> Vertices, NativeList<ushort> Indices) ComputeGeoSphere(
-        float diameter, int tessellation, bool rhcoords, bool invertn = false)
+    public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeGeoSphere(
+        float diameter, int tessellation, bool rhcoords, bool invertn)
     {
-        NativeList<VertexPositionNormalTexture> vertices = [];
-        NativeList<ushort> indices = [.. OctahedronIndices];
+        List<VertexPositionNormalTexture> vertices = [];
+        List<ushort> indices = [.. OctahedronIndices];
+
+        // Makes an undirected edge. Rather than overloading comparison operators to give us the (a,b)==(b,a) property,
+        // we'll just ensure that the larger of the two goes first. This'll simplify things greatly.
+        static (ushort, ushort) MakeUndirectedEdge(ushort a, ushort b) => (System.Math.Max(a, b), System.Math.Min(a, b));
+
         float radius = diameter * 0.5f;
 
         // Start with an octahedron; copy the data into the vertex/index collection.
-        using NativeList<Vector3> vertexPositions = [.. OctahedronVertices];
+        List<Vector3> vertexPositions = [.. OctahedronVertices];
 
         // We know these values by looking at the above index list for the octahedron. Despite the subdivisions that are
         // about to go on, these values aren't ever going to change because the vertices don't move around in the array.
@@ -212,12 +217,12 @@ public static class Geometry
                 throw new InvalidOperationException("Indices count must be a multiple of 3.");
 
             // We use this to keep track of which edges have already been subdivided.
-            int triangleCount = indices.Count / 3;
-            using NativeEdgeMap subdividedEdges = new(triangleCount * 3);
+            Dictionary<(ushort, ushort), ushort> subdividedEdges = [];
 
             // The new index collection after subdivision.
-            NativeList<ushort> newIndices = [];
+            List<ushort> newIndices = [];
             newIndices.EnsureCapacity(indices.Count * 4);
+            int triangleCount = indices.Count / 3;
 
             for (int iTriangle = 0; iTriangle < triangleCount; ++iTriangle)
             {
@@ -232,23 +237,21 @@ public static class Geometry
                 // Function that, when given the index of two vertices, creates a new vertex at the midpoint of those vertices.
                 void DivideEdge(ushort i0, ushort i1, out ushort outIndex)
                 {
-                    ushort high = System.Math.Max(i0, i1);
-                    ushort low = System.Math.Min(i0, i1);
-                    uint edgeKey = ((uint)high << 16) | low;
+                    (ushort, ushort) edge = MakeUndirectedEdge(i0, i1);
 
                     // Check to see if we've already generated this vertex
-                    if (!subdividedEdges.TryGetValue(edgeKey, out outIndex))
+                    if (!subdividedEdges.TryGetValue(edge, out outIndex))
                     {
                         // Haven't generated this vertex before: so add it now
                         Vector3 outVertex = (vertexPositions[i0] + vertexPositions[i1]) * 0.5f;
 
                         CheckIndexOverflow((uint)vertexPositions.Count);
 
-                        outIndex = (ushort)vertexPositions.Count.Value;
+                        outIndex = (ushort)vertexPositions.Count;
                         vertexPositions.Add(outVertex);
 
                         // Now add it to the map.
-                        subdividedEdges.Add(edgeKey, outIndex);
+                        subdividedEdges.Add(edge, outIndex);
                     }
                 }
 
@@ -287,7 +290,6 @@ public static class Geometry
                 IndexPushBack(newIndices, iv12);
             }
 
-            indices.Dispose();
             indices = newIndices;
         }
 
@@ -335,7 +337,7 @@ public static class Geometry
             if (isOnPrimeMeridian)
             {
                 CheckIndexOverflow((uint)vertices.Count);
-                ushort newIndex = (ushort)vertices.Count.Value;
+                ushort newIndex = (ushort)vertices.Count;
 
                 // copy this vertex, correct the texture coordinate, and add the vertex
                 var v = vertex;
@@ -440,7 +442,7 @@ public static class Geometry
                 else
                 {
                     CheckIndexOverflow((uint)vertices.Count);
-                    indices[poleIdxPtr] = (ushort)vertices.Count.Value;
+                    indices[poleIdxPtr] = (ushort)vertices.Count;
                     vertices.Add(newPoleVertex);
                 }
             }
@@ -462,14 +464,14 @@ public static class Geometry
     /// <summary>
     /// Cylinder.
     /// </summary>
-    public static (NativeList<VertexPositionNormalTexture> Vertices, NativeList<ushort> Indices) ComputeCylinder(
-        float height, float diameter, int tessellation, bool rhcoords, bool invertn = false)
+    public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeCylinder(
+        float height, float diameter, int tessellation, bool rhcoords, bool invertn)
     {
         if (tessellation < 3)
             throw new ArgumentException("Tessellation parameter must be at least 3.", nameof(tessellation));
 
-        NativeList<VertexPositionNormalTexture> vertices = [];
-        NativeList<ushort> indices = [];
+        List<VertexPositionNormalTexture> vertices = [];
+        List<ushort> indices = [];
 
         float radius = diameter * 0.5f;
         float halfHeight = height * 0.5f;
@@ -573,14 +575,14 @@ public static class Geometry
     /// <summary>
     /// Cone.
     /// </summary>
-    public static (NativeList<VertexPositionNormalTexture> Vertices, NativeList<ushort> Indices) ComputeCone(
-        float diameter, float height, int tessellation, bool rhcoords, bool invertn = false)
+    public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeCone(
+        float diameter, float height, int tessellation, bool rhcoords, bool invertn)
     {
         if (tessellation < 3)
             throw new ArgumentException("Tessellation parameter must be at least 3.", nameof(tessellation));
 
-        NativeList<VertexPositionNormalTexture> vertices = [];
-        NativeList<ushort> indices = [];
+        List<VertexPositionNormalTexture> vertices = [];
+        List<ushort> indices = [];
 
         float radius = diameter * 0.5f;
         float halfHeight = height * 0.5f;
@@ -665,14 +667,14 @@ public static class Geometry
     /// <summary>
     /// Torus (doughnut shape).
     /// </summary>
-    public static (NativeList<VertexPositionNormalTexture> Vertices, NativeList<ushort> Indices) ComputeTorus(
-        float diameter, float thickness, int tessellation, bool rhcoords, bool invertn = false)
+    public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeTorus(
+        float diameter, float thickness, int tessellation, bool rhcoords, bool invertn)
     {
         if (tessellation < 3)
             throw new ArgumentException("Tessellation parameter must be at least 3.", nameof(tessellation));
 
-        NativeList<VertexPositionNormalTexture> vertices = [];
-        NativeList<ushort> indices = [];
+        List<VertexPositionNormalTexture> vertices = [];
+        List<ushort> indices = [];
 
         int stride = tessellation + 1;
         int vertexCount = stride * stride;
@@ -744,11 +746,11 @@ public static class Geometry
     /// <summary>
     /// Tetrahedron (triangular pyramid).
     /// </summary>
-    public static (NativeList<VertexPositionNormalTexture> Vertices, NativeList<ushort> Indices) ComputeTetrahedron(
-        float size, bool rhcoords, bool invertn = false)
+    public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeTetrahedron(
+        float size, bool rhcoords, bool invertn)
     {
-        NativeList<VertexPositionNormalTexture> vertices = [];
-        NativeList<ushort> indices = [];
+        List<VertexPositionNormalTexture> vertices = [];
+        List<ushort> indices = [];
 
         const int faceCount = 4;
         const int vertexCount = faceCount * 3;
@@ -817,11 +819,11 @@ public static class Geometry
     /// <summary>
     /// Octahedron.
     /// </summary>
-    public static (NativeList<VertexPositionNormalTexture> Vertices, NativeList<ushort> Indices) ComputeOctahedron(
-        float size, bool rhcoords, bool invertn = false)
+    public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeOctahedron(
+        float size, bool rhcoords, bool invertn)
     {
-        NativeList<VertexPositionNormalTexture> vertices = [];
-        NativeList<ushort> indices = [];
+        List<VertexPositionNormalTexture> vertices = [];
+        List<ushort> indices = [];
 
         const int faceCount = 8;
         const int vertexCount = faceCount * 3;
@@ -873,11 +875,11 @@ public static class Geometry
     /// <summary>
     /// Dodecahedron (12 pentagonal faces).
     /// </summary>
-    public static (NativeList<VertexPositionNormalTexture> Vertices, NativeList<ushort> Indices) ComputeDodecahedron(
-        float size, bool rhcoords, bool invertn = false)
+    public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeDodecahedron(
+        float size, bool rhcoords, bool invertn)
     {
-        NativeList<VertexPositionNormalTexture> vertices = [];
-        NativeList<ushort> indices = [];
+        List<VertexPositionNormalTexture> vertices = [];
+        List<ushort> indices = [];
 
         const int faceCount = 12;
         const int vertexCount = faceCount * 5; // 5 vertices per pentagonal face
@@ -994,11 +996,11 @@ public static class Geometry
     /// <summary>
     /// Icosahedron (20 triangular faces).
     /// </summary>
-    public static (NativeList<VertexPositionNormalTexture> Vertices, NativeList<ushort> Indices) ComputeIcosahedron(
-        float size, bool rhcoords, bool invertn = false)
+    public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeIcosahedron(
+        float size, bool rhcoords, bool invertn)
     {
-        NativeList<VertexPositionNormalTexture> vertices = [];
-        NativeList<ushort> indices = [];
+        List<VertexPositionNormalTexture> vertices = [];
+        List<ushort> indices = [];
 
         const int faceCount = 20;
         const int vertexCount = faceCount * 3;
@@ -1102,7 +1104,7 @@ public static class Geometry
     /// <summary>
     /// Computes the Utah Teapot (Martin Newell, 1975).
     /// </summary>
-    public static (NativeList<VertexPositionNormalTexture> Vertices, NativeList<ushort> Indices) ComputeTeapot(
+    public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeTeapot(
         float size, int tessellation, bool rhcoords, bool invertn)
     {
         if (tessellation < 1)
@@ -1119,10 +1121,10 @@ public static class Geometry
         int quadsPerPatch = tessellation * tessellation;
         int totalIndices = TeapotData.PatchCount * quadsPerPatch * 6;
 
-        NativeList<VertexPositionNormalTexture> vertices = [];
+        List<VertexPositionNormalTexture> vertices = [];
         vertices.EnsureCapacity(totalVertices);
 
-        NativeList<ushort> indices = [];
+        List<ushort> indices = [];
         indices.EnsureCapacity(totalIndices);
 
         float scale = size * 0.5f;
@@ -1130,7 +1132,7 @@ public static class Geometry
         for (int patchIndex = 0; patchIndex < TeapotData.PatchCount; ++patchIndex)
         {
             ReadOnlySpan<Vector3> patch = TeapotData.GetPatch(patchIndex);
-            ushort patchBaseIndex = (ushort)vertices.Count.Value;
+            ushort patchBaseIndex = (ushort)vertices.Count;
 
             // Generate vertices for this patch
             for (int vIndex = 0; vIndex <= tessellation; ++vIndex)
@@ -1227,13 +1229,13 @@ public static class Geometry
     }
 
     // Collection types used when generating the geometry.
-    private static void IndexPushBack(NativeList<ushort> indices, uint value)
+    private static void IndexPushBack(List<ushort> indices, uint value)
     {
         CheckIndexOverflow(value);
         indices.Add((ushort)value);
     }
 
-    private static void IndexPushBack(NativeList<ushort> indices, int value)
+    private static void IndexPushBack(List<ushort> indices, int value)
     {
         CheckIndexOverflow(value);
         indices.Add((ushort)value);

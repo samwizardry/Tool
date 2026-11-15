@@ -4,7 +4,7 @@ using CoreGraphics = Torture.Core.Graphics;
 
 namespace Torture.Graphics.Direct3D11;
 
-public sealed class D3D11Buffer : CoreGraphics.Buffer
+internal sealed class D3D11Buffer : CoreGraphics.Buffer
 {
     private D3D11Buffer(ID3D11Buffer buffer)
     {
@@ -123,11 +123,6 @@ public sealed class D3D11Buffer : CoreGraphics.Buffer
             MiscFlags = miscFlags,
             StructureByteStride = isStructured ? desc.ByteStride : 0
         };
-    }
-
-    public override void UpdateBuffer<T>(ReadOnlySpan<T> data, uint byteOffset = 0)
-    {
-        throw new NotImplementedException();
     }
 
     public override void Dispose()

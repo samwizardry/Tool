@@ -1,4 +1,7 @@
-﻿using Vortice.Mathematics;
+﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+
+using Vortice.Mathematics;
 
 namespace Torture.Core.Graphics;
 
@@ -60,9 +63,17 @@ public abstract class GraphicsDevice : IDisposable
 
     public abstract InputLayout CreateInputLayout(in VertexLayout layout, Shader shader);
 
-    public abstract void SetVertexBuffer(Buffer buffer, uint byteStride, uint slot = 0, uint byteOffset = 0);
+    public abstract void UpdateBuffer<T>(Buffer buffer, ReadOnlySpan<T> data, uint byteOffset = 0)
+        where T : unmanaged;
 
-    public abstract void SetIndexBuffer(Buffer buffer, IndexFormat format = IndexFormat.UInt32, uint byteOffset = 0);
+    public abstract void UpdateBuffer<T>(Buffer buffer, ref T data, uint byteOffset = 0)
+        where T : unmanaged;
+
+    public abstract void SetVertexBuffer(Buffer buffer, uint slot = 0, uint byteOffset = 0);
+
+    public abstract void SetIndexBuffer(Buffer buffer, uint byteOffset = 0);
+
+    public abstract void SetConstantBuffer(Buffer buffer, ShaderType stage, uint slot);
 
     public abstract void SetVertexShader(Shader shader);
 
