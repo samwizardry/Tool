@@ -1,0 +1,116 @@
+﻿// Portions of this file are derived from NVRHI (https://github.com/NVIDIA-RTX/NVRHI)
+// Copyright (c) 2014-2026 NVIDIA Corporation. All rights reserved.
+// Licensed under the MIT License. See THIRD-PARTY-NOTICES.md in the project root for license information.
+
+namespace Torture.Core.Graphics;
+
+/// <summary>
+/// Describes a texture resource to be created on the graphics device.
+/// </summary>
+public readonly record struct TextureDescription
+{
+    public readonly uint Width;
+    public readonly uint Height;
+    public readonly uint Depth;
+    public readonly uint ArraySize;
+    public readonly uint MipLevels;
+    public readonly uint SampleCount;
+    public readonly uint SampleQuality;
+    public readonly Format Format;
+    public readonly TextureDimension Dimension;
+    public readonly TextureUsage Usage;
+    public readonly CpuAccess CpuAccess;
+    public readonly string? DebugName;
+
+    public TextureDescription(
+        uint width,
+        uint height = 1,
+        uint depth = 1,
+        uint arraySize = 1,
+        uint mipLevels = 1,
+        uint sampleCount = 1,
+        uint sampleQuality = 0,
+        Format format = Format.RGBA8_UNorm,
+        TextureDimension dimension = TextureDimension.Texture2D,
+        TextureUsage usage = TextureUsage.ShaderResource,
+        CpuAccess cpuAccess = CpuAccess.None,
+        string? debugName = null)
+    {
+        Width = width;
+        Height = height;
+        Depth = depth;
+        ArraySize = arraySize;
+        MipLevels = mipLevels;
+        SampleCount = sampleCount;
+        SampleQuality = sampleQuality;
+        Format = format;
+        Dimension = dimension;
+        Usage = usage;
+        CpuAccess = cpuAccess;
+        DebugName = debugName;
+    }
+
+    public static TextureDescription Texture2D(
+        uint width,
+        uint height,
+        Format format = Format.RGBA8_UNorm,
+        uint mipLevels = 1,
+        TextureUsage usage = TextureUsage.ShaderResource,
+        CpuAccess cpuAccess = CpuAccess.None,
+        string? debugName = null) =>
+        new(
+            width: width,
+            height: height,
+            depth: 1,
+            arraySize: 1,
+            mipLevels: mipLevels,
+            sampleCount: 1,
+            sampleQuality: 0,
+            format: format,
+            dimension: TextureDimension.Texture2D,
+            usage: usage,
+            cpuAccess: cpuAccess,
+            debugName: debugName);
+
+    public static TextureDescription TextureCube(
+        uint size,
+        Format format = Format.RGBA8_UNorm,
+        uint mipLevels = 1,
+        TextureUsage usage = TextureUsage.ShaderResource,
+        string? debugName = null) =>
+        new(
+            width: size,
+            height: size,
+            depth: 1,
+            arraySize: 6,
+            mipLevels: mipLevels,
+            sampleCount: 1,
+            sampleQuality: 0,
+            format: format,
+            dimension: TextureDimension.TextureCube,
+            usage: usage,
+            cpuAccess: CpuAccess.None,
+            debugName: debugName);
+
+    public static TextureDescription Texture3D(
+        uint width,
+        uint height,
+        uint depth,
+        Format format = Format.RGBA8_UNorm,
+        uint mipLevels = 1,
+        TextureUsage usage = TextureUsage.ShaderResource,
+        string? debugName = null) =>
+        new(
+            width: width,
+            height: height,
+            depth: depth,
+            arraySize: 1,
+            mipLevels: mipLevels,
+            sampleCount: 1,
+            sampleQuality: 0,
+            format: format,
+            dimension: TextureDimension.Texture3D,
+            usage: usage,
+            cpuAccess: CpuAccess.None,
+            debugName: debugName);
+}

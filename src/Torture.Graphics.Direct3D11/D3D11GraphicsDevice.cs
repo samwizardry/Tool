@@ -1,11 +1,4 @@
-﻿using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-
-using SharpGen.Runtime;
-
-using Vortice.Direct3D;
+﻿using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.Direct3D11.Debug;
 using Vortice.DXGI;
@@ -15,12 +8,12 @@ using Vortice.Mathematics;
 using static Vortice.Direct3D11.D3D11;
 using static Vortice.DXGI.DXGI;
 
-using CoreGraphics = Torture.Core.Graphics;
+using CoreGfx = Torture.Core.Graphics;
 
 namespace Torture.Graphics.Direct3D11;
 
 /// <inheritdoc />
-public sealed class D3D11GraphicsDevice : CoreGraphics.GraphicsDevice
+public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
 {
     private static readonly FeatureLevel[] FeatureLevels = [
         FeatureLevel.Level_11_1,
@@ -43,7 +36,7 @@ public sealed class D3D11GraphicsDevice : CoreGraphics.GraphicsDevice
     private ID3D11Texture2D _depthStencilBuffer = null!;
     private ID3D11DepthStencilView _depthStencilView = null!;
 
-    public D3D11GraphicsDevice(CoreGraphics.GraphicsDeviceOptions options,
+    public D3D11GraphicsDevice(CoreGfx.GraphicsDeviceOptions options,
         nint hwnd, SizeI clientSize, Format colorFormat = Format.B8G8R8A8_UNorm, Format depthStencilFormat = Format.D24_UNorm_S8_UInt)
         : base(options)
     {
@@ -203,7 +196,7 @@ public sealed class D3D11GraphicsDevice : CoreGraphics.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override CoreGraphics.GraphicsAPI API => CoreGraphics.GraphicsAPI.D3D11;
+    public override CoreGfx.GraphicsAPI API => CoreGfx.GraphicsAPI.D3D11;
 
     /// <inheritdoc />
     public override SizeI ClientSize { get; protected set; }
@@ -329,31 +322,43 @@ public sealed class D3D11GraphicsDevice : CoreGraphics.GraphicsDevice
     #region Resource Creation & Binding
 
     /// <inheritdoc />
-    public override CoreGraphics.Buffer CreateBuffer<T>(ReadOnlySpan<T> data, in CoreGraphics.BufferDescription desc)
+    public override CoreGfx.Buffer CreateBuffer<T>(ReadOnlySpan<T> data, in CoreGfx.BufferDescription desc)
     {
-        return D3D11Buffer.Create(_device, data, desc);
+        return D3D11Buffer.Create(_device, data, in desc);
     }
 
     /// <inheritdoc />
-    public override CoreGraphics.Buffer CreateBuffer(in CoreGraphics.BufferDescription desc)
+    public override CoreGfx.Buffer CreateBuffer(in CoreGfx.BufferDescription desc)
     {
-        return D3D11Buffer.Create(_device, desc);
+        return D3D11Buffer.Create(_device, in desc);
     }
 
     /// <inheritdoc />
-    public override CoreGraphics.Shader CreateShader(in CoreGraphics.ShaderDescription desc)
+    public override CoreGfx.Shader CreateShader(in CoreGfx.ShaderDescription desc)
     {
-        return new D3D11Shader(_device, desc);
+        return new D3D11Shader(_device, in desc);
     }
 
     /// <inheritdoc />
-    public override CoreGraphics.InputLayout CreateInputLayout(in CoreGraphics.VertexLayout layout, CoreGraphics.Shader shader)
+    public override CoreGfx.InputLayout CreateInputLayout(in CoreGfx.VertexLayout layout, CoreGfx.Shader shader)
     {
-        return new D3D11InputLayout(_device, layout, (D3D11Shader)shader);
+        return new D3D11InputLayout(_device, in layout, (D3D11Shader)shader);
     }
 
     /// <inheritdoc />
-    public override unsafe void UpdateBuffer<T>(CoreGraphics.Buffer buffer, ReadOnlySpan<T> data, uint byteOffset = 0)
+    public override CoreGfx.Texture CreateTexture<T>(ReadOnlySpan<T> data, in CoreGfx.TextureDescription desc)
+    {
+        return D3D11Texture.Create(_device, data, in desc);
+    }
+
+    /// <inheritdoc />
+    public override CoreGfx.Texture CreateTexture(in CoreGfx.TextureDescription desc)
+    {
+        return D3D11Texture.Create(_device, in desc);
+    }
+
+    /// <inheritdoc />
+    public override unsafe void UpdateBuffer<T>(CoreGfx.Buffer buffer, ReadOnlySpan<T> data, uint byteOffset = 0)
     {
 #if GRAPHICS_DEBUG
         if (data.IsEmpty)
@@ -384,7 +389,8 @@ public sealed class D3D11GraphicsDevice : CoreGraphics.GraphicsDevice
         }
     }
 
-    public override unsafe void UpdateBuffer<T>(CoreGraphics.Buffer buffer, ref T data, uint byteOffset = 0)
+    /// <inheritdoc />
+    public override unsafe void UpdateBuffer<T>(CoreGfx.Buffer buffer, ref T data, uint byteOffset = 0)
     {
         var d3dBuffer = (D3D11Buffer)buffer;
 
@@ -404,69 +410,109 @@ public sealed class D3D11GraphicsDevice : CoreGraphics.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override void SetVertexBuffer(CoreGraphics.Buffer buffer, uint slot = 0, uint byteOffset = 0)
+    public override void UpdateTexture<T>(CoreGfx.Texture texture, ReadOnlySpan<T> data, uint mipLevel = 0, uint arraySlice = 0)
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <inheritdoc />
+    public override void SetPrimitiveTopology(CoreGfx.PrimitiveTopology primitiveTopology)
+    {
+        _imContext.IASetPrimitiveTopology(primitiveTopology.ToD3D11PrimitiveTopology());
+    }
+
+    /// <inheritdoc />
+    public override void SetVertexBuffer(CoreGfx.Buffer buffer, uint slot = 0, uint byteOffset = 0)
     {
         var d3dBuffer = (D3D11Buffer)buffer;
         _imContext.IASetVertexBuffer(slot, d3dBuffer.Native, d3dBuffer.ByteStride, byteOffset);
     }
 
     /// <inheritdoc />
-    public override void SetIndexBuffer(CoreGraphics.Buffer buffer, uint byteOffset = 0)
+    public override void SetIndexBuffer(CoreGfx.Buffer buffer, uint byteOffset = 0)
     {
         var d3dBuffer = (D3D11Buffer)buffer;
-        _imContext.IASetIndexBuffer(d3dBuffer.Native, ((CoreGraphics.IndexFormat)d3dBuffer.ByteStride).ToDXGIFormat(), byteOffset);
+        _imContext.IASetIndexBuffer(d3dBuffer.Native, ((CoreGfx.IndexFormat)d3dBuffer.ByteStride).ToDXGIFormat(), byteOffset);
     }
 
-    public override void SetConstantBuffer(CoreGraphics.Buffer buffer, CoreGraphics.ShaderType stage, uint slot)
+    /// <inheritdoc />
+    public override void SetConstantBuffer(CoreGfx.Buffer buffer, CoreGfx.ShaderType stage, uint slot)
     {
         var d3dBuffer = (D3D11Buffer)buffer;
-        switch (stage)
+
+        if ((stage & CoreGfx.ShaderType.Vertex) == CoreGfx.ShaderType.Vertex)
         {
-            case CoreGraphics.ShaderType.Vertex:
-                _imContext.VSSetConstantBuffer(slot, d3dBuffer.Native);
-                break;
-            case CoreGraphics.ShaderType.Hull:
-                _imContext.HSSetConstantBuffer(slot, d3dBuffer.Native);
-                break;
-            case CoreGraphics.ShaderType.Domain:
-                _imContext.DSSetConstantBuffer(slot, d3dBuffer.Native);
-                break;
-            case CoreGraphics.ShaderType.Geometry:
-                _imContext.GSSetConstantBuffer(slot, d3dBuffer.Native);
-                break;
-            case CoreGraphics.ShaderType.Pixel:
-                _imContext.PSSetConstantBuffer(slot, d3dBuffer.Native);
-                break;
-            case CoreGraphics.ShaderType.Compute:
-                _imContext.CSSetConstantBuffer(slot, d3dBuffer.Native);
-                break;
-            default:
-                throw new NotSupportedException();
+            _imContext.VSSetConstantBuffer(slot, d3dBuffer.Native);
+        }
+        if ((stage & CoreGfx.ShaderType.Hull) == CoreGfx.ShaderType.Hull)
+        {
+            _imContext.HSSetConstantBuffer(slot, d3dBuffer.Native);
+        }
+        if ((stage & CoreGfx.ShaderType.Domain) == CoreGfx.ShaderType.Domain)
+        {
+            _imContext.DSSetConstantBuffer(slot, d3dBuffer.Native);
+        }
+        if ((stage & CoreGfx.ShaderType.Geometry) == CoreGfx.ShaderType.Geometry)
+        {
+            _imContext.GSSetConstantBuffer(slot, d3dBuffer.Native);
+        }
+        if ((stage & CoreGfx.ShaderType.Pixel) == CoreGfx.ShaderType.Pixel)
+        {
+            _imContext.PSSetConstantBuffer(slot, d3dBuffer.Native);
+        }
+        if ((stage & CoreGfx.ShaderType.Compute) == CoreGfx.ShaderType.Compute)
+        {
+            _imContext.CSSetConstantBuffer(slot, d3dBuffer.Native);
         }
     }
 
     /// <inheritdoc />
-    public override void SetVertexShader(CoreGraphics.Shader shader)
+    public override void SetVertexShader(CoreGfx.Shader shader)
     {
         _imContext.VSSetShader((ID3D11VertexShader)((D3D11Shader)shader).Native);
     }
 
     /// <inheritdoc />
-    public override void SetPixelShader(CoreGraphics.Shader shader)
+    public override void SetPixelShader(CoreGfx.Shader shader)
     {
         _imContext.PSSetShader((ID3D11PixelShader)((D3D11Shader)shader).Native);
     }
 
     /// <inheritdoc />
-    public override void SetInputLayout(CoreGraphics.InputLayout inputLayout)
+    public override void SetInputLayout(CoreGfx.InputLayout inputLayout)
     {
         _imContext.IASetInputLayout(((D3D11InputLayout)inputLayout).Native);
     }
 
     /// <inheritdoc />
-    public override void SetPrimitiveTopology(CoreGraphics.PrimitiveTopology primitiveTopology)
+    public override void SetTexture(CoreGfx.Texture texture, CoreGfx.ShaderType stage, uint slot)
     {
-        _imContext.IASetPrimitiveTopology(primitiveTopology.ToD3D11PrimitiveTopology());
+        var d3dTexture = (D3D11Texture)texture;
+
+        if ((stage & CoreGfx.ShaderType.Vertex) == CoreGfx.ShaderType.Vertex)
+        {
+            _imContext.VSSetShaderResource(slot, d3dTexture?.Srv);
+        }
+        if ((stage & CoreGfx.ShaderType.Hull) == CoreGfx.ShaderType.Hull)
+        {
+            _imContext.HSSetShaderResource(slot, d3dTexture?.Srv);
+        }
+        if ((stage & CoreGfx.ShaderType.Domain) == CoreGfx.ShaderType.Domain)
+        {
+            _imContext.DSSetShaderResource(slot, d3dTexture?.Srv);
+        }
+        if ((stage & CoreGfx.ShaderType.Geometry) == CoreGfx.ShaderType.Geometry)
+        {
+            _imContext.GSSetShaderResource(slot, d3dTexture?.Srv);
+        }
+        if ((stage & CoreGfx.ShaderType.Pixel) == CoreGfx.ShaderType.Pixel)
+        {
+            _imContext.PSSetShaderResource(slot, d3dTexture?.Srv!);
+        }
+        if ((stage & CoreGfx.ShaderType.Compute) == CoreGfx.ShaderType.Compute)
+        {
+            _imContext.CSSetShaderResource(slot, d3dTexture?.Srv);
+        }
     }
 
     #endregion
@@ -507,13 +553,13 @@ public sealed class D3D11GraphicsDevice : CoreGraphics.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override void DrawIndirect(CoreGraphics.Buffer buffer, uint alignedByteOffset = 0)
+    public override void DrawIndirect(CoreGfx.Buffer buffer, uint alignedByteOffset = 0)
     {
         _imContext.DrawInstancedIndirect(((D3D11Buffer)buffer).Native, alignedByteOffset);
     }
 
     /// <inheritdoc />
-    public override void DrawIndexedIndirect(CoreGraphics.Buffer buffer, uint alignedByteOffset = 0)
+    public override void DrawIndexedIndirect(CoreGfx.Buffer buffer, uint alignedByteOffset = 0)
     {
         _imContext.DrawIndexedInstancedIndirect(((D3D11Buffer)buffer).Native, alignedByteOffset);
     }
@@ -529,7 +575,7 @@ public sealed class D3D11GraphicsDevice : CoreGraphics.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override void DispatchIndirect(CoreGraphics.Buffer buffer, uint alignedByteOffset = 0)
+    public override void DispatchIndirect(CoreGfx.Buffer buffer, uint alignedByteOffset = 0)
     {
         _imContext.DispatchIndirect(((D3D11Buffer)buffer).Native, alignedByteOffset);
     }

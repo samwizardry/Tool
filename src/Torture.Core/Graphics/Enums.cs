@@ -1,8 +1,12 @@
-﻿namespace Torture.Core.Graphics;
+﻿// Portions of this file are derived from NVRHI (https://github.com/NVIDIA-RTX/NVRHI)
+// Copyright (c) 2014-2026 NVIDIA Corporation. All rights reserved.
+// Licensed under the MIT License. See THIRD-PARTY-NOTICES.md in the project root for license information.
+
+namespace Torture.Core.Graphics;
 
 public enum GraphicsAPI : byte
 {
-    Default,
+    Default = 0,
     D3D11,
     D3D12,
     Vulkan,
@@ -23,146 +27,126 @@ public enum BufferUsage : ushort
     RawBuffer = 1 << 7
 }
 
+[Flags]
+public enum TextureUsage : byte
+{
+    None = 0,
+    ShaderResource = 1 << 0,
+    RenderTarget = 1 << 1,
+    DepthStencil = 1 << 2,
+    UnorderedAccess = 1 << 3
+}
+
 public enum CpuAccess : byte
 {
     /// <summary>
-    /// Only for GPU (best performance).
+    /// Resource is accessible only by the GPU (best performance).
     /// </summary>
     None = 0,
+
     /// <summary>
-    /// CPU can write to VRAM (Dynamic / Upload).
+    /// CPU can write to the resource (Dynamic / Upload).
     /// </summary>
     Write,
+
     /// <summary>
-    /// CPU can read from VRAM (Staging / Readback).
+    /// CPU can read from the resource (Staging / Readback).
     /// </summary>
     Read
 }
 
-public enum Format : uint
+/// <summary>
+/// Resource data formats modeled after nvrhi::Format.
+/// </summary>
+public enum Format : byte
 {
-    Unknown = 0u,
-    R32G32B32A32_Typeless = 1u,
-    R32G32B32A32_Float = 2u,
-    R32G32B32A32_UInt = 3u,
-    R32G32B32A32_SInt = 4u,
-    R32G32B32_Typeless = 5u,
-    R32G32B32_Float = 6u,
-    R32G32B32_UInt = 7u,
-    R32G32B32_SInt = 8u,
-    R16G16B16A16_Typeless = 9u,
-    R16G16B16A16_Float = 10u,
-    R16G16B16A16_UNorm = 11u,
-    R16G16B16A16_UInt = 12u,
-    R16G16B16A16_SNorm = 13u,
-    R16G16B16A16_SInt = 14u,
-    R32G32_Typeless = 15u,
-    R32G32_Float = 16u,
-    R32G32_UInt = 17u,
-    R32G32_SInt = 18u,
-    R32G8X24_Typeless = 19u,
-    D32_Float_S8X24_UInt = 20u,
-    R32_Float_X8X24_Typeless = 21u,
-    X32_Typeless_G8X24_UInt = 22u,
-    R10G10B10A2_Typeless = 23u,
-    R10G10B10A2_UNorm = 24u,
-    R10G10B10A2_UInt = 25u,
-    R11G11B10_Float = 26u,
-    R8G8B8A8_Typeless = 27u,
-    R8G8B8A8_UNorm = 28u,
-    R8G8B8A8_UNorm_SRgb = 29u,
-    R8G8B8A8_UInt = 30u,
-    R8G8B8A8_SNorm = 31u,
-    R8G8B8A8_SInt = 32u,
-    R16G16_Typeless = 33u,
-    R16G16_Float = 34u,
-    R16G16_UNorm = 35u,
-    R16G16_UInt = 36u,
-    R16G16_SNorm = 37u,
-    R16G16_SInt = 38u,
-    R32_Typeless = 39u,
-    D32_Float = 40u,
-    R32_Float = 41u,
-    R32_UInt = 42u,
-    R32_SInt = 43u,
-    R24G8_Typeless = 44u,
-    D24_UNorm_S8_UInt = 45u,
-    R24_UNorm_X8_Typeless = 46u,
-    X24_Typeless_G8_UInt = 47u,
-    R8G8_Typeless = 48u,
-    R8G8_UNorm = 49u,
-    R8G8_UInt = 50u,
-    R8G8_SNorm = 51u,
-    R8G8_SInt = 52u,
-    R16_Typeless = 53u,
-    R16_Float = 54u,
-    D16_UNorm = 55u,
-    R16_UNorm = 56u,
-    R16_UInt = 57u,
-    R16_SNorm = 58u,
-    R16_SInt = 59u,
-    R8_Typeless = 60u,
-    R8_UNorm = 61u,
-    R8_UInt = 62u,
-    R8_SNorm = 63u,
-    R8_SInt = 64u,
-    A8_UNorm = 65u,
-    R1_UNorm = 66u,
-    R9G9B9E5_SharedExp = 67u,
-    R8G8_B8G8_UNorm = 68u,
-    G8R8_G8B8_UNorm = 69u,
-    BC1_Typeless = 70u,
-    BC1_UNorm = 71u,
-    BC1_UNorm_SRgb = 72u,
-    BC2_Typeless = 73u,
-    BC2_UNorm = 74u,
-    BC2_UNorm_SRgb = 75u,
-    BC3_Typeless = 76u,
-    BC3_UNorm = 77u,
-    BC3_UNorm_SRgb = 78u,
-    BC4_Typeless = 79u,
-    BC4_UNorm = 80u,
-    BC4_SNorm = 81u,
-    BC5_Typeless = 82u,
-    BC5_UNorm = 83u,
-    BC5_SNorm = 84u,
-    B5G6R5_UNorm = 85u,
-    B5G5R5A1_UNorm = 86u,
-    B8G8R8A8_UNorm = 87u,
-    B8G8R8X8_UNorm = 88u,
-    R10G10B10_Xr_Bias_A2_UNorm = 89u,
-    B8G8R8A8_Typeless = 90u,
-    B8G8R8A8_UNorm_SRgb = 91u,
-    B8G8R8X8_Typeless = 92u,
-    B8G8R8X8_UNorm_SRgb = 93u,
-    BC6H_Typeless = 94u,
-    BC6H_Uf16 = 95u,
-    BC6H_Sf16 = 96u,
-    BC7_Typeless = 97u,
-    BC7_UNorm = 98u,
-    BC7_UNorm_SRgb = 99u,
-    AYUV = 100u,
-    Y410 = 101u,
-    Y416 = 102u,
-    NV12 = 103u,
-    P010 = 104u,
-    P016 = 105u,
-    Opaque420 = 106u,
-    YUY2 = 107u,
-    Y210 = 108u,
-    Y216 = 109u,
-    NV11 = 110u,
-    AI44 = 111u,
-    IA44 = 112u,
-    P8 = 113u,
-    A8P8 = 114u,
-    B4G4R4A4_UNorm = 115u,
-    P208 = 130u,
-    V208 = 131u,
-    V408 = 132u,
-    Sampler_Feedback_Min_Mip_Opaque = 189u,
-    Sampler_Feedback_Mip_Region_Used_Opaque = 190u,
-    A4B4G4R4_UNorm = 191u
+    Unknown = 0,
+
+    R8_UInt,
+    R8_SInt,
+    R8_UNorm,
+    R8_SNorm,
+    RG8_UInt,
+    RG8_SInt,
+    RG8_UNorm,
+    RG8_SNorm,
+    R16_UInt,
+    R16_SInt,
+    R16_UNorm,
+    R16_SNorm,
+    R16_Float,
+    BGRA4_UNorm,
+    B5G6R5_UNorm,
+    B5G5R5A1_UNorm,
+    RGBA8_UInt,
+    RGBA8_SInt,
+    RGBA8_UNorm,
+    RGBA8_SNorm,
+    BGRA8_UNorm,
+    SRGBA8_UNorm,
+    SBGRA8_UNorm,
+    R10G10B10A2_UNorm,
+    R11G11B10_Float,
+    RG16_UInt,
+    RG16_SInt,
+    RG16_UNorm,
+    RG16_SNorm,
+    RG16_Float,
+    R32_UInt,
+    R32_SInt,
+    R32_Float,
+    RGBA16_UInt,
+    RGBA16_SInt,
+    RGBA16_Float,
+    RGBA16_UNorm,
+    RGBA16_SNorm,
+    RG32_UInt,
+    RG32_SInt,
+    RG32_Float,
+    RGB32_UInt,
+    RGB32_SInt,
+    RGB32_Float,
+    RGBA32_UInt,
+    RGBA32_SInt,
+    RGBA32_Float,
+
+    D16,
+    D24S8,
+    X24G8_UInt,
+    D32,
+    D32S8,
+    X32G8_UInt,
+
+    BC1_UNorm,
+    BC1_UNorm_Srgb,
+    BC2_UNorm,
+    BC2_UNorm_Srgb,
+    BC3_UNorm,
+    BC3_UNorm_Srgb,
+    BC4_UNorm,
+    BC4_SNorm,
+    BC5_UNorm,
+    BC5_SNorm,
+    BC6H_UFloat,
+    BC6H_SFloat,
+    BC7_UNorm,
+    BC7_UNorm_Srgb,
+
+    Count
+}
+
+public enum TextureDimension : byte
+{
+    Unknown = 0,
+    Texture1D,
+    Texture1DArray,
+    Texture2D,
+    Texture2DArray,
+    TextureCube,
+    TextureCubeArray,
+    Texture2DMS,
+    Texture2DMSArray,
+    Texture3D
 }
 
 /// <summary>
@@ -170,21 +154,11 @@ public enum Format : uint
 /// </summary>
 public enum IndexFormat : byte
 {
-    UInt32 = 4,
     UInt16 = 2,
+    UInt32 = 4
 }
 
 [Flags]
-public enum ClearFlags : byte
-{
-    None = 0,
-    Target = 1,
-    Depth = 2,
-    Stencil = 4,
-    DepthStencil = Depth | Stencil,
-    All = Target | Depth | Stencil
-}
-
 public enum ShaderType : ushort
 {
     None = 0x0000,
@@ -204,16 +178,114 @@ public enum ShaderType : ushort
     Intersection = 0x1000,
     Callable = 0x2000,
     AllRayTracing = 0x3F00,
-    All = 0x3FFF,
-};
+    All = 0x3FFF
+}
 
 public enum PrimitiveTopology : byte
 {
     Undefined = 0,
-    PointList = 1,
-    LineList = 2,
-    LineStrip = 3,
-    TriangleList = 4,
-    TriangleStrip = 5,
-    TriangleFan = 6
+    PointList,
+    LineList,
+    LineStrip,
+    TriangleList,
+    TriangleStrip,
+    TriangleFan,
+    TriangleListWithAdjacency,
+    TriangleStripWithAdjacency,
+    PatchList
+}
+
+public enum BlendFactor : byte
+{
+    Zero = 1,
+    One = 2,
+    SrcColor = 3,
+    InvSrcColor = 4,
+    SrcAlpha = 5,
+    InvSrcAlpha = 6,
+    DstAlpha = 7,
+    InvDstAlpha = 8,
+    DstColor = 9,
+    InvDstColor = 10,
+    SrcAlphaSaturate = 11,
+    ConstantColor = 14,
+    InvConstantColor = 15,
+    Src1Color = 16,
+    InvSrc1Color = 17,
+    Src1Alpha = 18,
+    InvSrc1Alpha = 19
+}
+
+public enum BlendOp : byte
+{
+    Add = 1,
+    Subtract = 2,
+    ReverseSubtract = 3,
+    Min = 4,
+    Max = 5
+}
+
+[Flags]
+public enum ColorMask : byte
+{
+    None = 0,
+    Red = 1 << 0,
+    Green = 1 << 1,
+    Blue = 1 << 2,
+    Alpha = 1 << 3,
+    All = Red | Green | Blue | Alpha
+}
+
+public enum StencilOp : byte
+{
+    Keep = 1,
+    Zero = 2,
+    Replace = 3,
+    IncrementAndClamp = 4,
+    DecrementAndClamp = 5,
+    Invert = 6,
+    IncrementAndWrap = 7,
+    DecrementAndWrap = 8
+}
+
+public enum ComparisonFunc : byte
+{
+    Never = 1,
+    Less = 2,
+    Equal = 3,
+    LessOrEqual = 4,
+    Greater = 5,
+    NotEqual = 6,
+    GreaterOrEqual = 7,
+    Always = 8
+}
+
+public enum RasterFillMode : byte
+{
+    Solid = 0,
+    Wireframe
+}
+
+public enum RasterCullMode : byte
+{
+    Back = 0,
+    Front,
+    None
+}
+
+public enum SamplerAddressMode : byte
+{
+    Clamp = 0,
+    Wrap,
+    Border,
+    Mirror,
+    MirrorOnce
+}
+
+public enum SamplerReductionType : byte
+{
+    Standard = 0,
+    Comparison,
+    Minimum,
+    Maximum
 }

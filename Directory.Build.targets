@@ -1,5 +1,34 @@
 <Project>
   <!-- See https://aka.ms/dotnet/msbuild/customize for more details on customizing your build -->
-  <Target Name="CustomAfterBuildTarget" AfterTargets="Build">
+
+  <!-- Default configuration flags -->
+  <PropertyGroup>
+    <!-- Flag to enable/disable resources copying (can be overridden in individual .csproj or via CLI) -->
+    <CopyResourcesToOutput Condition="'$(CopyResourcesToOutput)' == ''">true</CopyResourcesToOutput>
+  </PropertyGroup>
+
+  <!-- Define items to copy -->
+  <ItemGroup Condition="'$(CopyResourcesToOutput)' == 'true'">
+    <!-- Adjust path depending on where 'resources' folder is located:
+         $(MSBuildThisFileDirectory) points to the root where Directory.Build.targets resides -->
+    <ResourceFiles Include="$(MSBuildThisFileDirectory)resources\**\*" />
+  </ItemGroup>
+
+  <!--
+    Incremental Target:
+    - Inputs/Outputs: skips the target entirely if no source file was modified.
+    - Condition: runs only for executable projects (optional, remove OutputType check if needed for libraries).
+  -->
+  <Target Name="CopyResources"
+          AfterTargets="Build"
+          Condition="'$(CopyResourcesToOutput)' == 'true' and '$(OutputType)' == 'Exe'"
+          Inputs="@(ResourceFiles)"
+          Outputs="@(ResourceFiles->'$(TargetDir)resources\%(RecursiveDir)%(Filename)%(Extension)')">
+
+    <Message Importance="high" Text="Copying modified resources to $(TargetDir)resources..." />
+
+    <Copy SourceFiles="@(ResourceFiles)"
+          DestinationFiles="@(ResourceFiles->'$(TargetDir)resources\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
   </Target>
 </Project>

@@ -63,11 +63,21 @@ public abstract class GraphicsDevice : IDisposable
 
     public abstract InputLayout CreateInputLayout(in VertexLayout layout, Shader shader);
 
+    public abstract Texture CreateTexture<T>(ReadOnlySpan<T> data, in TextureDescription desc)
+        where T : unmanaged;
+
+    public abstract Texture CreateTexture(in TextureDescription desc);
+
     public abstract void UpdateBuffer<T>(Buffer buffer, ReadOnlySpan<T> data, uint byteOffset = 0)
         where T : unmanaged;
 
     public abstract void UpdateBuffer<T>(Buffer buffer, ref T data, uint byteOffset = 0)
         where T : unmanaged;
+
+    public abstract void UpdateTexture<T>(Texture texture, ReadOnlySpan<T> data, uint mipLevel = 0, uint arraySlice = 0)
+        where T : unmanaged;
+
+    public abstract void SetPrimitiveTopology(PrimitiveTopology primitiveTopology);
 
     public abstract void SetVertexBuffer(Buffer buffer, uint slot = 0, uint byteOffset = 0);
 
@@ -81,7 +91,7 @@ public abstract class GraphicsDevice : IDisposable
 
     public abstract void SetInputLayout(InputLayout inputLayout);
 
-    public abstract void SetPrimitiveTopology(PrimitiveTopology primitiveTopology);
+    public abstract void SetTexture(Texture texture, ShaderType stage, uint slot);
 
     #endregion
 

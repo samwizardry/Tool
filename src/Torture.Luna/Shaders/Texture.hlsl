@@ -13,17 +13,24 @@ cbuffer PerFrameBuffer : register(b0)
 //    float4 BaseColor;
 //};
 
+Texture2D gDiffuseMap : register(t0);
+SamplerState smp
+{
+    AddressU = Clamp;
+    AddressV = Wrap;
+};
+
 struct VSInput
 {
     float3 Position : POSITION;
     float3 Normal : NORMAL;
-    float4 Texture : TEXCOORD;
+    float2 Texture : TEXCOORD;
 };
 
 struct PSInput
 {
     float4 Position : SV_POSITION;
-    float4 Color : COLOR;
+    float2 Texture : TEXCOORD;
 };
 
 PSInput VSMain(VSInput input)
@@ -34,11 +41,12 @@ PSInput VSMain(VSInput input)
     result.Position = mul(result.Position, View);
     result.Position = mul(result.Position, Proj);
 
-    result.Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
+    result.Texture = input.Texture;
     return result;
 }
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-    return input.Color;
+    float4 color = gDiffuseMap.Sample(smp, input.Texture);
+    return color;
 }

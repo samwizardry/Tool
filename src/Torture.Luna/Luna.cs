@@ -2,6 +2,8 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
+using StbImageSharp;
+
 using Torture.Core;
 using Torture.Core.Collections;
 using Torture.Core.Graphics;
@@ -34,6 +36,7 @@ public sealed partial class Luna : Application<Luna>
         WindowMode = WindowMode.Windowed;
     }
 
+
     (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) _modelData;
     Core.Graphics.Buffer _vb;
     Core.Graphics.Buffer _ib;
@@ -41,10 +44,12 @@ public sealed partial class Luna : Application<Luna>
     Shader _vs;
     Shader _ps;
     InputLayout _inputLayout;
+    Texture _container;
+    Texture _containerSpecular;
 
     protected override void Initialize()
     {
-        GraphicsDevice.VSync = false;
+        GraphicsDevice.VSync = true;
         GraphicsDevice.ClearColor = new Color4(0.2f, 0.3f, 0.3f, 1.0f);
 
         base.Initialize();
@@ -52,6 +57,7 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void LoadContent()
     {
+
         //_modelData = Geometry.ComputeGeoSphere(1.0f, 5, false, false);
         _modelData = Geometry.ComputeTeapot(2.0f, 5, false, false);
 
@@ -59,7 +65,7 @@ public sealed partial class Luna : Application<Luna>
         _vb = GraphicsDevice.CreateBuffer(_modelData.Vertices.AsSpan(), BufferDescription.Vertex(0, 0));
         _ib = GraphicsDevice.CreateBuffer(_modelData.Indices.AsSpan(), BufferDescription.Index(0));
 
-        var triangleCode = File.ReadAllBytes(Path.Combine("Assets", "Triangle.hlsl"));
+        var triangleCode = File.ReadAllBytes(Path.Combine("Shaders", "Texture.hlsl"));
 
         _vs = GraphicsDevice.CreateShader(new ShaderDescription(
             ShaderType.Vertex,
@@ -78,6 +84,19 @@ public sealed partial class Luna : Application<Luna>
             "Triangle_PS"));
 
         _inputLayout = GraphicsDevice.CreateInputLayout(VertexPositionNormalTexture.Layout, _vs);
+
+        // Load texture
+        // Create texture resource
+        using (var stream = File.OpenRead("resources/textures/container2.png"))
+        {
+            ImageResult image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
+            _container = GraphicsDevice.CreateTexture(image.Data.AsSpan(), TextureDescription.Texture2D((uint)image.Width, (uint)image.Height));
+        }
+
+        //using (var stream = File.OpenRead("resources/textures/container2_specular.png"))
+        //{
+        //    ImageResult image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
+        //}
     }
 
     protected override unsafe void Update(GameTime gameTime)
@@ -112,13 +131,14 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.SetPrimitiveTopology(PrimitiveTopology.TriangleList);
         GraphicsDevice.SetVertexShader(_vs);
         GraphicsDevice.SetPixelShader(_ps);
         GraphicsDevice.SetInputLayout(_inputLayout);
         GraphicsDevice.SetConstantBuffer(_cb, ShaderType.Vertex, 0);
+        GraphicsDevice.SetTexture(_container, ShaderType.Pixel, 0);
         GraphicsDevice.SetVertexBuffer(_vb);
         GraphicsDevice.SetIndexBuffer(_ib);
+        GraphicsDevice.SetPrimitiveTopology(PrimitiveTopology.TriangleList);
         GraphicsDevice.DrawIndexed(_ib.Count, 0, 0);
     }
 
@@ -130,6 +150,8 @@ public sealed partial class Luna : Application<Luna>
         _vs?.Dispose();
         _ib?.Dispose();
         _vb?.Dispose();
+        _container?.Dispose();
+        _containerSpecular?.Dispose();
     }
 
     protected override void Cleanup()

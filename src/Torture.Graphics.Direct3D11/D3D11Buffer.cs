@@ -23,7 +23,7 @@ internal sealed class D3D11Buffer : CoreGraphics.Buffer
         uint byteSize = d3dDesc.ByteWidth > 0 ? d3dDesc.ByteWidth : vertexByteSize * (uint)data.Length;
         uint byteStride = d3dDesc.StructureByteStride > 0 ? d3dDesc.StructureByteStride : vertexByteSize;
 
-        bool isStructured = d3dDesc.MiscFlags.HasFlag(ResourceOptionFlags.BufferStructured);
+        bool isStructured = (d3dDesc.MiscFlags & ResourceOptionFlags.BufferStructured) == ResourceOptionFlags.BufferStructured;
         uint structureByteStride = isStructured ? byteStride : 0;
 
         d3dDesc.ByteWidth = byteSize;
@@ -48,7 +48,7 @@ internal sealed class D3D11Buffer : CoreGraphics.Buffer
     {
         BufferDescription d3dDesc = ToD3DBufferDescription(desc, false);
 
-        bool isStructured = d3dDesc.MiscFlags.HasFlag(ResourceOptionFlags.BufferStructured);
+        bool isStructured = (d3dDesc.MiscFlags & ResourceOptionFlags.BufferStructured) == ResourceOptionFlags.BufferStructured;
         uint structureByteStride = isStructured ? desc.ByteStride : 0;
 
         d3dDesc.StructureByteStride = structureByteStride;
@@ -89,27 +89,27 @@ internal sealed class D3D11Buffer : CoreGraphics.Buffer
         BindFlags bindFlags = BindFlags.None;
         if (desc.CpuAccess != CoreGraphics.CpuAccess.Read)
         {
-            if (desc.Usage.HasFlag(CoreGraphics.BufferUsage.VertexBuffer)) bindFlags |= BindFlags.VertexBuffer;
-            if (desc.Usage.HasFlag(CoreGraphics.BufferUsage.IndexBuffer)) bindFlags |= BindFlags.IndexBuffer;
-            if (desc.Usage.HasFlag(CoreGraphics.BufferUsage.ConstantBuffer)) bindFlags |= BindFlags.ConstantBuffer;
-            if (desc.Usage.HasFlag(CoreGraphics.BufferUsage.ShaderResource) ||
-                desc.Usage.HasFlag(CoreGraphics.BufferUsage.StructuredBuffer)) bindFlags |= BindFlags.ShaderResource;
-            if (desc.Usage.HasFlag(CoreGraphics.BufferUsage.UnorderedAccess)) bindFlags |= BindFlags.UnorderedAccess;
+            if ((desc.Usage & CoreGraphics.BufferUsage.VertexBuffer) == CoreGraphics.BufferUsage.VertexBuffer) bindFlags |= BindFlags.VertexBuffer;
+            if ((desc.Usage & CoreGraphics.BufferUsage.IndexBuffer) == CoreGraphics.BufferUsage.IndexBuffer) bindFlags |= BindFlags.IndexBuffer;
+            if ((desc.Usage & CoreGraphics.BufferUsage.ConstantBuffer) == CoreGraphics.BufferUsage.ConstantBuffer) bindFlags |= BindFlags.ConstantBuffer;
+            if ((desc.Usage & CoreGraphics.BufferUsage.ShaderResource) == CoreGraphics.BufferUsage.ShaderResource ||
+                (desc.Usage & CoreGraphics.BufferUsage.StructuredBuffer) == CoreGraphics.BufferUsage.StructuredBuffer) bindFlags |= BindFlags.ShaderResource;
+            if ((desc.Usage & CoreGraphics.BufferUsage.UnorderedAccess) == CoreGraphics.BufferUsage.UnorderedAccess) bindFlags |= BindFlags.UnorderedAccess;
         }
 
         ResourceOptionFlags miscFlags = ResourceOptionFlags.None;
-        if (desc.Usage.HasFlag(CoreGraphics.BufferUsage.IndirectArguments))
+        if ((desc.Usage & CoreGraphics.BufferUsage.IndirectArguments) == CoreGraphics.BufferUsage.IndirectArguments)
         {
             miscFlags |= ResourceOptionFlags.DrawIndirectArguments;
         }
 
-        bool isStructured = desc.Usage.HasFlag(CoreGraphics.BufferUsage.StructuredBuffer);
+        bool isStructured = (desc.Usage & CoreGraphics.BufferUsage.StructuredBuffer) == CoreGraphics.BufferUsage.StructuredBuffer;
         if (isStructured)
         {
             miscFlags |= ResourceOptionFlags.BufferStructured;
         }
 
-        if (desc.Usage.HasFlag(CoreGraphics.BufferUsage.RawBuffer))
+        if ((desc.Usage & CoreGraphics.BufferUsage.RawBuffer) == CoreGraphics.BufferUsage.RawBuffer)
         {
             miscFlags |= ResourceOptionFlags.BufferAllowRawViews;
         }

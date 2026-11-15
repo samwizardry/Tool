@@ -5,6 +5,7 @@
 
   <ItemGroup>
     <PackageReference Include="SDL3-CS" />
+    <PackageReference Include="StbImageSharp" />
     <PackageReference Include="Vortice.Mathematics" />
   </ItemGroup>
 
