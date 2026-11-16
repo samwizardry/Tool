@@ -92,38 +92,35 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void LoadContent()
     {
+        // States
         _solid = GraphicsDevice.CreateRasterState(RasterStateDescription.CullNone);
         _wireframe = GraphicsDevice.CreateRasterState(RasterStateDescription.Wireframe);
         _rs = _solid;
 
-        _modelData = Geometry.ComputeBox(Vector3.One * 4.0f, true, false);
+        _bilinear = GraphicsDevice.CreateSampler(SamplerDescription.Bilinear);
+        _anisotropic16 = GraphicsDevice.CreateSampler(SamplerDescription.AnisotropicWrap(16.0f));
+        _sampler = _anisotropic16;
 
-        _cb = GraphicsDevice.CreateBuffer(BufferDescription.Constant<MatrixBufferType>());
+        // Buffers
+        _modelData = Geometry.ComputeBox(Vector3.One * 4.0f, true, false);
         _vb = GraphicsDevice.CreateBuffer(_modelData.Vertices.AsSpan(), BufferDescription.Vertex(0, 0));
         _ib = GraphicsDevice.CreateBuffer(_modelData.Indices.AsSpan(), BufferDescription.Index(0));
 
+        // Shaders
         var triangleCode = File.ReadAllBytes(Path.Combine("Shaders", "Texture.hlsl"));
 
-        _vs = GraphicsDevice.CreateShader(new ShaderDescription(
-            ShaderType.Vertex,
-            triangleCode,
-            "VSMain",
-            true,
-            false,
-            "Triangle_VS"));
+        _vs = GraphicsDevice.CreateShader(triangleCode, ShaderDescription.Vertex(
+            debug: true,
+            debugName: "Triangle_VS"));
 
-        _ps = GraphicsDevice.CreateShader(new ShaderDescription(
-            ShaderType.Pixel,
-            triangleCode,
-            "PSMain",
-            true,
-            false,
-            "Triangle_PS"));
+        _ps = GraphicsDevice.CreateShader(triangleCode, ShaderDescription.Pixel(
+            debug: true,
+            debugName: "Triangle_PS"));
 
         _inputLayout = GraphicsDevice.CreateInputLayout(VertexPositionNormalTexture.Layout, _vs);
+        _cb = GraphicsDevice.CreateBuffer(BufferDescription.Constant<MatrixBufferType>());
 
-        // Load texture
-        // Create texture resource
+        // Textures
         using (var stream = File.OpenRead("resources/textures/container2.png"))
         {
             ImageResult image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
@@ -139,10 +136,6 @@ public sealed partial class Luna : Application<Luna>
                 image.Data.AsSpan(),
                 TextureDescription.Texture2D((uint)image.Width, (uint)image.Height, mipLevels: 0));
         }
-
-        _bilinear = GraphicsDevice.CreateSampler(SamplerDescription.Bilinear);
-        _anisotropic16 = GraphicsDevice.CreateSampler(SamplerDescription.AnisotropicWrap(16.0f));
-        _sampler = _anisotropic16;
     }
 
     float _angle = 0.0f;
@@ -223,16 +216,19 @@ public sealed partial class Luna : Application<Luna>
     {
         _solid?.Dispose();
         _wireframe?.Dispose();
-        _inputLayout?.Dispose();
-        _ps?.Dispose();
-        _cb?.Dispose();
-        _vs?.Dispose();
-        _ib?.Dispose();
-        _vb?.Dispose();
-        _container?.Dispose();
-        _containerSpecular?.Dispose();
         _bilinear?.Dispose();
         _anisotropic16?.Dispose();
+
+        _vb?.Dispose();
+        _ib?.Dispose();
+
+        _vs?.Dispose();
+        _ps?.Dispose();
+        _inputLayout?.Dispose();
+        _cb?.Dispose();
+
+        _container?.Dispose();
+        _containerSpecular?.Dispose();
     }
 
     protected override void Cleanup()

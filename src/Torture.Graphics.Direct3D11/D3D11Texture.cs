@@ -33,7 +33,6 @@ internal sealed class D3D11Texture : CoreGfx.Texture
         {
             CoreGfx.FormatInfo.GetSurfaceInfo(desc.Format, desc.Width, desc.Height, out uint rowPitch, out uint slicePitch);
 
-#if GRAPHICS_DEBUG
             uint expectedBytes = slicePitch * desc.Depth;
             uint actualBytes = (uint)(sizeof(T) * data.Length);
             if (actualBytes < expectedBytes)
@@ -41,7 +40,6 @@ internal sealed class D3D11Texture : CoreGfx.Texture
                 throw new ArgumentOutOfRangeException(nameof(data),
                     $"Provided data size ({actualBytes} bytes) is smaller than the required surface size ({expectedBytes} bytes).");
             }
-#endif
 
             if (desc.MipLevels == 1 && desc.ArraySize == 1)
             {

@@ -61,7 +61,7 @@ public abstract class GraphicsDevice : IDisposable
 
     public abstract Buffer CreateBuffer(in BufferDescription desc);
 
-    public abstract Shader CreateShader(in ShaderDescription desc);
+    public abstract Shader CreateShader(ReadOnlySpan<byte> source, in ShaderDescription desc);
 
     public abstract InputLayout CreateInputLayout(in VertexLayout layout, Shader shader);
 

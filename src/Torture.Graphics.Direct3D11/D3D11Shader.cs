@@ -1,16 +1,17 @@
 ﻿using SharpGen.Runtime;
 
-using Torture.Core.Graphics;
-
 using Vortice.D3DCompiler;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 
+using CoreGfx = Torture.Core.Graphics;
+
 namespace Torture.Graphics.Direct3D11;
 
-internal sealed unsafe class D3D11Shader : Shader
+internal sealed unsafe class D3D11Shader : CoreGfx.Shader
 {
-    public D3D11Shader(ID3D11Device5 device, in ShaderDescription desc)
+    public D3D11Shader(ID3D11Device5 device, ReadOnlySpan<byte> source, in CoreGfx.ShaderDescription desc)
+        : base(in desc)
     {
         Blob code = default!;
         Blob errorMsgs = default!;
@@ -19,9 +20,9 @@ internal sealed unsafe class D3D11Shader : Shader
         {
             string profile = desc.ShaderType switch
             {
-                ShaderType.Vertex => "vs_5_0",
-                ShaderType.Pixel => "ps_5_0",
-                _ => throw new NotSupportedException($"Shader type {desc.ShaderType} not supported.")
+                CoreGfx.ShaderType.Vertex => "vs_5_0",
+                CoreGfx.ShaderType.Pixel => "ps_5_0",
+                _ => throw new NotSupportedException()
             };
 
             ShaderFlags flags = ShaderFlags.None;
@@ -33,7 +34,7 @@ internal sealed unsafe class D3D11Shader : Shader
 
             if (desc.Debug)
             {
-                flags |= ShaderFlags.Debug;
+                flags |= ShaderFlags.Debug | ShaderFlags.SkipOptimization;
             }
             else
             {
@@ -42,12 +43,12 @@ internal sealed unsafe class D3D11Shader : Shader
 
             Result result;
 
-            fixed (byte* srcData = desc.ShaderSource)
+            fixed (byte* srcData = source)
             {
                 // sourceName (receiving DebugName) can accept a null value
                 result = Compiler.Compile(
                     srcData,
-                    (uint)desc.ShaderSource.Length,
+                    (uint)source.Length,
                     desc.DebugName!,
                     null,
                     null,
@@ -66,12 +67,15 @@ internal sealed unsafe class D3D11Shader : Shader
 
             Native = desc.ShaderType switch
             {
-                ShaderType.Vertex => device.CreateVertexShader(code),
-                ShaderType.Pixel => device.CreatePixelShader(code),
-                _ => throw new NotSupportedException($"Shader type {desc.ShaderType} not supported."),
+                CoreGfx.ShaderType.Vertex => device.CreateVertexShader(code),
+                CoreGfx.ShaderType.Pixel => device.CreatePixelShader(code),
+                _ => throw new NotSupportedException(),
             };
 
-            Bytecode = code.AsBytes();
+            if (desc.ShaderType == CoreGfx.ShaderType.Vertex)
+            {
+                Bytecode = code.AsBytes();
+            }
         }
         finally
         {
@@ -82,7 +86,7 @@ internal sealed unsafe class D3D11Shader : Shader
 
     public ID3D11DeviceChild Native { get; private set; }
 
-    public byte[] Bytecode { get; private set; }
+    public byte[]? Bytecode { get; private set; }
 
     public override void Dispose()
     {

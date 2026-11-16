@@ -1,18 +1,23 @@
-﻿using Torture.Core.Graphics;
+﻿using Vortice.Direct3D11;
 
-using Vortice.Direct3D11;
+using CoreGfx = Torture.Core.Graphics;
 
 namespace Torture.Graphics.Direct3D11;
 
-internal sealed class D3D11InputLayout : InputLayout
+internal sealed class D3D11InputLayout : CoreGfx.InputLayout
 {
-    public D3D11InputLayout(ID3D11Device5 device, in VertexLayout layout, D3D11Shader shader)
+    public D3D11InputLayout(ID3D11Device5 device, in CoreGfx.VertexLayout layout, D3D11Shader shader)
     {
+        if (shader.ShaderType != CoreGfx.ShaderType.Vertex)
+        {
+            throw new InvalidOperationException();
+        }
+
         InputElementDescription[] nativeDescription = new InputElementDescription[layout.Elements.Length];
 
         for (int i = 0; i < layout.Elements.Length; ++i)
         {
-            VertexElement element = layout.Elements[i];
+            CoreGfx.VertexElement element = layout.Elements[i];
 
             nativeDescription[i].SemanticName = element.SemanticName.ToD3D11SemanticName();
             nativeDescription[i].SemanticIndex = element.SemanticIndex;
@@ -23,7 +28,7 @@ internal sealed class D3D11InputLayout : InputLayout
             nativeDescription[i].InstanceDataStepRate = 0;
         }
 
-        Native = device.CreateInputLayout(nativeDescription, shader.Bytecode);
+        Native = device.CreateInputLayout(nativeDescription, shader.Bytecode!);
     }
 
     public ID3D11InputLayout Native { get; private set; }

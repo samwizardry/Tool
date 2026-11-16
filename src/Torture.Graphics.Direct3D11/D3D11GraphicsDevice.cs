@@ -1,4 +1,6 @@
-﻿using Vortice.Direct3D;
+﻿using SharpGen.Runtime;
+
+using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.Direct3D11.Debug;
 using Vortice.DXGI;
@@ -45,7 +47,7 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
         // Global SharpGen switch: must be set before the first COM wrapper is created.
         if (options.EnableObjectTracking)
         {
-            SharpGen.Runtime.Configuration.EnableObjectTracking = true;
+            Configuration.EnableObjectTracking = true;
         }
 
         try
@@ -153,7 +155,7 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
 
                 _onFirstChanceException = (_, args) =>
                 {
-                    if (args.Exception is SharpGen.Runtime.SharpGenException)
+                    if (args.Exception is SharpGenException)
                     {
                         FlushDebugMessages();
                     }
@@ -315,11 +317,7 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
             presentFlags |= PresentFlags.AllowTearing;
         }
 
-#if GRAPHICS_DEBUG
         _swapChain.Present(syncInterval, presentFlags).CheckError();
-#else
-        _swapChain.Present(syncInterval, presentFlags);
-#endif
         FlushDebugMessages();
         return true;
     }
@@ -353,9 +351,9 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override CoreGfx.Shader CreateShader(in CoreGfx.ShaderDescription desc)
+    public override CoreGfx.Shader CreateShader(ReadOnlySpan<byte> source, in CoreGfx.ShaderDescription desc)
     {
-        return new D3D11Shader(_device, in desc);
+        return new D3D11Shader(_device, source, in desc);
     }
 
     /// <inheritdoc />
@@ -385,22 +383,19 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
     /// <inheritdoc />
     public override unsafe void UpdateBuffer<T>(CoreGfx.Buffer buffer, ReadOnlySpan<T> data, uint byteOffset = 0)
     {
-#if GRAPHICS_DEBUG
         if (data.IsEmpty)
         {
-            throw new ArgumentException("Data was empty.", nameof(data));
+            throw new ArgumentException("Empty data.", nameof(data));
         }
-#endif
 
         var d3dBuffer = (D3D11Buffer)buffer;
+
         uint dataByteSize = (uint)(sizeof(T) * data.Length);
 
-#if GRAPHICS_DEBUG
         if (byteOffset + dataByteSize > d3dBuffer.ByteSize)
         {
             throw new ArgumentOutOfRangeException(nameof(data), "Data size exceeds buffer capacity.");
         }
-#endif
 
         fixed (T* srcPtr = data)
         {
@@ -419,12 +414,10 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
     {
         var d3dBuffer = (D3D11Buffer)buffer;
 
-#if GRAPHICS_DEBUG
         if (byteOffset + (uint)sizeof(T) > d3dBuffer.ByteSize)
         {
             throw new ArgumentOutOfRangeException(nameof(data), "Data size exceeds buffer capacity.");
         }
-#endif
 
         MapMode mode = byteOffset == 0 ? MapMode.WriteDiscard : MapMode.WriteNoOverwrite;
         var map = _imContext.Map(d3dBuffer.Native, 0, mode, Vortice.Direct3D11.MapFlags.None);
@@ -439,16 +432,15 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
     {
         var d3dTexture = (D3D11Texture)texture;
 
-#if GRAPHICS_DEBUG
         if (mipLevel >= d3dTexture.MipLevels)
         {
             throw new ArgumentOutOfRangeException(nameof(mipLevel), "Mip level exceeds texture mip count.");
         }
+
         if (arraySlice >= d3dTexture.ArraySize)
         {
             throw new ArgumentOutOfRangeException(nameof(arraySlice), "Array slice exceeds texture array size.");
         }
-#endif
 
         uint mipWidth = Math.Max(1u, d3dTexture.Width >> (int)mipLevel);
         uint mipHeight = Math.Max(1u, d3dTexture.Height >> (int)mipLevel);
@@ -456,15 +448,14 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
         uint subresource = mipLevel + (arraySlice * d3dTexture.MipLevels);
         CoreGfx.FormatInfo.GetSurfaceInfo(d3dTexture.Format, mipWidth, mipHeight, out uint rowPitch, out uint slicePitch);
 
-#if GRAPHICS_DEBUG
         uint expectedBytes = slicePitch * mipDepth;
         uint actualBytes = (uint)(sizeof(T) * data.Length);
+
         if (actualBytes < expectedBytes)
         {
             throw new ArgumentOutOfRangeException(nameof(data),
                 $"Provided data size ({actualBytes} bytes) is smaller than the target mip level size ({expectedBytes} bytes).");
         }
-#endif
 
         fixed (T* srcPtr = data)
         {
