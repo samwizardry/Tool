@@ -6,22 +6,8 @@ using Vortice.Mathematics;
 
 namespace Torture.Core.Graphics;
 
-/// <summary>
-/// Describes a texture sampler state modeled after nvrhi::SamplerDesc.
-/// </summary>
 public readonly record struct SamplerDescription
 {
-    public readonly Color4 BorderColor;
-    public readonly float MaxAnisotropy;
-    public readonly float MipBias;
-    public readonly bool MinFilter;
-    public readonly bool MagFilter;
-    public readonly bool MipFilter;
-    public readonly SamplerAddressMode AddressU;
-    public readonly SamplerAddressMode AddressV;
-    public readonly SamplerAddressMode AddressW;
-    public readonly SamplerReductionType ReductionType;
-
     public SamplerDescription(
         bool minFilter = true,
         bool magFilter = true,
@@ -43,8 +29,19 @@ public readonly record struct SamplerDescription
         MaxAnisotropy = maxAnisotropy;
         MipBias = mipBias;
         ReductionType = reductionType;
-        BorderColor = borderColor ?? new Color4(1.0f, 1.0f, 1.0f, 1.0f);
+        BorderColor = borderColor.HasValue ? borderColor.Value : Colors.White;
     }
+
+    public readonly bool MinFilter { get; init; }
+    public readonly bool MagFilter { get; init; }
+    public readonly bool MipFilter { get; init; }
+    public readonly SamplerAddressMode AddressU { get; init; }
+    public readonly SamplerAddressMode AddressV { get; init; }
+    public readonly SamplerAddressMode AddressW { get; init; }
+    public readonly float MaxAnisotropy { get; init; }
+    public readonly float MipBias { get; init; }
+    public readonly SamplerReductionType ReductionType { get; init; }
+    public readonly Color4 BorderColor { get; init; }
 
     public static SamplerDescription PointClamp => new(false, false, false,
         SamplerAddressMode.Clamp, SamplerAddressMode.Clamp, SamplerAddressMode.Clamp);
@@ -56,14 +53,20 @@ public readonly record struct SamplerDescription
         SamplerAddressMode.Clamp, SamplerAddressMode.Clamp, SamplerAddressMode.Clamp);
 
     /// <summary>
+    /// Bilinear
+    /// </summary>
+    public static SamplerDescription Bilinear => new(true, true, false,
+        SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap);
+
+    /// <summary>
     /// Trilinear.
     /// </summary>
     public static SamplerDescription LinearWrap => new(true, true, true,
         SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap);
 
-    public static SamplerDescription Bilinear => new(true, true, false,
-        SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap);
-
+    /// <summary>
+    /// Anisotropic.
+    /// </summary>
     public static SamplerDescription AnisotropicWrap(float maxAnisotropy = 16.0f) =>
         new(true, true, true, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, maxAnisotropy);
 }

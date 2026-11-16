@@ -1,6 +1,4 @@
-﻿using SharpGen.Runtime;
-
-using Vortice.Direct3D;
+﻿using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.Direct3D11.Debug;
 using Vortice.DXGI;
@@ -155,7 +153,7 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
 
                 _onFirstChanceException = (_, args) =>
                 {
-                    if (args.Exception is SharpGenException)
+                    if (args.Exception is SharpGen.Runtime.SharpGenException)
                     {
                         FlushDebugMessages();
                     }
@@ -239,30 +237,31 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
         _imContext.OMSetRenderTargets((ID3D11RenderTargetView)null!);
 
         // Release the old views, as they hold references to the buffers we
-        // will be destroying. Also release the old depth/stencil buffer.
+        // will be destroying. Also release the old depth/stencil buffer
         _renderTargetView?.Dispose();
         _rtvBackBuffer?.Dispose();
         _depthStencilView?.Dispose();
         _depthStencilBuffer?.Dispose();
 
-        // Resize the swap chain and recreate the render target view.
+        // Resize the swap chain and recreate the render target view
         _swapChain.ResizeBuffers(BufferCount, (uint)width, (uint)height, _colorFormat, _swapChainFlags).CheckError();
 
         _rtvBackBuffer = _swapChain.GetBuffer<ID3D11Texture2D>(0);
         _renderTargetView = _device.CreateRenderTargetView(_rtvBackBuffer);
 
-        // Create the depth/stencil buffer and view.
+        // Create the depth/stencil buffer and view
         _depthStencilBuffer = _device.CreateTexture2D(_depthStencilFormat, (uint)width, (uint)height,
                 arraySize: 1, mipLevels: 1, initialData: null,
                 bindFlags: BindFlags.DepthStencil, miscFlags: ResourceOptionFlags.None,
                 usage: ResourceUsage.Default, cpuAccessFlags: CpuAccessFlags.None);
         _depthStencilView = _device.CreateDepthStencilView(_depthStencilBuffer, new DepthStencilViewDescription(_depthStencilBuffer, DepthStencilViewDimension.Texture2D));
 
-        // Bind the render target view and depth/stencil view to the pipeline.
+        // Bind the render target view and depth/stencil view to the pipeline
         _imContext.OMSetRenderTargets(_renderTargetView, _depthStencilView);
 
-        // Set the viewport transform.
-        _imContext.RSSetViewport(0, 0, (float)width, (float)height, 0.0f, 1.0f);
+        // Set the viewport and scissor rect
+        _imContext.RSSetViewport(Viewport);
+        _imContext.RSSetScissorRect(ScissorRect);
     }
 
     /// <inheritdoc />
@@ -336,9 +335,9 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
     #region Resource Creation & Binding
 
     /// <inheritdoc />
-    public override CoreGfx.RasterizerState CreateRasterizerState(in CoreGfx.RasterizerStateDescription desc)
+    public override CoreGfx.RasterState CreateRasterState(in CoreGfx.RasterStateDescription desc)
     {
-        return new D3D11RasterizerState(_device, in desc);
+        return new D3D11RasterState(_device, in desc);
     }
 
     /// <inheritdoc />
@@ -474,9 +473,9 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override void SetRasterizerState(CoreGfx.RasterizerState state)
+    public override void SetRasterState(CoreGfx.RasterState state)
     {
-        _imContext.RSSetState(((D3D11RasterizerState)state).Native);
+        _imContext.RSSetState(((D3D11RasterState)state).Native);
     }
 
     /// <inheritdoc />

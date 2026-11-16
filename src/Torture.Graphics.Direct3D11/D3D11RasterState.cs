@@ -1,0 +1,55 @@
+﻿// Portions of this file are derived from NVRHI (https://github.com/NVIDIA-RTX/NVRHI)
+// Copyright (c) 2014-2026 NVIDIA Corporation. All rights reserved.
+// Licensed under the MIT License. See THIRD-PARTY-NOTICES.md in the project root for license information.
+
+namespace Torture.Graphics.Direct3D11;
+
+using Vortice.Direct3D11;
+
+using CoreGfx = Core.Graphics;
+
+internal sealed class D3D11RasterState : CoreGfx.RasterState
+{
+    public D3D11RasterState(ID3D11Device5 device, in CoreGfx.RasterStateDescription desc)
+        : base(in desc)
+    {
+        Native = device.CreateRasterizerState2(new()
+        {
+            FillMode = desc.FillMode switch
+            {
+                CoreGfx.RasterFillMode.Solid => FillMode.Solid,
+                CoreGfx.RasterFillMode.Wireframe => FillMode.Wireframe,
+                _ => throw new NotSupportedException()
+            },
+            CullMode = desc.CullMode switch
+            {
+                CoreGfx.RasterCullMode.Back => CullMode.Back,
+                CoreGfx.RasterCullMode.Front => CullMode.Front,
+                CoreGfx.RasterCullMode.None => CullMode.None,
+                _ => throw new NotSupportedException()
+            },
+            FrontCounterClockwise = desc.FrontCounterClockwise,
+            DepthBias = desc.DepthBias,
+            DepthBiasClamp = desc.DepthBiasClamp,
+            SlopeScaledDepthBias = desc.SlopeScaledDepthBias,
+            DepthClipEnable = desc.DepthClipEnable,
+            ScissorEnable = desc.ScissorEnable,
+            MultisampleEnable = desc.MultisampleEnable,
+            AntialiasedLineEnable = desc.AntialiasedLineEnable,
+            ForcedSampleCount = desc.ForcedSampleCount,
+            ConservativeRaster = desc.ConservativeRasterEnable ? ConservativeRasterizationMode.On : ConservativeRasterizationMode.Off
+        });
+    }
+
+    public ID3D11RasterizerState Native { get; }
+
+    public override void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        Native?.Dispose();
+
+        _disposed = true;
+    }
+}

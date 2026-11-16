@@ -54,7 +54,7 @@ public abstract class GraphicsDevice : IDisposable
 
     #region Resource Creation & Binding
 
-    public abstract RasterizerState CreateRasterizerState(in RasterizerStateDescription desc);
+    public abstract RasterState CreateRasterState(in RasterStateDescription desc);
 
     public abstract Buffer CreateBuffer<T>(ReadOnlySpan<T> data, in BufferDescription desc)
         where T : unmanaged;
@@ -81,7 +81,7 @@ public abstract class GraphicsDevice : IDisposable
     public abstract void UpdateTexture<T>(Texture texture, ReadOnlySpan<T> data, uint mipLevel = 0, uint arraySlice = 0)
         where T : unmanaged;
 
-    public abstract void SetRasterizerState(RasterizerState state);
+    public abstract void SetRasterState(RasterState state);
 
     public abstract void SetPrimitiveTopology(PrimitiveTopology primitiveTopology);
 

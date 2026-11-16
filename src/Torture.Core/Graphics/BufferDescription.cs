@@ -4,11 +4,6 @@ namespace Torture.Core.Graphics;
 
 public readonly record struct BufferDescription
 {
-    public readonly uint ByteSize;
-    public readonly uint ByteStride;
-    public readonly BufferUsage Usage;
-    public readonly CpuAccess CpuAccess;
-
     public BufferDescription(
         uint byteSize,
         BufferUsage usage,
@@ -29,6 +24,11 @@ public readonly record struct BufferDescription
         : this(byteSize, usage, isDynamic ? CpuAccess.Write : CpuAccess.None, byteStride)
     {
     }
+
+    public readonly uint ByteSize { get; init; }
+    public readonly uint ByteStride { get; init; }
+    public readonly BufferUsage Usage { get; init; }
+    public readonly CpuAccess CpuAccess { get; init; }
 
     public static BufferDescription Vertex(uint byteSize, uint byteStride, bool isDynamic = false) =>
         new(byteSize, BufferUsage.VertexBuffer, isDynamic ? CpuAccess.Write : CpuAccess.None, byteStride);

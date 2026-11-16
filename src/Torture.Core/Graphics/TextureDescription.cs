@@ -11,19 +11,6 @@ namespace Torture.Core.Graphics;
 /// </summary>
 public readonly record struct TextureDescription
 {
-    public readonly uint Width;
-    public readonly uint Height;
-    public readonly uint Depth;
-    public readonly uint ArraySize;
-    public readonly uint MipLevels;
-    public readonly uint SampleCount;
-    public readonly uint SampleQuality;
-    public readonly Format Format;
-    public readonly TextureDimension Dimension;
-    public readonly TextureUsage Usage;
-    public readonly CpuAccess CpuAccess;
-    public readonly string? DebugName;
-
     public TextureDescription(
         uint width,
         uint height = 1,
@@ -35,8 +22,7 @@ public readonly record struct TextureDescription
         Format format = Format.RGBA8_UNorm,
         TextureDimension dimension = TextureDimension.Texture2D,
         TextureUsage usage = TextureUsage.ShaderResource,
-        CpuAccess cpuAccess = CpuAccess.None,
-        string? debugName = null)
+        CpuAccess cpuAccess = CpuAccess.None)
     {
         Width = width;
         Height = height;
@@ -49,8 +35,19 @@ public readonly record struct TextureDescription
         Dimension = dimension;
         Usage = usage;
         CpuAccess = cpuAccess;
-        DebugName = debugName;
     }
+
+    public readonly uint Width { get; init; }
+    public readonly uint Height { get; init; }
+    public readonly uint Depth { get; init; }
+    public readonly uint ArraySize { get; init; }
+    public readonly uint MipLevels { get; init; }
+    public readonly uint SampleCount { get; init; }
+    public readonly uint SampleQuality { get; init; }
+    public readonly Format Format { get; init; }
+    public readonly TextureDimension Dimension { get; init; }
+    public readonly TextureUsage Usage { get; init; }
+    public readonly CpuAccess CpuAccess { get; init; }
 
     public static TextureDescription Texture2D(
         uint width,
@@ -58,8 +55,7 @@ public readonly record struct TextureDescription
         Format format = Format.RGBA8_UNorm,
         uint mipLevels = 1,
         TextureUsage usage = TextureUsage.ShaderResource,
-        CpuAccess cpuAccess = CpuAccess.None,
-        string? debugName = null) =>
+        CpuAccess cpuAccess = CpuAccess.None) =>
         new(
             width: width,
             height: height,
@@ -71,15 +67,13 @@ public readonly record struct TextureDescription
             format: format,
             dimension: TextureDimension.Texture2D,
             usage: usage,
-            cpuAccess: cpuAccess,
-            debugName: debugName);
+            cpuAccess: cpuAccess);
 
     public static TextureDescription TextureCube(
         uint size,
         Format format = Format.RGBA8_UNorm,
         uint mipLevels = 1,
-        TextureUsage usage = TextureUsage.ShaderResource,
-        string? debugName = null) =>
+        TextureUsage usage = TextureUsage.ShaderResource) =>
         new(
             width: size,
             height: size,
@@ -91,8 +85,7 @@ public readonly record struct TextureDescription
             format: format,
             dimension: TextureDimension.TextureCube,
             usage: usage,
-            cpuAccess: CpuAccess.None,
-            debugName: debugName);
+            cpuAccess: CpuAccess.None);
 
     public static TextureDescription Texture3D(
         uint width,
@@ -100,8 +93,7 @@ public readonly record struct TextureDescription
         uint depth,
         Format format = Format.RGBA8_UNorm,
         uint mipLevels = 1,
-        TextureUsage usage = TextureUsage.ShaderResource,
-        string? debugName = null) =>
+        TextureUsage usage = TextureUsage.ShaderResource) =>
         new(
             width: width,
             height: height,
@@ -113,8 +105,7 @@ public readonly record struct TextureDescription
             format: format,
             dimension: TextureDimension.Texture3D,
             usage: usage,
-            cpuAccess: CpuAccess.None,
-            debugName: debugName);
+            cpuAccess: CpuAccess.None);
 
     /// <summary>
     /// Calculates the full mipmap chain count down to 1x1x1 for the given dimensions.

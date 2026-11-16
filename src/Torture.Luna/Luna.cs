@@ -15,6 +15,15 @@ namespace Torture.Luna;
 [SDL3.SDL.GenerateMain]
 public sealed partial class Luna : Application<Luna>
 {
+    private readonly Camera _camera;
+
+    // Stats
+    private readonly bool _showFpsInTitle = true;
+    private float _elapsedSeconds;
+    private int _frameCount;
+
+    // Graphics resources
+
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
     struct MatrixBufferType
     {
@@ -23,13 +32,9 @@ public sealed partial class Luna : Application<Luna>
         public Matrix4x4 Proj;
     };
 
-    private readonly bool _showFpsInTitle = true;
-    private float _elapsedSeconds;
-    private int _frameCount;
-
-    RasterizerState _solid = default!;
-    RasterizerState _wireframe = default!;
-    RasterizerState _rasterizerState = default!;
+    RasterState _solid = default!;
+    RasterState _wireframe = default!;
+    RasterState _rs = default!;
     (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) _modelData = default!;
     Core.Graphics.Buffer _vb = default!;
     Core.Graphics.Buffer _ib = default!;
@@ -46,11 +51,36 @@ public sealed partial class Luna : Application<Luna>
     public Luna()
     {
         Title = "Luna";
-        Identifier = "Semisoft.Luna";
+        Identifier = "semisoft.torture.luna";
         PreferredWindowSize = new SizeI(1280, 720);
         WindowMode = WindowMode.Windowed;
+        _camera = new Camera(85.0f, 1280, 720);
     }
 
+    protected override GraphicsDevice CreateGraphicsDevice(GraphicsAPI api, NativeWindowInfo window, GraphicsDeviceOptions options)
+    {
+        if (api == GraphicsAPI.Default)
+        {
+#if SUPPORT_DIRECTX
+            api = GraphicsAPI.D3D11;
+#elif SUPPORT_VULKAN
+            //api = GraphicsAPI.Vulkan;
+#endif
+        }
+
+        return api switch
+        {
+#if SUPPORT_DIRECTX
+            GraphicsAPI.D3D11
+                => new Graphics.Direct3D11.D3D11GraphicsDevice(options, window.WindowHandle, window.ClientSize),
+#endif
+#if SUPPORT_VULKAN
+            //GraphicsAPI.Vulkan
+            //    => new VulkanGraphicsDevice(),
+#endif
+            _ => throw new PlatformNotSupportedException($"{api} is not supported on this platform.")
+        };
+    }
 
     protected override void Initialize()
     {
@@ -62,9 +92,9 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void LoadContent()
     {
-        _solid = GraphicsDevice.CreateRasterizerState(RasterizerStateDescriptionBuilder.CullNone.Build());
-        _wireframe = GraphicsDevice.CreateRasterizerState(RasterizerStateDescriptionBuilder.Wireframe.Build());
-        _rasterizerState = _solid;
+        _solid = GraphicsDevice.CreateRasterState(RasterStateDescription.CullNone);
+        _wireframe = GraphicsDevice.CreateRasterState(RasterStateDescription.Wireframe);
+        _rs = _solid;
 
         _modelData = Geometry.ComputeBox(Vector3.One * 4.0f, true, false);
 
@@ -112,7 +142,7 @@ public sealed partial class Luna : Application<Luna>
 
         _bilinear = GraphicsDevice.CreateSampler(SamplerDescription.Bilinear);
         _anisotropic16 = GraphicsDevice.CreateSampler(SamplerDescription.AnisotropicWrap(16.0f));
-        _sampler = _bilinear;
+        _sampler = _anisotropic16;
     }
 
     float _angle = 0.0f;
@@ -131,36 +161,38 @@ public sealed partial class Luna : Application<Luna>
             if (_elapsedSeconds >= 1.0f)
             {
                 double fps = _frameCount / _elapsedSeconds;
-                //Console.WriteLine($"Luna | FPS: {fps:F1}");
+                Console.WriteLine($"Luna | FPS: {fps:F1}");
                 _elapsedSeconds -= 1.0f;
                 _frameCount = 0;
             }
         }
 
-        if (Keyboard.IsKeyPressed(KeyboardKey.A))
+        _camera.Update(gameTime.DeltaSeconds);
+
+        if (Keyboard.IsKeyPressed(KeyboardKey.Alpha1))
         {
             _sampler = _bilinear;
         }
-        if (Keyboard.IsKeyPressed(KeyboardKey.S))
+        if (Keyboard.IsKeyPressed(KeyboardKey.Alpha2))
         {
             _sampler = _anisotropic16;
         }
 
-        if (Keyboard.IsKeyPressed(KeyboardKey.Q))
+        if (Keyboard.IsKeyPressed(KeyboardKey.Alpha3))
         {
-            _rasterizerState = _solid;
+            _rs = _solid;
         }
-        if (Keyboard.IsKeyPressed(KeyboardKey.W))
+        if (Keyboard.IsKeyPressed(KeyboardKey.Alpha4))
         {
-            _rasterizerState = _wireframe;
+            _rs = _wireframe;
         }
 
         _angle += 10.0f * gameTime.DeltaSeconds;
         MatrixBufferType mvp = new()
         {
-            World = Matrix4x4.CreateRotationY(float.DegreesToRadians(_angle)) * Matrix4x4.CreateRotationX(0.4f),
-            View = Matrix4x4.CreateLookAt(new Vector3(0.0f, 0.0f, -5.0f), Vector3.UnitZ, Vector3.UnitY),
-            Proj = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(85.0f), 1280.0f / 720.0f, 0.1f, 1000.0f)
+            World = Matrix4x4.CreateRotationY(float.DegreesToRadians(_angle)),
+            View = _camera.View,
+            Proj = _camera.Proj
         };
 
         GraphicsDevice.UpdateBuffer(_cb, ref mvp);
@@ -168,7 +200,7 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.SetRasterizerState(_rasterizerState);
+        GraphicsDevice.SetRasterState(_rs);
         GraphicsDevice.SetVertexShader(_vs);
         GraphicsDevice.SetPixelShader(_ps);
         GraphicsDevice.SetInputLayout(_inputLayout);
@@ -180,6 +212,11 @@ public sealed partial class Luna : Application<Luna>
         GraphicsDevice.SetIndexBuffer(_ib);
         GraphicsDevice.SetPrimitiveTopology(PrimitiveTopology.TriangleList);
         GraphicsDevice.DrawIndexed(_ib.Count, 0, 0);
+    }
+
+    protected override void OnResize(int width, int height)
+    {
+        _camera.OnResize(width, height);
     }
 
     protected override void UnloadContent()
@@ -200,30 +237,5 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void Cleanup()
     {
-    }
-
-    protected override GraphicsDevice CreateGraphicsDevice(GraphicsAPI api, NativeWindowInfo window, GraphicsDeviceOptions options)
-    {
-        if (api == GraphicsAPI.Default)
-        {
-#if SUPPORT_DIRECTX
-            api = GraphicsAPI.D3D11;
-#elif SUPPORT_VULKAN
-            //api = GraphicsAPI.Vulkan;
-#endif
-        }
-
-        return api switch
-        {
-#if SUPPORT_DIRECTX
-            GraphicsAPI.D3D11
-                => new Graphics.Direct3D11.D3D11GraphicsDevice(options, window.WindowHandle, window.ClientSize),
-#endif
-#if SUPPORT_VULKAN
-            //GraphicsAPI.Vulkan
-            //    => new VulkanGraphicsDevice(),
-#endif
-            _ => throw new PlatformNotSupportedException($"{api} is not supported on this platform.")
-        };
     }
 }
