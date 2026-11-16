@@ -27,6 +27,22 @@ public sealed partial class Luna : Application<Luna>
     private float _elapsedSeconds;
     private int _frameCount;
 
+    RasterizerState _solid = default!;
+    RasterizerState _wireframe = default!;
+    RasterizerState _rasterizerState = default!;
+    (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) _modelData = default!;
+    Core.Graphics.Buffer _vb = default!;
+    Core.Graphics.Buffer _ib = default!;
+    Core.Graphics.Buffer _cb = default!;
+    Shader _vs = default!;
+    Shader _ps = default!;
+    InputLayout _inputLayout = default!;
+    Texture _container = default!;
+    Texture _containerSpecular = default!;
+    Sampler _sampler = default!;
+    Sampler _bilinear = default!;
+    Sampler _anisotropic16 = default!;
+
     public Luna()
     {
         Title = "Luna";
@@ -35,19 +51,6 @@ public sealed partial class Luna : Application<Luna>
         WindowMode = WindowMode.Windowed;
     }
 
-
-    (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) _modelData;
-    Core.Graphics.Buffer _vb;
-    Core.Graphics.Buffer _ib;
-    Core.Graphics.Buffer _cb;
-    Shader _vs;
-    Shader _ps;
-    InputLayout _inputLayout;
-    Texture _container;
-    Texture _containerSpecular;
-    Sampler _sampler;
-    Sampler _bilinear;
-    Sampler _anisotropic16;
 
     protected override void Initialize()
     {
@@ -59,6 +62,10 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void LoadContent()
     {
+        _solid = GraphicsDevice.CreateRasterizerState(RasterizerStateDescriptionBuilder.CullNone.Build());
+        _wireframe = GraphicsDevice.CreateRasterizerState(RasterizerStateDescriptionBuilder.Wireframe.Build());
+        _rasterizerState = _solid;
+
         _modelData = Geometry.ComputeBox(Vector3.One * 4.0f, true, false);
 
         _cb = GraphicsDevice.CreateBuffer(BufferDescription.Constant<MatrixBufferType>());
@@ -139,6 +146,15 @@ public sealed partial class Luna : Application<Luna>
             _sampler = _anisotropic16;
         }
 
+        if (Keyboard.IsKeyPressed(KeyboardKey.Q))
+        {
+            _rasterizerState = _solid;
+        }
+        if (Keyboard.IsKeyPressed(KeyboardKey.W))
+        {
+            _rasterizerState = _wireframe;
+        }
+
         _angle += 10.0f * gameTime.DeltaSeconds;
         MatrixBufferType mvp = new()
         {
@@ -152,6 +168,7 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void Draw(GameTime gameTime)
     {
+        GraphicsDevice.SetRasterizerState(_rasterizerState);
         GraphicsDevice.SetVertexShader(_vs);
         GraphicsDevice.SetPixelShader(_ps);
         GraphicsDevice.SetInputLayout(_inputLayout);
@@ -167,6 +184,8 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void UnloadContent()
     {
+        _solid?.Dispose();
+        _wireframe?.Dispose();
         _inputLayout?.Dispose();
         _ps?.Dispose();
         _cb?.Dispose();

@@ -11,7 +11,7 @@ namespace Torture.Graphics.Direct3D11;
 internal sealed class D3D11Sampler : CoreGfx.Sampler
 {
     public D3D11Sampler(ID3D11Device5 device, in CoreGfx.SamplerDescription desc)
-        : base(desc)
+        : base(in desc)
     {
         Native = device.CreateSamplerState(new SamplerDescription(
             filter: ConvertFilter(in desc),

@@ -13,7 +13,7 @@ namespace Torture.Graphics.Direct3D11;
 internal sealed class D3D11Texture : CoreGfx.Texture
 {
     public D3D11Texture(in CoreGfx.TextureDescription desc, ID3D11Resource texture, ID3D11ShaderResourceView? srv)
-        : base(desc)
+        : base(in desc)
     {
         Native = texture;
         Srv = srv;

@@ -331,9 +331,15 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
         _imContext.Flush();
     }
 
-#endregion
+    #endregion
 
     #region Resource Creation & Binding
+
+    /// <inheritdoc />
+    public override CoreGfx.RasterizerState CreateRasterizerState(in CoreGfx.RasterizerStateDescription desc)
+    {
+        return new D3D11RasterizerState(_device, in desc);
+    }
 
     /// <inheritdoc />
     public override CoreGfx.Buffer CreateBuffer<T>(ReadOnlySpan<T> data, in CoreGfx.BufferDescription desc)
@@ -465,6 +471,12 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
         {
             _imContext.UpdateSubresource(d3dTexture.Native, subresource, null, (nint)srcPtr, rowPitch, slicePitch);
         }
+    }
+
+    /// <inheritdoc />
+    public override void SetRasterizerState(CoreGfx.RasterizerState state)
+    {
+        _imContext.RSSetState(((D3D11RasterizerState)state).Native);
     }
 
     /// <inheritdoc />
