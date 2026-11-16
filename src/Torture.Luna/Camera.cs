@@ -32,7 +32,7 @@ public class Camera
     }
 
     public float Speed { get; set; } = 50.0f;
-    public float Sensetivity { get; set; } = 30.0f;
+    public float Sensetivity { get; set; } = 5f;
 
     public float Fov
     {
@@ -107,7 +107,7 @@ public class Camera
 
         if (Mouse.IsRelativeMode)
         {
-            var delta = Mouse.Delta * Sensetivity * dt;
+            var delta = Mouse.Delta * Sensetivity * 0.022f;
             _yaw += delta.X;
             _pitch -= delta.Y;
             _pitch = float.Clamp(_pitch, -89.0f, 89.0f);

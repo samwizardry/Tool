@@ -84,7 +84,7 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void Initialize()
     {
-        GraphicsDevice.VSync = true;
+        GraphicsDevice.VSync = false;
         GraphicsDevice.ClearColor = new Color4(0.2f, 0.3f, 0.3f, 1.0f);
 
         base.Initialize();
