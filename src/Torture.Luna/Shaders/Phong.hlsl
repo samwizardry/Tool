@@ -149,7 +149,7 @@ float3 ComputeSpotLight(SpotLight light, Material mat, float3 viewPos, float3 ve
 
     float theta = dot(lightDir, normalize(-light.Direction));
     float epsilon = (light.CutOff - light.OuterCutOff);
-    float intensity = saturate((theta - light.OuterCutOff) / epsilon);
+    float intensity = smoothstep(0.0f, 1.0f, (theta - light.OuterCutOff) / epsilon);
 
     if (intensity == 0.0f)
         return float3(0.0f, 0.0f, 0.0f);
