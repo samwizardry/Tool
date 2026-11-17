@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 
 using SDL3;
 
@@ -67,8 +68,8 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
     }
 
     public string Version { get; protected init; } = "0.1";
-    public string Identifier { get; protected init; } = "semisoft.torture.app";
-    public SizeI PreferredWindowSize { get; protected init; } = new(800, 600);
+    public string Identifier { get; protected init; } = "semisoft.torture";
+    public SizeI PreferredWindowSize { get; protected init; } = new(1280, 720);
     public bool IsResizable { get; protected init; } = true;
     public GraphicsAPI PreferredGraphicsAPI { get; protected init; } = GraphicsAPI.Default;
     public bool CollectGarbageBeforeRun { get; protected init; } = true;
@@ -117,7 +118,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
     /// <summary>
     /// Called every frame to render the scene.
     /// </summary>
-    protected virtual void Draw(GameTime gameTime) { }
+    protected virtual void Draw() { }
 
     /// <summary>
     /// Called after rendering a frame has completed.
@@ -193,6 +194,9 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
 
     private SDL.AppResult InternalInit(string[] args)
     {
+        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+        CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+
         SDL.SetAppMetadata(Title, Version, Identifier);
 
         if (!SDL.Init(SDL.InitFlags.Video))
@@ -325,7 +329,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
 
         if (BeginDraw())
         {
-            Draw(gameTime);
+            Draw();
             EndDraw();
         }
         AllocationTracker.Mark("Draw");

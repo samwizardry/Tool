@@ -1,16 +1,81 @@
 ﻿using System.Numerics;
 using System.Runtime.InteropServices;
 
-using StbImageSharp;
-
 using Torture.Core;
-using Torture.Core.Collections;
 using Torture.Core.Graphics;
 using Torture.Core.Input;
 
 using Vortice.Mathematics;
 
 namespace Torture.Luna;
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct Material
+{
+    public float Shininess;
+    public Vector3 Pad0;
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct DirectionalLight
+{
+    public Vector3 Direction;
+    public float Pad0;
+    public Vector3 Ambient;
+    public float Pad1;
+    public Vector3 Diffuse;
+    public float Pad2;
+    public Vector3 Specular;
+    public float Pad3;
+};
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct PointLight
+{
+    public Vector3 Position;
+    public float Constant;
+    public Vector3 Diffuse;
+    public float Linear;
+    public Vector3 Specular;
+    public float Quadratic;
+};
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct SpotLight
+{
+    public Vector3 Position;
+    public float CutOff;
+    public Vector3 Direction;
+    public float OuterCutOff;
+    public Vector3 Diffuse;
+    public float Linear;
+    public Vector3 Specular;
+    public float Quadratic;
+};
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct Light
+{
+    public DirectionalLight DirLight;
+    public PointLight PointLight;
+    public SpotLight SpotLight;
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct PerFrameData
+{
+    public Matrix4x4 ViewProj;
+    public Light Light;
+    public Vector3 ViewPosition;
+};
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct PerObjectData
+{
+    public Matrix4x4 Model;
+    public Matrix4x4 NormalMatrix;
+    public Material Material;
+}
 
 [SDL3.SDL.GenerateMain]
 public sealed partial class Luna : Application<Luna>
@@ -22,39 +87,16 @@ public sealed partial class Luna : Application<Luna>
     private float _elapsedSeconds;
     private int _frameCount;
 
-    // Graphics resources
-
-    [StructLayout(LayoutKind.Sequential, Pack = 4)]
-    struct MatrixBufferType
-    {
-        public Matrix4x4 World;
-        public Matrix4x4 View;
-        public Matrix4x4 Proj;
-    };
-
-    RasterState _solid = default!;
-    RasterState _wireframe = default!;
-    RasterState _rs = default!;
-    (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) _modelData = default!;
-    Core.Graphics.Buffer _vb = default!;
-    Core.Graphics.Buffer _ib = default!;
-    Core.Graphics.Buffer _cb = default!;
-    Shader _vs = default!;
-    Shader _ps = default!;
-    InputLayout _inputLayout = default!;
-    Texture _container = default!;
-    Texture _containerSpecular = default!;
-    Sampler _sampler = default!;
-    Sampler _bilinear = default!;
-    Sampler _anisotropic16 = default!;
+    private PipelineState _pipelineState = default!;
+    private readonly List<Actor> _actors = [];
+    private Model<VertexPositionNormal, uint> _model = default!;
+    private PerFrameData _perFrameData = default;
 
     public Luna()
     {
         Title = "Luna";
         Identifier = "semisoft.torture.luna";
-        PreferredWindowSize = new SizeI(1280, 720);
-        WindowMode = WindowMode.Windowed;
-        _camera = new Camera(85.0f, 1280, 720);
+        _camera = new Camera(60.0f, PreferredWindowSize.Width, PreferredWindowSize.Height);
     }
 
     protected override GraphicsDevice CreateGraphicsDevice(GraphicsAPI api, NativeWindowInfo window, GraphicsDeviceOptions options)
@@ -84,61 +126,40 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void Initialize()
     {
-        GraphicsDevice.VSync = false;
-        GraphicsDevice.ClearColor = new Color4(0.2f, 0.3f, 0.3f, 1.0f);
+        GraphicsDevice.VSync = true;
+        GraphicsDevice.ClearColor = new Color4(0.05f, 0.05f, 0.05f, 1.0f);
 
         base.Initialize();
     }
 
     protected override void LoadContent()
     {
-        // States
-        _solid = GraphicsDevice.CreateRasterState(RasterStateDescription.CullNone);
-        _wireframe = GraphicsDevice.CreateRasterState(RasterStateDescription.Wireframe);
-        _rs = _solid;
+        _pipelineState = new PipelineState(GraphicsDevice);
+        _actors.Add(new Box(GraphicsDevice));
 
-        _bilinear = GraphicsDevice.CreateSampler(SamplerDescription.Bilinear);
-        _anisotropic16 = GraphicsDevice.CreateSampler(SamplerDescription.AnisotropicWrap(16.0f));
-        _sampler = _anisotropic16;
+        _perFrameData.Light.DirLight.Direction = Vector3.Normalize(new Vector3(-0.2f, -1.0f, -0.3f));
+        _perFrameData.Light.DirLight.Ambient = new Vector3(0.1f, 0.1f, 0.1f);
+        _perFrameData.Light.DirLight.Diffuse = new Vector3(0.4f, 0.4f, 0.4f);
+        _perFrameData.Light.DirLight.Specular = new Vector3(0.5f, 0.5f, 0.5f);
 
-        // Buffers
-        _modelData = Geometry.ComputeBox(Vector3.One * 4.0f, true, false);
-        _vb = GraphicsDevice.CreateBuffer(_modelData.Vertices.AsSpan(), BufferDescription.Vertex(0, 0));
-        _ib = GraphicsDevice.CreateBuffer(_modelData.Indices.AsSpan(), BufferDescription.Index(0));
+        _perFrameData.Light.PointLight.Position = new Vector3(1.2f, 1.0f, 2.0f);
+        _perFrameData.Light.PointLight.Diffuse = new Vector3(0.6f, 0.6f, 0.6f);
+        _perFrameData.Light.PointLight.Specular = new Vector3(1.0f, 1.0f, 1.0f);
+        _perFrameData.Light.PointLight.Constant = 1.0f;
+        _perFrameData.Light.PointLight.Linear = 0.22f;
+        _perFrameData.Light.PointLight.Quadratic = 0.20f;
 
-        // Shaders
-        var triangleCode = File.ReadAllBytes(Path.Combine("Shaders", "Texture.hlsl"));
+        _perFrameData.Light.SpotLight.Position = _camera.Position;
+        _perFrameData.Light.SpotLight.Direction = _camera.Direction;
+        _perFrameData.Light.SpotLight.Diffuse = new Vector3(0.6f, 0.6f, 0.6f);
+        _perFrameData.Light.SpotLight.Specular = new Vector3(1.0f, 1.0f, 1.0f);
+        _perFrameData.Light.SpotLight.CutOff = MathF.Cos(float.DegreesToRadians(12.5f));
+        _perFrameData.Light.SpotLight.OuterCutOff = MathF.Cos(float.DegreesToRadians(17.5f));
+        _perFrameData.Light.SpotLight.Linear = 0.09f;
+        _perFrameData.Light.SpotLight.Quadratic = 0.032f;
 
-        _vs = GraphicsDevice.CreateShader(triangleCode, ShaderDescription.Vertex(
-            debug: true,
-            debugName: "Triangle_VS"));
-
-        _ps = GraphicsDevice.CreateShader(triangleCode, ShaderDescription.Pixel(
-            debug: true,
-            debugName: "Triangle_PS"));
-
-        _inputLayout = GraphicsDevice.CreateInputLayout(VertexPositionNormalTexture.Layout, _vs);
-        _cb = GraphicsDevice.CreateBuffer(BufferDescription.Constant<MatrixBufferType>());
-
-        // Textures
-        using (var stream = File.OpenRead("resources/textures/container2.png"))
-        {
-            ImageResult image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
-            _container = GraphicsDevice.CreateTexture(
-                image.Data.AsSpan(),
-                TextureDescription.Texture2D((uint)image.Width, (uint)image.Height, mipLevels: 0));
-        }
-
-        using (var stream = File.OpenRead("resources/textures/container2_specular.png"))
-        {
-            ImageResult image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
-            _containerSpecular = GraphicsDevice.CreateTexture(
-                image.Data.AsSpan(),
-                TextureDescription.Texture2D((uint)image.Width, (uint)image.Height, mipLevels: 0));
-        }
+        //_model = Model<VertexPositionNormal, uint>.FromLunaModel(GraphicsDevice, _pipelineState.LunaVS, "resources/objects/car.txt");
     }
-
-    float _angle = 0.0f;
 
     protected override unsafe void Update(GameTime gameTime)
     {
@@ -162,49 +183,48 @@ public sealed partial class Luna : Application<Luna>
 
         _camera.Update(gameTime.DeltaSeconds);
 
-        if (Keyboard.IsKeyPressed(KeyboardKey.Alpha1))
+        if (Keyboard.IsKeyPressed(KeyboardKey.F1))
         {
-            _sampler = _bilinear;
+            _pipelineState.UseSolid();
         }
-        if (Keyboard.IsKeyPressed(KeyboardKey.Alpha2))
+        if (Keyboard.IsKeyPressed(KeyboardKey.F2))
         {
-            _sampler = _anisotropic16;
-        }
-
-        if (Keyboard.IsKeyPressed(KeyboardKey.Alpha3))
-        {
-            _rs = _solid;
-        }
-        if (Keyboard.IsKeyPressed(KeyboardKey.Alpha4))
-        {
-            _rs = _wireframe;
+            _pipelineState.UseWireframe();
         }
 
-        _angle += 10.0f * gameTime.DeltaSeconds;
-        MatrixBufferType mvp = new()
+        if (Keyboard.IsKeyPressed(KeyboardKey.F3))
         {
-            World = Matrix4x4.CreateRotationY(float.DegreesToRadians(_angle)),
-            View = _camera.View,
-            Proj = _camera.Proj
-        };
+            _pipelineState.UseBilinear();
+        }
+        if (Keyboard.IsKeyPressed(KeyboardKey.F4))
+        {
+            _pipelineState.UseAnisotropic();
+        }
 
-        GraphicsDevice.UpdateBuffer(_cb, ref mvp);
+        _perFrameData.ViewProj = _camera.ViewProj;
+        _perFrameData.ViewPosition = _camera.Position;
+
+        _perFrameData.Light.SpotLight.Position = _camera.Position;
+        _perFrameData.Light.SpotLight.Direction = _camera.Direction;
+
+        _pipelineState.SetPerFrameData(ref _perFrameData);
+
+        foreach (var actor in _actors)
+        {
+            actor.Update(gameTime.DeltaSeconds);
+        }
     }
 
-    protected override void Draw(GameTime gameTime)
+    protected override void Draw()
     {
-        GraphicsDevice.SetRasterState(_rs);
-        GraphicsDevice.SetVertexShader(_vs);
-        GraphicsDevice.SetPixelShader(_ps);
-        GraphicsDevice.SetInputLayout(_inputLayout);
-        GraphicsDevice.SetConstantBuffer(_cb, ShaderType.Vertex, 0);
-        GraphicsDevice.SetTexture(_container, ShaderType.Pixel, 0);
-        GraphicsDevice.SetTexture(_containerSpecular, ShaderType.Pixel, 1u);
-        GraphicsDevice.SetSampler(_sampler, ShaderType.Pixel, 0);
-        GraphicsDevice.SetVertexBuffer(_vb);
-        GraphicsDevice.SetIndexBuffer(_ib);
-        GraphicsDevice.SetPrimitiveTopology(PrimitiveTopology.TriangleList);
-        GraphicsDevice.DrawIndexed(_ib.Count, 0, 0);
+        _pipelineState.Apply();
+
+        foreach (var actor in _actors)
+        {
+            actor.Draw();
+        }
+
+        //_model.Draw();
     }
 
     protected override void OnResize(int width, int height)
@@ -214,21 +234,14 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void UnloadContent()
     {
-        _solid?.Dispose();
-        _wireframe?.Dispose();
-        _bilinear?.Dispose();
-        _anisotropic16?.Dispose();
+        _pipelineState.Dispose();
 
-        _vb?.Dispose();
-        _ib?.Dispose();
+        foreach (var actor in _actors)
+        {
+            actor.Dispose();
+        }
 
-        _vs?.Dispose();
-        _ps?.Dispose();
-        _inputLayout?.Dispose();
-        _cb?.Dispose();
-
-        _container?.Dispose();
-        _containerSpecular?.Dispose();
+        _model?.Dispose();
     }
 
     protected override void Cleanup()

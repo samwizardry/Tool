@@ -283,6 +283,13 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
     #region Frame Lifecycle & Render Target Control
 
     /// <inheritdoc />
+    public override void Clear()
+    {
+        _imContext.ClearRenderTargetView(_renderTargetView, ClearColor);
+        _imContext.ClearDepthStencilView(_depthStencilView, DepthStencilClearFlags.Depth | DepthStencilClearFlags.Stencil, 1.0f, 0);
+    }
+
+    /// <inheritdoc />
     public override bool BeginFrame()
     {
         _imContext.ClearRenderTargetView(_renderTargetView, ClearColor);
@@ -293,13 +300,6 @@ public sealed class D3D11GraphicsDevice : CoreGfx.GraphicsDevice
         _imContext.RSSetScissorRect(ScissorRect);
 
         return true;
-    }
-
-    /// <inheritdoc />
-    public override void Clear()
-    {
-        _imContext.ClearRenderTargetView(_renderTargetView, ClearColor);
-        _imContext.ClearDepthStencilView(_depthStencilView, DepthStencilClearFlags.Depth | DepthStencilClearFlags.Stencil, 1.0f, 0);
     }
 
     /// <inheritdoc />

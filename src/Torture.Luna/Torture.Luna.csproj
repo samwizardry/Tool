@@ -18,7 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Shaders\Texture.hlsl">
+    <None Update="Shaders\Phong.hlsl">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Shaders\PosNormal.hlsl">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

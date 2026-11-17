@@ -1,7 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-
-using Vortice.Mathematics;
+﻿using Vortice.Mathematics;
 
 namespace Torture.Core.Graphics;
 
@@ -42,9 +39,9 @@ public abstract class GraphicsDevice : IDisposable
 
     #region Frame Lifecycle & Render Target Control
 
-    public abstract bool BeginFrame();
-
     public abstract void Clear();
+
+    public abstract bool BeginFrame();
 
     public abstract bool EndFrame();
 
@@ -75,6 +72,9 @@ public abstract class GraphicsDevice : IDisposable
     public abstract void UpdateBuffer<T>(Buffer buffer, ReadOnlySpan<T> data, uint byteOffset = 0)
         where T : unmanaged;
 
+    /// <summary>
+    /// This method never modifies <paramref name="data"/>.
+    /// </summary>
     public abstract void UpdateBuffer<T>(Buffer buffer, ref T data, uint byteOffset = 0)
         where T : unmanaged;
 

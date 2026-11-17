@@ -1,10 +1,10 @@
 ﻿using Vortice.Direct3D11;
 
-using CoreGraphics = Torture.Core.Graphics;
+using CoreGfx = Torture.Core.Graphics;
 
 namespace Torture.Graphics.Direct3D11;
 
-internal sealed class D3D11Buffer : CoreGraphics.Buffer
+internal sealed class D3D11Buffer : CoreGfx.Buffer
 {
     private D3D11Buffer(ID3D11Buffer buffer)
     {
@@ -13,7 +13,7 @@ internal sealed class D3D11Buffer : CoreGraphics.Buffer
 
     public ID3D11Buffer Native { get; private set; }
 
-    public static unsafe D3D11Buffer Create<T>(ID3D11Device5 device, ReadOnlySpan<T> data, in CoreGraphics.BufferDescription desc)
+    public static unsafe D3D11Buffer Create<T>(ID3D11Device5 device, ReadOnlySpan<T> data, in CoreGfx.BufferDescription desc)
         where T : unmanaged
     {
         BufferDescription d3dDesc = ToD3DBufferDescription(desc, true);
@@ -44,7 +44,7 @@ internal sealed class D3D11Buffer : CoreGraphics.Buffer
         };
     }
 
-    public static D3D11Buffer Create(ID3D11Device5 device, in CoreGraphics.BufferDescription desc)
+    public static D3D11Buffer Create(ID3D11Device5 device, in CoreGfx.BufferDescription desc)
     {
         BufferDescription d3dDesc = ToD3DBufferDescription(desc, false);
 
@@ -62,22 +62,22 @@ internal sealed class D3D11Buffer : CoreGraphics.Buffer
         };
     }
 
-    private static BufferDescription ToD3DBufferDescription(in CoreGraphics.BufferDescription desc, bool hasInitialData)
+    private static BufferDescription ToD3DBufferDescription(in CoreGfx.BufferDescription desc, bool hasInitialData)
     {
         ResourceUsage resourceUsage;
         CpuAccessFlags cpuAccessFlags = CpuAccessFlags.None;
 
         switch (desc.CpuAccess)
         {
-            case CoreGraphics.CpuAccess.None:
+            case CoreGfx.CpuAccess.None:
                 // If we have an initial data, we can set Immutable for best performance
                 resourceUsage = hasInitialData ? ResourceUsage.Immutable : ResourceUsage.Default;
                 break;
-            case CoreGraphics.CpuAccess.Write:
+            case CoreGfx.CpuAccess.Write:
                 resourceUsage = ResourceUsage.Dynamic;
                 cpuAccessFlags = CpuAccessFlags.Write;
                 break;
-            case CoreGraphics.CpuAccess.Read:
+            case CoreGfx.CpuAccess.Read:
                 resourceUsage = ResourceUsage.Staging;
                 cpuAccessFlags = CpuAccessFlags.Read;
                 break;
@@ -87,29 +87,29 @@ internal sealed class D3D11Buffer : CoreGraphics.Buffer
 
         // If cpu access is read, then d3d resource usage is staging, for staging buffers BindFlags should be None
         BindFlags bindFlags = BindFlags.None;
-        if (desc.CpuAccess != CoreGraphics.CpuAccess.Read)
+        if (desc.CpuAccess != CoreGfx.CpuAccess.Read)
         {
-            if ((desc.Usage & CoreGraphics.BufferUsage.VertexBuffer) == CoreGraphics.BufferUsage.VertexBuffer) bindFlags |= BindFlags.VertexBuffer;
-            if ((desc.Usage & CoreGraphics.BufferUsage.IndexBuffer) == CoreGraphics.BufferUsage.IndexBuffer) bindFlags |= BindFlags.IndexBuffer;
-            if ((desc.Usage & CoreGraphics.BufferUsage.ConstantBuffer) == CoreGraphics.BufferUsage.ConstantBuffer) bindFlags |= BindFlags.ConstantBuffer;
-            if ((desc.Usage & CoreGraphics.BufferUsage.ShaderResource) == CoreGraphics.BufferUsage.ShaderResource ||
-                (desc.Usage & CoreGraphics.BufferUsage.StructuredBuffer) == CoreGraphics.BufferUsage.StructuredBuffer) bindFlags |= BindFlags.ShaderResource;
-            if ((desc.Usage & CoreGraphics.BufferUsage.UnorderedAccess) == CoreGraphics.BufferUsage.UnorderedAccess) bindFlags |= BindFlags.UnorderedAccess;
+            if ((desc.Usage & CoreGfx.BufferUsage.VertexBuffer) == CoreGfx.BufferUsage.VertexBuffer) bindFlags |= BindFlags.VertexBuffer;
+            if ((desc.Usage & CoreGfx.BufferUsage.IndexBuffer) == CoreGfx.BufferUsage.IndexBuffer) bindFlags |= BindFlags.IndexBuffer;
+            if ((desc.Usage & CoreGfx.BufferUsage.ConstantBuffer) == CoreGfx.BufferUsage.ConstantBuffer) bindFlags |= BindFlags.ConstantBuffer;
+            if ((desc.Usage & CoreGfx.BufferUsage.ShaderResource) == CoreGfx.BufferUsage.ShaderResource ||
+                (desc.Usage & CoreGfx.BufferUsage.StructuredBuffer) == CoreGfx.BufferUsage.StructuredBuffer) bindFlags |= BindFlags.ShaderResource;
+            if ((desc.Usage & CoreGfx.BufferUsage.UnorderedAccess) == CoreGfx.BufferUsage.UnorderedAccess) bindFlags |= BindFlags.UnorderedAccess;
         }
 
         ResourceOptionFlags miscFlags = ResourceOptionFlags.None;
-        if ((desc.Usage & CoreGraphics.BufferUsage.IndirectArguments) == CoreGraphics.BufferUsage.IndirectArguments)
+        if ((desc.Usage & CoreGfx.BufferUsage.IndirectArguments) == CoreGfx.BufferUsage.IndirectArguments)
         {
             miscFlags |= ResourceOptionFlags.DrawIndirectArguments;
         }
 
-        bool isStructured = (desc.Usage & CoreGraphics.BufferUsage.StructuredBuffer) == CoreGraphics.BufferUsage.StructuredBuffer;
+        bool isStructured = (desc.Usage & CoreGfx.BufferUsage.StructuredBuffer) == CoreGfx.BufferUsage.StructuredBuffer;
         if (isStructured)
         {
             miscFlags |= ResourceOptionFlags.BufferStructured;
         }
 
-        if ((desc.Usage & CoreGraphics.BufferUsage.RawBuffer) == CoreGraphics.BufferUsage.RawBuffer)
+        if ((desc.Usage & CoreGfx.BufferUsage.RawBuffer) == CoreGfx.BufferUsage.RawBuffer)
         {
             miscFlags |= ResourceOptionFlags.BufferAllowRawViews;
         }

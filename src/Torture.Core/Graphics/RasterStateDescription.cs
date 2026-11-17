@@ -7,7 +7,7 @@ namespace Torture.Core.Graphics;
 public readonly record struct RasterStateDescription(
     RasterFillMode FillMode = RasterFillMode.Solid,
     RasterCullMode CullMode = RasterCullMode.Back,
-    bool FrontCounterClockwise = false,
+    bool FrontCounterClockwise = true,
     bool DepthClipEnable = true,
     bool ScissorEnable = false,
     bool MultisampleEnable = false,

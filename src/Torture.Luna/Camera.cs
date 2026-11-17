@@ -8,11 +8,11 @@ public class Camera
 {
     private Matrix4x4 _view;
     private Matrix4x4 _proj;
-    private Vector3 _position = Vector3.Zero;
+    private Vector3 _position = new Vector3(0.0f, 0.0f, 5.0f);
     private float _yaw = 0.0f;
     private float _pitch = 0.0f;
     private Vector3 _right = Vector3.UnitX;
-    private Vector3 _front = Vector3.UnitZ;
+    private Vector3 _front = -Vector3.UnitZ;
     private Vector3 _up = Vector3.UnitY;
 
     private float _fov;
@@ -31,7 +31,13 @@ public class Camera
         CalculateProjectionMatrix();
     }
 
-    public float Speed { get; set; } = 50.0f;
+    public ref readonly Matrix4x4 Proj => ref _proj;
+    public ref readonly Matrix4x4 View => ref _view;
+    public Matrix4x4 ViewProj => _view * _proj;
+    public Vector3 Position => _position;
+    public Vector3 Direction => _front;
+
+    public float Speed { get; set; } = 10.0f;
     public float Sensetivity { get; set; } = 5f;
 
     public float Fov
@@ -66,10 +72,6 @@ public class Camera
             CalculateProjectionMatrix();
         }
     }
-
-    public ref readonly Matrix4x4 Proj => ref _proj;
-    public ref readonly Matrix4x4 View => ref _view;
-    public Matrix4x4 ViewProj => _view * _proj;
 
     public void Update(float dt)
     {
@@ -113,10 +115,10 @@ public class Camera
             _pitch = float.Clamp(_pitch, -89.0f, 89.0f);
         }
 
-        _front = Vector3.Normalize(new(
-            MathF.Cos(float.DegreesToRadians(_yaw)) * MathF.Cos(float.DegreesToRadians(_pitch)),
-            MathF.Sin(float.DegreesToRadians(_pitch)),
-            MathF.Sin(float.DegreesToRadians(_yaw)) * MathF.Cos(float.DegreesToRadians(_pitch))));
+        (float sinYaw, float cosYaw) = MathF.SinCos(float.DegreesToRadians(_yaw));
+        (float sinPitch, float cosPitch) = MathF.SinCos(float.DegreesToRadians(_pitch));
+
+        _front = Vector3.Normalize(new(sinYaw * cosPitch, sinPitch, -cosYaw * cosPitch));
 
         _right = Vector3.Normalize(Vector3.Cross(_front, Vector3.UnitY));
         _up = Vector3.Normalize(Vector3.Cross(_right, _front));

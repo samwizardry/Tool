@@ -54,7 +54,7 @@ public static class Geometry
     /// Cube (aka a Hexahedron) or Box.
     /// </summary>
     public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeBox(
-        Vector3 size, bool rhcoords, bool invertn)
+        Vector3 size, bool invertn = false)
     {
         List<VertexPositionNormalTexture> vertices = [];
         List<ushort> indices = [];
@@ -99,11 +99,7 @@ public static class Geometry
             vertices.Add(new((normal + side1 - side2) * tsize, normal, TexCoords[3]));
         }
 
-        // Build RH above
-        if (!rhcoords)
-        {
-            ReverseWinding(indices.AsSpan(), vertices.AsSpan());
-        }
+        ReverseWinding(indices.AsSpan());
 
         if (invertn)
             InvertNormals(vertices.AsSpan());
@@ -115,7 +111,7 @@ public static class Geometry
     /// Sphere.
     /// </summary>
     public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeSphere(
-        float diameter, int tessellation, bool rhcoords, bool invertn)
+        float diameter, int tessellation, bool invertn = false)
     {
         if (tessellation < 3)
             throw new ArgumentException("Tessellation parameter must be at least 3.", nameof(tessellation));
@@ -181,9 +177,7 @@ public static class Geometry
             }
         }
 
-        // Build RH above
-        if (!rhcoords)
-            ReverseWinding(indices.AsSpan(), vertices.AsSpan());
+        ReverseWinding(indices.AsSpan());
 
         if (invertn)
             InvertNormals(vertices.AsSpan());
@@ -195,7 +189,7 @@ public static class Geometry
     /// Geodesic sphere.
     /// </summary>
     public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeGeoSphere(
-        float diameter, int tessellation, bool rhcoords, bool invertn)
+        float diameter, int tessellation, bool invertn = false)
     {
         List<VertexPositionNormalTexture> vertices = [];
         List<ushort> indices = [.. OctahedronIndices];
@@ -455,9 +449,7 @@ public static class Geometry
         FixPole(northPoleIndex);
         FixPole(southPoleIndex);
 
-        // Build RH above
-        if (!rhcoords)
-            ReverseWinding(indices.AsSpan(), vertices.AsSpan());
+        ReverseWinding(indices.AsSpan());
 
         if (invertn)
             InvertNormals(vertices.AsSpan());
@@ -469,7 +461,7 @@ public static class Geometry
     /// Cylinder.
     /// </summary>
     public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeCylinder(
-        float height, float diameter, int tessellation, bool rhcoords, bool invertn)
+        float height, float diameter, int tessellation, bool invertn = false)
     {
         if (tessellation < 3)
             throw new ArgumentException("Tessellation parameter must be at least 3.", nameof(tessellation));
@@ -566,9 +558,7 @@ public static class Geometry
         CreateCylinderCap(isTop: true);
         CreateCylinderCap(isTop: false);
 
-        // Build RH above
-        if (!rhcoords)
-            ReverseWinding(indices.AsSpan(), vertices.AsSpan());
+        ReverseWinding(indices.AsSpan());
 
         if (invertn)
             InvertNormals(vertices.AsSpan());
@@ -580,7 +570,7 @@ public static class Geometry
     /// Cone.
     /// </summary>
     public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeCone(
-        float diameter, float height, int tessellation, bool rhcoords, bool invertn)
+        float diameter, float height, int tessellation, bool invertn = false)
     {
         if (tessellation < 3)
             throw new ArgumentException("Tessellation parameter must be at least 3.", nameof(tessellation));
@@ -658,9 +648,7 @@ public static class Geometry
             IndexPushBack(indices, mantleRimStart + i);
         }
 
-        // Build RH above
-        if (!rhcoords)
-            ReverseWinding(indices.AsSpan(), vertices.AsSpan());
+        ReverseWinding(indices.AsSpan());
 
         if (invertn)
             InvertNormals(vertices.AsSpan());
@@ -672,7 +660,7 @@ public static class Geometry
     /// Torus (doughnut shape).
     /// </summary>
     public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeTorus(
-        float diameter, float thickness, int tessellation, bool rhcoords, bool invertn)
+        float diameter, float thickness, int tessellation, bool invertn = false)
     {
         if (tessellation < 3)
             throw new ArgumentException("Tessellation parameter must be at least 3.", nameof(tessellation));
@@ -737,9 +725,7 @@ public static class Geometry
             }
         }
 
-        // Build RH above
-        if (!rhcoords)
-            ReverseWinding(indices.AsSpan(), vertices.AsSpan());
+        ReverseWinding(indices.AsSpan());
 
         if (invertn)
             InvertNormals(vertices.AsSpan());
@@ -751,7 +737,7 @@ public static class Geometry
     /// Tetrahedron (triangular pyramid).
     /// </summary>
     public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeTetrahedron(
-        float size, bool rhcoords, bool invertn)
+        float size, bool invertn = false)
     {
         List<VertexPositionNormalTexture> vertices = [];
         List<ushort> indices = [];
@@ -810,9 +796,7 @@ public static class Geometry
             vertices.Add(new(v2, normal, uvs[2]));
         }
 
-        // Build RH above
-        if (!rhcoords)
-            ReverseWinding(indices.AsSpan(), vertices.AsSpan());
+        ReverseWinding(indices.AsSpan());
 
         if (invertn)
             InvertNormals(vertices.AsSpan());
@@ -824,7 +808,7 @@ public static class Geometry
     /// Octahedron.
     /// </summary>
     public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeOctahedron(
-        float size, bool rhcoords, bool invertn)
+        float size, bool invertn = false)
     {
         List<VertexPositionNormalTexture> vertices = [];
         List<ushort> indices = [];
@@ -866,9 +850,7 @@ public static class Geometry
             vertices.Add(new(v2, normal, uvs[2]));
         }
 
-        // Build RH above
-        if (!rhcoords)
-            ReverseWinding(indices.AsSpan(), vertices.AsSpan());
+        ReverseWinding(indices.AsSpan());
 
         if (invertn)
             InvertNormals(vertices.AsSpan());
@@ -880,7 +862,7 @@ public static class Geometry
     /// Dodecahedron (12 pentagonal faces).
     /// </summary>
     public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeDodecahedron(
-        float size, bool rhcoords, bool invertn)
+        float size, bool invertn = false)
     {
         List<VertexPositionNormalTexture> vertices = [];
         List<ushort> indices = [];
@@ -987,9 +969,7 @@ public static class Geometry
             IndexPushBack(indices, vbase + 4);
         }
 
-        // Build RH above
-        if (!rhcoords)
-            ReverseWinding(indices.AsSpan(), vertices.AsSpan());
+        ReverseWinding(indices.AsSpan());
 
         if (invertn)
             InvertNormals(vertices.AsSpan());
@@ -1001,7 +981,7 @@ public static class Geometry
     /// Icosahedron (20 triangular faces).
     /// </summary>
     public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeIcosahedron(
-        float size, bool rhcoords, bool invertn)
+        float size, bool invertn = false)
     {
         List<VertexPositionNormalTexture> vertices = [];
         List<ushort> indices = [];
@@ -1095,9 +1075,7 @@ public static class Geometry
             vertices.Add(new(v2, normal, uvs[2]));
         }
 
-        // Build RH above
-        if (!rhcoords)
-            ReverseWinding(indices.AsSpan(), vertices.AsSpan());
+        ReverseWinding(indices.AsSpan());
 
         if (invertn)
             InvertNormals(vertices.AsSpan());
@@ -1109,7 +1087,7 @@ public static class Geometry
     /// Computes the Utah Teapot (Martin Newell, 1975).
     /// </summary>
     public static (List<VertexPositionNormalTexture> Vertices, List<ushort> Indices) ComputeTeapot(
-        float size, int tessellation, bool rhcoords, bool invertn)
+        float size, int tessellation, bool invertn = false)
     {
         if (tessellation < 1)
         {
@@ -1177,9 +1155,7 @@ public static class Geometry
             }
         }
 
-        // Build RH above
-        if (!rhcoords)
-            ReverseWinding(indices.AsSpan(), vertices.AsSpan());
+        ReverseWinding(indices.AsSpan());
 
         if (invertn)
             InvertNormals(vertices.AsSpan());
@@ -1188,7 +1164,7 @@ public static class Geometry
     }
 
     // Helper for flipping winding of geometric primitives for LH vs. RH coords
-    private static void ReverseWinding(Span<ushort> indices, Span<VertexPositionNormalTexture> vertices)
+    private static void ReverseWinding(Span<ushort> indices)
     {
         if (indices.Length % 3 != 0)
         {
@@ -1198,11 +1174,6 @@ public static class Geometry
         for (int i = 0; i < indices.Length; i += 3)
         {
             (indices[i], indices[i + 2]) = (indices[i + 2], indices[i]);
-        }
-
-        foreach (ref var vertex in vertices)
-        {
-            vertex.TexCoord.X = 1.0f - vertex.TexCoord.X;
         }
     }
 

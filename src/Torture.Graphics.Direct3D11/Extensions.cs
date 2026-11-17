@@ -9,7 +9,7 @@ using CoreGfx = Torture.Core.Graphics;
 
 namespace Torture.Graphics.Direct3D11;
 
-public static class Extensions
+internal static class Extensions
 {
     public readonly record struct DxgiFormatMapping(
         CoreGfx.Format AbstractFormat,
