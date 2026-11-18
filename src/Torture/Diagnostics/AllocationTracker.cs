@@ -9,6 +9,8 @@ namespace Torture.Diagnostics;
 /// </summary>
 public static class AllocationTracker
 {
+    public const string Symbol = "TRACK_ALLOCATIONS";
+
     private const int MaxMarks = 32;
     private const int MaxDetailedLinesPerSecond = 5;
     private static readonly long WarmupTicks = Stopwatch.Frequency * 2; // 2 seconds of JIT warm-up
@@ -35,7 +37,7 @@ public static class AllocationTracker
     public static long BytesLastSecond { get; private set; }
 
     /// <summary>Call once before the main loop starts (after loading and the full GC).</summary>
-    [Conditional("TRACK_ALLOCATIONS")]
+    [Conditional(Symbol)]
     public static void Reset()
     {
         s_startTimestamp = s_secondStart = Stopwatch.GetTimestamp();
@@ -48,7 +50,7 @@ public static class AllocationTracker
         s_gen2 = GC.CollectionCount(2);
     }
 
-    [Conditional("TRACK_ALLOCATIONS")]
+    [Conditional(Symbol)]
     public static void BeginFrame()
     {
         s_count = 0;
@@ -62,7 +64,7 @@ public static class AllocationTracker
     }
 
     /// <summary>Attributes bytes allocated since the previous mark to this label. Use string literals only.</summary>
-    [Conditional("TRACK_ALLOCATIONS")]
+    [Conditional(Symbol)]
     public static void Mark(string label)
     {
         long now = GC.GetAllocatedBytesForCurrentThread();
@@ -70,7 +72,7 @@ public static class AllocationTracker
         s_last = now;
     }
 
-    [Conditional("TRACK_ALLOCATIONS")]
+    [Conditional(Symbol)]
     public static void EndFrame()
     {
         long total = 0;
@@ -105,7 +107,7 @@ public static class AllocationTracker
         {
             if (warmedUp && s_allocFramesThisSecond > 0)
             {
-                Console.WriteLine(
+                Log.Info(LogCategories.Memory,
                     $"[Alloc] last second: {s_allocFramesThisSecond}/{s_framesThisSecond} frames allocated, {s_bytesThisSecond} B total");
             }
 
@@ -139,7 +141,8 @@ public static class AllocationTracker
                 s_sb.Append(' ').Append(s_labels[i]).Append('=').Append(s_bytes[i]).Append(" B");
             }
         }
-        Console.WriteLine(s_sb.ToString());
+
+        Log.Info(LogCategories.Memory, s_sb.ToString());
     }
 
     private static void ReportCollections(bool print)
@@ -147,9 +150,12 @@ public static class AllocationTracker
         int g0 = GC.CollectionCount(0), g1 = GC.CollectionCount(1), g2 = GC.CollectionCount(2);
         if (print && g0 != s_gen0)
         {
-            Console.WriteLine(
-                $"[GC] frame {s_frame}: gen0 +{g0 - s_gen0}, gen1 +{g1 - s_gen1}, gen2 +{g2 - s_gen2}, " +
+            Log.Info(LogCategories.Memory, $"frame {s_frame}: gen0 +{g0 - s_gen0}, gen1 +{g1 - s_gen1}, gen2 +{g2 - s_gen2}, " +
                 $"total pause {GC.GetTotalPauseDuration().TotalMilliseconds:F2} ms");
+
+            //Console.WriteLine(
+            //    $"[GC] frame {s_frame}: gen0 +{g0 - s_gen0}, gen1 +{g1 - s_gen1}, gen2 +{g2 - s_gen2}, " +
+            //    $"total pause {GC.GetTotalPauseDuration().TotalMilliseconds:F2} ms");
         }
         s_gen0 = g0; s_gen1 = g1; s_gen2 = g2;
     }

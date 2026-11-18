@@ -34,12 +34,14 @@ public static class GarbageCollection
     public static void EnterLoadingMode()
         => GCSettings.LatencyMode = GCLatencyMode.Interactive;
 
-    [Conditional(Log.Symbol)]
     private static void LogStats(long before, TimeSpan elapsed)
     {
         long after = GC.GetTotalMemory(false);
-        Log.Info("GC",
+        Log.Info(LogCategories.Memory,
             $"{before / 1024} KB -> {after / 1024} KB in {elapsed.TotalMilliseconds:F2} ms; " +
             $"gen0={GC.CollectionCount(0)} gen1={GC.CollectionCount(1)} gen2={GC.CollectionCount(2)}");
+        //Log.Info(LogCategories.Memory,
+        //    $"{before / 1024} KB -> {after / 1024} KB in {elapsed.TotalMilliseconds:F2} ms; " +
+        //    $"gen0={GC.CollectionCount(0)} gen1={GC.CollectionCount(1)} gen2={GC.CollectionCount(2)}");
     }
 }

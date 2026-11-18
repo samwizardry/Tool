@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 
 using Torture.Core;
+using Torture.Diagnostics;
 using Torture.Graphics;
 using Torture.Input;
 
@@ -80,6 +81,8 @@ public struct PerObjectData
 [SDL3.SDL.GenerateMain]
 public sealed partial class Luna : Application<Luna>
 {
+    public static readonly LogCategory LunaCat = new("Luna");
+
     private readonly Camera _camera;
 
     // Stats
@@ -175,7 +178,7 @@ public sealed partial class Luna : Application<Luna>
             if (_elapsedSeconds >= 1.0f)
             {
                 double fps = _frameCount / _elapsedSeconds;
-                Console.WriteLine($"Luna | FPS: {fps:F1}");
+                //Log.Info(LunaCat, $"FPS: {fps:F1}");
                 _elapsedSeconds -= 1.0f;
                 _frameCount = 0;
             }

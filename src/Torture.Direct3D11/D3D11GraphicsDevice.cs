@@ -99,8 +99,8 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
                     }
                     else
                     {
-                        TortDiag.Log.Warning("D3D11", "Validation requested, but D3D11 SDK layers are not installed " +
-                                             "(Settings > System > Optional features > Graphics Tools).");
+                        TortDiag.Log.Warning(D3D11LogCategories.D3D11, "Validation requested, but D3D11 SDK layers are not installed " +
+                            "(Settings > System > Optional features > Graphics Tools).");
                     }
                 }
 
@@ -148,7 +148,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
             _infoQueue = options.EnableValidation ? _device.QueryInterfaceOrNull<ID3D11InfoQueue>() : null;
             if (_infoQueue != null)
             {
-                TortDiag.Log.Info("D3D11", "Debug layer enabled.");
+                TortDiag.Log.Info(D3D11LogCategories.D3D11, "Debug layer enabled.");
                 if (options.BreakOnError && System.Diagnostics.Debugger.IsAttached)
                 {
                     _infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, true);
@@ -727,6 +727,24 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
 
     #region Private
 
+    private static TortDiag.LogSeverity ToLogSeverity(MessageSeverity severity) => severity switch
+    {
+        MessageSeverity.Corruption => TortDiag.LogSeverity.Fatal,
+        MessageSeverity.Error => TortDiag.LogSeverity.Error,
+        MessageSeverity.Warning => TortDiag.LogSeverity.Warning,
+        MessageSeverity.Info => TortDiag.LogSeverity.Debug,
+        _ => TortDiag.LogSeverity.Trace
+    };
+
+    private static TortDiag.LogSeverity ToLogSeverity(InfoQueueMessageSeverity severity) => severity switch
+    {
+        InfoQueueMessageSeverity.Corruption => TortDiag.LogSeverity.Fatal,
+        InfoQueueMessageSeverity.Error => TortDiag.LogSeverity.Error,
+        InfoQueueMessageSeverity.Warning => TortDiag.LogSeverity.Warning,
+        InfoQueueMessageSeverity.Info => TortDiag.LogSeverity.Debug,
+        _ => TortDiag.LogSeverity.Trace
+    };
+
     private IDXGIAdapter1 GetHardwareAdapter()
     {
         for (uint adapterIndex = 0;
@@ -771,27 +789,13 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     private void FlushDebugMessages()
     {
         if (_infoQueue is null || _infoQueue.NativePointer == nint.Zero)
-        {
             return;
-        }
 
         ulong count = _infoQueue.NumStoredMessages;
         for (ulong i = 0; i < count; i++)
         {
             Message msg = _infoQueue.GetMessage(i);
-            switch (msg.Severity)
-            {
-                case MessageSeverity.Corruption:
-                case MessageSeverity.Error:
-                    TortDiag.Log.Error("D3D11", $"({msg.Id}): {msg.Description}");
-                    break;
-                case MessageSeverity.Warning:
-                    TortDiag.Log.Warning("D3D11", $"({msg.Id}): {msg.Description}");
-                    break;
-                default:
-                    TortDiag.Log.Info("D3D11", $"({msg.Id}): {msg.Description}");
-                    break;
-            }
+            TortDiag.Log.Write(ToLogSeverity(msg.Severity), D3D11LogCategories.D3D11, $"{msg.Category}: {msg.Description}", (int)msg.Id);
         }
 
         _infoQueue.ClearStoredMessages();
@@ -813,7 +817,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
             for (ulong i = 0; i < count; i++)
             {
                 InfoQueueMessage msg = dxgiInfoQueue.GetMessage(DebugAll, i);
-                TortDiag.Log.Warning("DXGI", $"{msg.Severity} ({msg.Id}): {msg.Description}");
+                TortDiag.Log.Write(ToLogSeverity(msg.Severity), D3D11LogCategories.Dxgi, $"{msg.Category}: {msg.Description}", id: msg.Id);
             }
 
             dxgiInfoQueue.Dispose();
@@ -830,11 +834,11 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
             if (leak.TryGetTarget(out var target))
             {
                 // Same style as D3D11/DXGI output: [SharpGen Warning] (0x000001DF...): Live instance of ...
-                TortDiag.Log.Warning("SharpGen", $"(0x{target.NativePointer:X16}): Live instance of {target.GetType().Name} was not disposed.");
+                TortDiag.Log.Warning(D3D11LogCategories.SharpGen, $"(0x{target.NativePointer:X16}): Live instance of {target.GetType().Name} was not disposed.");
             }
             else
             {
-                TortDiag.Log.Warning("SharpGen", "Active tracking reference with an already collected target.");
+                TortDiag.Log.Warning(D3D11LogCategories.SharpGen, "Active tracking reference with an already collected target.");
             }
         }
     }

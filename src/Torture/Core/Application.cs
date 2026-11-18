@@ -74,6 +74,8 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
     public GraphicsAPI PreferredGraphicsAPI { get; protected init; } = GraphicsAPI.Default;
     public bool CollectGarbageBeforeRun { get; protected init; } = true;
 
+    #region Game
+
     /// <summary>
     /// Signals the application to exit at the end of the current frame.
     /// </summary>
@@ -164,204 +166,9 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
     /// </summary>
     protected virtual void Cleanup() { }
 
-    /// <summary>
-    /// Builds graphics device options from build defaults and command-line switches:
-    /// --gfx-debug / --no-gfx-debug and --gfx-track-objects / --no-gfx-track-objects.
-    /// </summary>
-    protected virtual GraphicsDeviceOptions CreateGraphicsDeviceOptions(string[] args)
-    {
-        var options = new GraphicsDeviceOptions();
-        if (ReadSwitch(args, "--gfx-debug", "--no-gfx-debug") is bool validation)
-        {
-            options = options with { EnableValidation = validation };
-        }
-        if (ReadSwitch(args, "--gfx-track-objects", "--no-gfx-track-objects") is bool tracking)
-        {
-            options = options with { EnableObjectTracking = tracking };
-        }
-        Log.Info("Graphics", $"Validation={options.EnableValidation}, ObjectTracking={options.EnableObjectTracking}");
-        return options;
-    }
+    #endregion
 
-    /// <summary>Creates the platform-specific graphics device instance.</summary>
-    protected abstract GraphicsDevice CreateGraphicsDevice(GraphicsAPI api, NativeWindowInfo window, GraphicsDeviceOptions options);
-
-    public static SDL.AppResult AppInit(out TApp? appState, string[] args)
-    {
-        appState = new TApp();
-        return appState.InternalInit(args);
-    }
-
-    private SDL.AppResult InternalInit(string[] args)
-    {
-        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
-        CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
-
-        SDL.SetAppMetadata(Title, Version, Identifier);
-
-        if (!SDL.Init(SDL.InitFlags.Video))
-        {
-            SDL.LogError(SDL.LogCategory.Application, $"Couldn't initialize SDL: {SDL.GetError()}");
-            return SDL.AppResult.Failure;
-        }
-
-        SDL.WindowFlags windowFlags = BuildInitialWindowFlags();
-
-        Window = SDL.CreateWindow(Title, PreferredWindowSize.Width, PreferredWindowSize.Height, windowFlags);
-        if (Window == IntPtr.Zero)
-        {
-            SDL.LogError(SDL.LogCategory.Application, $"Couldn't create window: {SDL.GetError()}");
-            return SDL.AppResult.Failure;
-        }
-
-        GraphicsDeviceOptions graphicsOptions = CreateGraphicsDeviceOptions(args);
-        GraphicsDevice = CreateGraphicsDevice(PreferredGraphicsAPI, GetNativeWindowInfo(Window), graphicsOptions);
-
-        // Initialize systems
-        Keyboard.Initialize();
-        Mouse.Initialize(Window);
-
-        Initialize();
-        BeginRun();
-
-        if (CollectGarbageBeforeRun)
-        {
-            GarbageCollection.FullBlockingCollect();
-        }
-        GarbageCollection.EnterGameplayMode();
-
-        AllocationTracker.Reset();
-        _timer.Start();
-
-        return SDL.AppResult.Continue;
-    }
-
-    public SDL.AppResult AppEvent(ref SDL.Event e)
-    {
-        switch ((SDL.EventType)e.Type)
-        {
-            case SDL.EventType.Quit:
-                return SDL.AppResult.Success;
-
-            case SDL.EventType.WindowMinimized:
-                _isMinimized = true;
-                GraphicsDevice?.OnMinimized();
-                OnMinimized();
-                break;
-
-            case SDL.EventType.WindowRestored:
-                _isMinimized = false;
-                GraphicsDevice?.OnRestored();
-                OnRestored();
-                break;
-
-            case SDL.EventType.WindowPixelSizeChanged:
-                int w = e.Window.Data1;
-                int h = e.Window.Data2;
-                if (w > 0 && h > 0)
-                {
-                    GraphicsDevice?.OnResize(w, h);
-                    OnResize(w, h);
-                }
-                break;
-
-            case SDL.EventType.WindowMoved:
-                int x = e.Window.Data1;
-                int y = e.Window.Data2;
-                SizeI currentSize = GraphicsDevice?.ClientSize ?? PreferredWindowSize;
-                var bounds = new RectI(x, y, currentSize.Width, currentSize.Height);
-                GraphicsDevice?.OnWindowMoved(bounds);
-                OnWindowMoved(bounds);
-                break;
-
-            case SDL.EventType.WindowEnterFullscreen:
-                if (_windowMode == WindowMode.Windowed)
-                {
-                    _windowMode = WindowMode.BorderlessFullscreen;
-                    GraphicsDevice?.OnWindowModeChanged(_windowMode);
-                    OnWindowModeChanged(_windowMode);
-                }
-                break;
-
-            case SDL.EventType.WindowLeaveFullscreen:
-                if (_windowMode != WindowMode.Windowed)
-                {
-                    _windowMode = WindowMode.Windowed;
-                    GraphicsDevice?.OnWindowModeChanged(_windowMode);
-                    OnWindowModeChanged(_windowMode);
-                }
-                break;
-
-            case SDL.EventType.MouseWheel:
-                Mouse.OnScrollWheel(e.Wheel.X, e.Wheel.Y);
-                break;
-        }
-
-        return SDL.AppResult.Continue;
-    }
-
-    public SDL.AppResult AppIterate()
-    {
-        AllocationTracker.BeginFrame();
-
-        if (_isExiting)
-        {
-            return SDL.AppResult.Success;
-        }
-
-        TimeSpan totalTime = _timer.Elapsed;
-        TimeSpan elapsedTime = totalTime - _lastFrameTime;
-        _lastFrameTime = totalTime;
-        var gameTime = new GameTime(totalTime, elapsedTime);
-
-        // Update systems
-        Keyboard.Update();
-        Mouse.Update();
-        AllocationTracker.Mark("Input");
-
-        Update(gameTime);
-        AllocationTracker.Mark("Update");
-
-        if (_isExiting)
-        {
-            return SDL.AppResult.Success;
-        }
-
-        if (BeginDraw())
-        {
-            Draw();
-            EndDraw();
-        }
-        AllocationTracker.Mark("Draw");
-
-        AllocationTracker.EndFrame();
-
-        return SDL.AppResult.Continue;
-    }
-
-    public void AppQuit(SDL.AppResult result)
-    {
-        GraphicsDevice?.WaitIdle();
-
-        EndRun();
-        UnloadContent();
-        Cleanup();
-
-        // Shutdown systems
-        Mouse.Shutdown();
-        Keyboard.Shutdown();
-
-        GraphicsDevice?.Dispose();
-        GraphicsDevice = null!;
-
-        if (Window != IntPtr.Zero)
-        {
-            SDL.DestroyWindow(Window);
-            Window = IntPtr.Zero;
-        }
-
-        SDL.Quit();
-    }
+    #region Systems
 
     protected NativeWindowInfo GetNativeWindowInfo(nint window)
     {
@@ -392,6 +199,288 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
 #else
         return new NativeWindowInfo(window, IntPtr.Zero, size, bounds);
 #endif
+    }
+
+    /// <summary>%LocalAppData%/{Identifier}/Logs/latest.log on Windows, ~/.local/share/... on Linux.</summary>
+    protected string GetDefaultLogFilePath() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), Identifier, "Logs", "latest.log");
+
+    /// <summary>Registers log sinks. Called first, right after the application instance is created.</summary>
+    protected virtual void ConfigureLogging(string[] args)
+    {
+        Log.AddSink(new ConsoleLogSink());
+        Log.AddSink(new FileLogSink(GetDefaultLogFilePath()));
+    }
+
+    /// <summary>
+    /// Builds graphics device options from build defaults and command-line switches:
+    /// --gfx-debug / --no-gfx-debug and --gfx-track-objects / --no-gfx-track-objects.
+    /// </summary>
+    protected virtual GraphicsDeviceOptions CreateGraphicsDeviceOptions(string[] args)
+    {
+        var options = new GraphicsDeviceOptions();
+
+        if (ReadSwitch(args, "--gfx-debug", "--no-gfx-debug") is bool validation)
+        {
+            options = options with { EnableValidation = validation };
+        }
+        if (ReadSwitch(args, "--gfx-track-objects", "--no-gfx-track-objects") is bool tracking)
+        {
+            options = options with { EnableObjectTracking = tracking };
+        }
+
+        Log.Info(LogCategories.Graphics, $"Validation={options.EnableValidation}, ObjectTracking={options.EnableObjectTracking}");
+        return options;
+    }
+
+    protected abstract GraphicsDevice CreateGraphicsDevice(GraphicsAPI api, NativeWindowInfo window, GraphicsDeviceOptions options);
+
+    #endregion
+
+    #region SDL
+
+    public static SDL.AppResult AppInit(out TApp? appState, string[] args)
+    {
+        appState = new TApp();
+        appState.ConfigureLogging(args);
+
+        AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+
+        try
+        {
+            return appState.InternalInit(args);
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(LogCategories.Core, "Initialization failed.", ex);
+            return SDL.AppResult.Failure;
+        }
+    }
+
+    private SDL.AppResult InternalInit(string[] args)
+    {
+        SDL.SetAppMetadata(Title, Version, Identifier);
+
+        if (!SDL.Init(SDL.InitFlags.Video))
+        {
+            Log.Error(LogCategories.Core, $"Couldn't initialize SDL: {SDL.GetError()}");
+            return SDL.AppResult.Failure;
+        }
+
+        SDL.WindowFlags windowFlags = BuildInitialWindowFlags();
+
+        Window = SDL.CreateWindow(Title, PreferredWindowSize.Width, PreferredWindowSize.Height, windowFlags);
+        if (Window == IntPtr.Zero)
+        {
+            Log.Error(LogCategories.Core, $"Couldn't create window: {SDL.GetError()}");
+            return SDL.AppResult.Failure;
+        }
+
+        GraphicsDeviceOptions graphicsOptions = CreateGraphicsDeviceOptions(args);
+        GraphicsDevice = CreateGraphicsDevice(PreferredGraphicsAPI, GetNativeWindowInfo(Window), graphicsOptions);
+
+        // Initialize systems
+        Keyboard.Initialize();
+        Mouse.Initialize(Window);
+
+        Initialize();
+        BeginRun();
+
+        if (CollectGarbageBeforeRun)
+        {
+            GarbageCollection.FullBlockingCollect();
+        }
+        GarbageCollection.EnterGameplayMode();
+
+        AllocationTracker.Reset();
+        _timer.Start();
+
+        return SDL.AppResult.Continue;
+    }
+
+    public SDL.AppResult AppEvent(ref SDL.Event e)
+    {
+        try
+        {
+            switch ((SDL.EventType)e.Type)
+            {
+                case SDL.EventType.Quit:
+                    return SDL.AppResult.Success;
+
+                case SDL.EventType.WindowMinimized:
+                    _isMinimized = true;
+                    GraphicsDevice?.OnMinimized();
+                    OnMinimized();
+                    break;
+
+                case SDL.EventType.WindowRestored:
+                    _isMinimized = false;
+                    GraphicsDevice?.OnRestored();
+                    OnRestored();
+                    break;
+
+                case SDL.EventType.WindowPixelSizeChanged:
+                    int w = e.Window.Data1;
+                    int h = e.Window.Data2;
+                    if (w > 0 && h > 0)
+                    {
+                        GraphicsDevice?.OnResize(w, h);
+                        OnResize(w, h);
+                    }
+                    break;
+
+                case SDL.EventType.WindowMoved:
+                    int x = e.Window.Data1;
+                    int y = e.Window.Data2;
+                    SizeI currentSize = GraphicsDevice?.ClientSize ?? PreferredWindowSize;
+                    var bounds = new RectI(x, y, currentSize.Width, currentSize.Height);
+                    GraphicsDevice?.OnWindowMoved(bounds);
+                    OnWindowMoved(bounds);
+                    break;
+
+                case SDL.EventType.WindowEnterFullscreen:
+                    if (_windowMode == WindowMode.Windowed)
+                    {
+                        _windowMode = WindowMode.BorderlessFullscreen;
+                        GraphicsDevice?.OnWindowModeChanged(_windowMode);
+                        OnWindowModeChanged(_windowMode);
+                    }
+                    break;
+
+                case SDL.EventType.WindowLeaveFullscreen:
+                    if (_windowMode != WindowMode.Windowed)
+                    {
+                        _windowMode = WindowMode.Windowed;
+                        GraphicsDevice?.OnWindowModeChanged(_windowMode);
+                        OnWindowModeChanged(_windowMode);
+                    }
+                    break;
+
+                case SDL.EventType.MouseWheel:
+                    Mouse.OnScrollWheel(e.Wheel.X, e.Wheel.Y);
+                    break;
+            }
+
+            return SDL.AppResult.Continue;
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(LogCategories.Core, "Unhandled exception in the main loop.", ex);
+            return SDL.AppResult.Failure;
+        }
+    }
+
+    public SDL.AppResult AppIterate()
+    {
+        try
+        {
+            AllocationTracker.BeginFrame();
+
+            if (_isExiting)
+            {
+                return SDL.AppResult.Success;
+            }
+
+            // Game timer
+            TimeSpan totalTime = _timer.Elapsed;
+            TimeSpan elapsedTime = totalTime - _lastFrameTime;
+            _lastFrameTime = totalTime;
+            var gameTime = new GameTime(totalTime, elapsedTime);
+
+            // Update systems
+            Keyboard.Update();
+            Mouse.Update();
+            AllocationTracker.Mark("Input");
+
+            // Update game
+            Update(gameTime);
+            AllocationTracker.Mark("Update");
+
+            if (_isExiting)
+            {
+                return SDL.AppResult.Success;
+            }
+
+            if (BeginDraw())
+            {
+                Draw();
+                EndDraw();
+            }
+            AllocationTracker.Mark("Draw");
+
+            AllocationTracker.EndFrame();
+
+            return SDL.AppResult.Continue;
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(LogCategories.Core, "Unhandled exception in the main loop.", ex);
+            return SDL.AppResult.Failure;
+        }
+    }
+
+    public void AppQuit(SDL.AppResult result)
+    {
+        try
+        {
+            GraphicsDevice?.WaitIdle();
+
+            // Shutdown game
+            EndRun();
+            UnloadContent();
+            Cleanup();
+
+            // Shutdown systems
+            Mouse.Shutdown();
+            Keyboard.Shutdown();
+
+            GraphicsDevice?.Dispose();
+            GraphicsDevice = null!;
+
+            if (Window != IntPtr.Zero)
+            {
+                SDL.DestroyWindow(Window);
+                Window = IntPtr.Zero;
+            }
+
+            SDL.Quit();
+
+            Log.Info(LogCategories.Core, $"Shutdown complete ({result}).");
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(LogCategories.Core, "Shutdown failed.", ex);
+        }
+        finally
+        {
+            Log.Shutdown();
+        }
+    }
+
+    #endregion
+
+    private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        Log.Fatal(LogCategories.Core, "Unhandled exception.", e.ExceptionObject as Exception);
+        Log.Shutdown();
+    }
+
+    /// <summary>Returns true/false if the on/off switch is present (the last one wins), otherwise null.</summary>
+    private static bool? ReadSwitch(string[] args, string on, string off)
+    {
+        bool? result = null;
+        foreach (string arg in args)
+        {
+            if (arg.Equals(on, StringComparison.OrdinalIgnoreCase))
+            {
+                result = true;
+            }
+            else if (arg.Equals(off, StringComparison.OrdinalIgnoreCase))
+            {
+                result = false;
+            }
+        }
+        return result;
     }
 
     private SDL.WindowFlags BuildInitialWindowFlags()
@@ -437,23 +526,5 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
                 SDL.SetWindowFullscreen(Window, true);
                 break;
         }
-    }
-
-    /// <summary>Returns true/false if the on/off switch is present (the last one wins), otherwise null.</summary>
-    private static bool? ReadSwitch(string[] args, string on, string off)
-    {
-        bool? result = null;
-        foreach (string arg in args)
-        {
-            if (arg.Equals(on, StringComparison.OrdinalIgnoreCase))
-            {
-                result = true;
-            }
-            else if (arg.Equals(off, StringComparison.OrdinalIgnoreCase))
-            {
-                result = false;
-            }
-        }
-        return result;
     }
 }

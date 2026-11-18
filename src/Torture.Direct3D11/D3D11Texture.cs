@@ -44,11 +44,11 @@ internal sealed class D3D11Texture : TortGfx.Texture
             if (desc.MipLevels == 1 && desc.ArraySize == 1)
             {
                 SubresourceData initialData = new((nint)dataPtr, rowPitch, slicePitch);
-                return CreateCore(device, in desc, &initialData, generateMips: false);
+                return Create(device, in desc, &initialData, generateMips: false);
             }
             else
             {
-                var texture = CreateCore(device, in desc, null, true);
+                var texture = Create(device, in desc, null, true);
 
                 imContext.UpdateSubresource(texture.Native, 0, null, (nint)dataPtr, rowPitch, slicePitch);
                 imContext.GenerateMips(texture.Srv);
@@ -60,10 +60,10 @@ internal sealed class D3D11Texture : TortGfx.Texture
 
     public static unsafe D3D11Texture Create(ID3D11Device5 device, in TortGfx.TextureDescription desc)
     {
-        return CreateCore(device, in desc, null, false);
+        return Create(device, in desc, null, false);
     }
 
-    private static unsafe D3D11Texture CreateCore(ID3D11Device5 device,
+    private static unsafe D3D11Texture Create(ID3D11Device5 device,
         in TortGfx.TextureDescription desc,
         SubresourceData* initialData,
         bool generateMips)
