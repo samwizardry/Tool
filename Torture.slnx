@@ -5,9 +5,9 @@
     <File Path="Directory.Packages.props" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/Torture.Core/Torture.Core.csproj" />
-    <Project Path="src/Torture.Graphics.Direct3D11/Torture.Graphics.Direct3D11.csproj" />
-    <Project Path="src/Torture.Graphics.Vulkan/Torture.Graphics.Vulkan.csproj" />
+    <Project Path="src/Torture/Torture.csproj" />
+    <Project Path="src/Torture.Direct3D11/Torture.Direct3D11.csproj" />
+    <Project Path="src/Torture.Vulkan/Torture.Vulkan.csproj" />
     <Project Path="src/Torture.ImGui/Torture.ImGui.csproj" />
     <Project Path="src/Torture.Luna/Torture.Luna.csproj" />
   </Folder>

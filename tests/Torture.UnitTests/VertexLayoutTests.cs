@@ -2,7 +2,7 @@
 
 using FluentAssertions;
 
-using Torture.Core.Graphics;
+using Torture.Graphics;
 
 namespace Torture.UnitTests;
 

@@ -2,15 +2,15 @@
 
 using StbImageSharp;
 
-using Torture.Core.Collections;
-using Torture.Core.Graphics;
+using Torture.Collections;
+using Torture.Graphics;
 
 namespace Torture.Luna;
 
 public class Box : Actor
 {
-    private readonly Core.Graphics.Buffer _vb = default!;
-    private readonly Core.Graphics.Buffer _ib = default!;
+    private readonly Graphics.Buffer _vb = default!;
+    private readonly Graphics.Buffer _ib = default!;
     private readonly Texture _container = default!;
     private readonly Texture _containerSpecular = default!;
 

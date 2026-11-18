@@ -2,8 +2,8 @@
 using System.Runtime.InteropServices;
 
 using Torture.Core;
-using Torture.Core.Graphics;
-using Torture.Core.Input;
+using Torture.Graphics;
+using Torture.Input;
 
 using Vortice.Mathematics;
 
@@ -114,7 +114,7 @@ public sealed partial class Luna : Application<Luna>
         {
 #if SUPPORT_DIRECTX
             GraphicsAPI.D3D11
-                => new Graphics.Direct3D11.D3D11GraphicsDevice(options, window.WindowHandle, window.ClientSize),
+                => new Direct3D11.D3D11GraphicsDevice(options, window.WindowHandle, window.ClientSize),
 #endif
 #if SUPPORT_VULKAN
             //GraphicsAPI.Vulkan

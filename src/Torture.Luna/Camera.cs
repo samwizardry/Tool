@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 
-using Torture.Core.Input;
+using Torture.Input;
 
 namespace Torture.Luna;
 

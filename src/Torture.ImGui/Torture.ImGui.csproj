@@ -5,7 +5,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Torture.Core\Torture.Core.csproj" />
+    <ProjectReference Include="..\Torture\Torture.csproj" />
   </ItemGroup>
 
 </Project>

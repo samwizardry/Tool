@@ -12,9 +12,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Torture.Core\Torture.Core.csproj" />
-    <ProjectReference Include="..\Torture.Graphics.Direct3D11\Torture.Graphics.Direct3D11.csproj" Condition="'$(TortureTargetOS)' == 'Windows'" />
-    <ProjectReference Include="..\Torture.Graphics.Vulkan\Torture.Graphics.Vulkan.csproj" Condition="'$(TortureTargetOS)' == 'Linux' or '$(TortureTargetOS)' == 'Windows'" />
+    <ProjectReference Include="..\Torture\Torture.csproj" />
+    <ProjectReference Include="..\Torture.Direct3D11\Torture.Direct3D11.csproj" Condition="'$(TortureTargetOS)' == 'Windows'" />
+    <ProjectReference Include="..\Torture.Vulkan\Torture.Vulkan.csproj" Condition="'$(TortureTargetOS)' == 'Linux' or '$(TortureTargetOS)' == 'Windows'" />
   </ItemGroup>
 
   <ItemGroup>

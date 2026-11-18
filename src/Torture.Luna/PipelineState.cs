@@ -1,4 +1,4 @@
-﻿using Torture.Core.Graphics;
+﻿using Torture.Graphics;
 
 namespace Torture.Luna;
 
@@ -17,7 +17,7 @@ public class PipelineState : IDisposable
     private readonly Shader _lunaVS = default!;
     private readonly Shader _lunaPS = default!;
     private readonly InputLayout _inputLayout = default!;
-    private readonly Core.Graphics.Buffer _perFrame = default!;
+    private readonly Graphics.Buffer _perFrame = default!;
 
     public PipelineState(GraphicsDevice graphicsDevice)
     {

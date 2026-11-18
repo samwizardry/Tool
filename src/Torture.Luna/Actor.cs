@@ -1,4 +1,4 @@
-﻿using Torture.Core.Graphics;
+﻿using Torture.Graphics;
 
 namespace Torture.Luna;
 
@@ -9,7 +9,7 @@ public abstract class Actor : IDisposable
     protected bool _disposed;
     protected PerObjectData _perObjectData;
 
-    private readonly Core.Graphics.Buffer _perObject = default!;
+    private readonly Graphics.Buffer _perObject = default!;
 
     protected Actor(GraphicsDevice graphicsDevice)
     {

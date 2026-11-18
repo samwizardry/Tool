@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Torture.Core\Torture.Core.csproj" />
+    <ProjectReference Include="..\..\src\Torture\Torture.csproj" />
   </ItemGroup>
 
   <ItemGroup>
