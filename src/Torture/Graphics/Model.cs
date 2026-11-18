@@ -1,49 +1,98 @@
 ﻿using System.Globalization;
-using System.Numerics;
-using System.Runtime.InteropServices;
-
-using Torture.Collections;
 
 namespace Torture.Graphics;
 
-public class Model<TVertex, TIndex> : IDisposable
-    where TVertex : unmanaged
-    where TIndex : unmanaged
+/// <summary>
+/// Represents a drawable sub-region of a <see cref="Mesh"/> associated with a material slot.
+/// Supports both indexed and non-indexed geometry.
+/// </summary>
+public readonly record struct MeshPart(
+    uint IndexCount,
+    uint StartIndexLocation = 0,
+    int BaseVertexLocation = 0,
+    uint VertexCount = 0,
+    uint StartVertexLocation = 0,
+    int MaterialIndex = 0)
 {
-    private readonly GraphicsDevice _graphicsDevice;
-    private readonly Shader _shader;
-    private readonly List<ModelMesh<TVertex, TIndex>> _meshes = [];
+    public static MeshPart Indexed(uint indexCount, uint startIndex = 0, int baseVertex = 0, int materialIndex = 0) =>
+        new(indexCount, startIndex, baseVertex, 0, 0, materialIndex);
 
-    public Model(GraphicsDevice graphicsDevice, Shader shader, List<ModelMesh<TVertex, TIndex>> meshes)
+    public static MeshPart NonIndexed(uint vertexCount, uint startVertex = 0, int materialIndex = 0) =>
+        new(0, 0, 0, vertexCount, startVertex, materialIndex);
+}
+
+/// <summary>
+/// Holds GPU geometry buffers (VertexBuffer and optional IndexBuffer) and sub-meshes (<see cref="MeshPart"/>).
+/// </summary>
+public sealed class Mesh : IDisposable
+{
+    private readonly MeshPart[] _parts;
+    private bool _disposed;
+
+    public Mesh(Buffer vertexBuffer, Buffer? indexBuffer, MeshPart[]? parts = null)
     {
-        _graphicsDevice = graphicsDevice;
-        _shader = shader;
+        VertexBuffer = vertexBuffer;
+        IndexBuffer = indexBuffer;
+
+        _parts = parts ??
+            [
+                indexBuffer is not null
+                    ? MeshPart.Indexed(indexBuffer.Count)
+                    : MeshPart.NonIndexed(vertexBuffer.Count)
+            ];
+    }
+
+    public Buffer VertexBuffer { get; }
+
+    public Buffer? IndexBuffer { get; }
+
+    public ReadOnlySpan<MeshPart> Parts => _parts.AsSpan();
+
+    public bool IsIndexed => IndexBuffer is not null;
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        VertexBuffer.Dispose();
+        IndexBuffer?.Dispose();
+
+        _disposed = true;
+    }
+}
+
+public class Model : IDisposable
+{
+    private readonly Mesh[] _meshes;
+
+    public Model(Mesh[] meshes)
+    {
         _meshes = meshes;
     }
 
-    public static Model<VertexPositionNormal, uint> FromLunaModel(GraphicsDevice graphicsDevice, Shader shader, string path)
+    public static Model FromLunaModel(GraphicsDevice graphicsDevice, Shader shader, string path)
     {
         using var fs = File.OpenRead(path);
-
-        int vertexCount = 0;
-        int triangleCount = 0;
 
         string vertexCountLine = "VertexCount:";
         string triangleCountLine = "TriangleCount:";
         string vertexListLine = "VertexList";
         string triangleListLine = "TriangleList";
 
-        List<VertexPositionNormal> vertices = [];
-        List<uint> indices = [];
-
-        Span<float> vertexElements = stackalloc float[6];
-        Span<uint> indexElements = stackalloc uint[3];
-
-        using var sr = new StreamReader(fs);
         bool startReadVertices = false;
         bool startReadIndices = false;
 
-        int index = -1;
+        int vertexCount = 0;
+        int triangleCount = 0;
+
+        float[] vertices = null!;
+        uint[] indices = null!;
+
+        int startVertLoc = 0;
+        int startIndLoc = 0;
+
+        using var sr = new StreamReader(fs);
 
         while (!sr.EndOfStream)
         {
@@ -73,36 +122,27 @@ public class Model<TVertex, TIndex> : IDisposable
             if (startReadVertices)
             {
                 var s = lineAsSpan.Split(' ');
-
-                int i = 0;
                 foreach (var r in s)
                 {
-                    vertexElements[i++] = float.Parse(lineAsSpan[r].Trim(), CultureInfo.InvariantCulture);
+                    vertices[startVertLoc++] = float.Parse(lineAsSpan[r].Trim(), CultureInfo.InvariantCulture);
                 }
-
-                vertices.Add(new(
-                    new(vertexElements[..3]),
-                    new(vertexElements[3..])));
             }
 
             // Indices
             if (startReadIndices)
             {
                 var s = lineAsSpan.Split(' ');
-
-                int i = 0;
                 foreach (var r in s)
                 {
-                    indexElements[i++] = uint.Parse(lineAsSpan[r], NumberStyles.Integer);
+                    indices[startIndLoc++] = uint.Parse(lineAsSpan[r], NumberStyles.Integer);
                 }
-
-                indices.AddRange(indexElements);
             }
 
             // VertexList
             if (lineAsSpan.Contains(vertexListLine.AsSpan(), StringComparison.Ordinal))
             {
                 startReadVertices = true;
+                vertices = new float[vertexCount];
                 continue;
             }
 
@@ -110,11 +150,12 @@ public class Model<TVertex, TIndex> : IDisposable
             if (lineAsSpan.Contains(triangleListLine.AsSpan(), StringComparison.Ordinal))
             {
                 startReadIndices = true;
+                indices = new uint[triangleCount * 3];
                 continue;
             }
 
             // VertexCount
-            index = lineAsSpan.IndexOf(vertexCountLine);
+            int index = lineAsSpan.IndexOf(vertexCountLine);
             if (index != -1)
             {
                 var s = lineAsSpan
@@ -138,81 +179,22 @@ public class Model<TVertex, TIndex> : IDisposable
             }
         }
 
-        List<ModelMesh<VertexPositionNormal, uint>> meshes =
-            [new ModelMesh<VertexPositionNormal, uint>(graphicsDevice, shader, vertices, indices, in VertexPositionNormal.Layout)];
+        Mesh mesh = new(
+            graphicsDevice.CreateBuffer(vertices, BufferDescription.Vertex(0, 0)),
+            graphicsDevice.CreateBuffer(indices, BufferDescription.Index(0)));
 
-        if (vertices.Count != vertexCount || indices.Count % 3 != 0 || indices.Count / 3 != triangleCount)
-        {
-            throw new InvalidOperationException();
-        }
-
-        return new Model<VertexPositionNormal, uint>(graphicsDevice, shader, meshes);
+        return new Model([mesh]);
     }
 
     public void Draw()
     {
-        foreach (var mesh in _meshes)
-        {
-            mesh.Draw();
-        }
     }
 
     public void Dispose()
     {
-        foreach (var mesh in _meshes)
+        for (int i = 0; i < _meshes.Length; i++)
         {
-            mesh.Dispose();
+            _meshes[i].Dispose();
         }
-    }
-}
-
-public class ModelMesh<TVertex, TIndex> : IDisposable
-    where TVertex : unmanaged
-    where TIndex : unmanaged
-{
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct PerObjectData
-    {
-        public Matrix4x4 Model;
-    }
-
-    private readonly GraphicsDevice _graphicsDevice;
-    private readonly Shader _shader;
-    private readonly Buffer _vertexBuffer;
-    private readonly Buffer _indexBuffer;
-    private readonly InputLayout _layout;
-    private readonly Buffer _perObject;
-
-    private PerObjectData _perObjectData = default;
-
-    public ModelMesh(GraphicsDevice graphicsDevice, Shader shader, List<TVertex> vertices, List<TIndex> indices, in VertexLayout layout)
-    {
-        _graphicsDevice = graphicsDevice;
-        _shader = shader;
-        _vertexBuffer = graphicsDevice.CreateBuffer(vertices.AsSpan(), BufferDescription.Vertex(0, 0));
-        _indexBuffer = graphicsDevice.CreateBuffer(indices.AsSpan(), BufferDescription.Index(0));
-        _layout = graphicsDevice.CreateInputLayout(in layout, shader);
-        _perObject = graphicsDevice.CreateBuffer(BufferDescription.Constant<PerObjectData>());
-    }
-
-    public void Draw()
-    {
-        _perObjectData.Model = Matrix4x4.Identity;
-
-        _graphicsDevice.UpdateBuffer(_perObject, ref _perObjectData);
-        _graphicsDevice.SetConstantBuffer(_perObject, ShaderType.Vertex | ShaderType.Pixel, 1u);
-
-        _graphicsDevice.SetVertexBuffer(_vertexBuffer);
-        _graphicsDevice.SetIndexBuffer(_indexBuffer);
-        _graphicsDevice.SetInputLayout(_layout);
-        _graphicsDevice.SetPrimitiveTopology(PrimitiveTopology.TriangleList);
-        _graphicsDevice.DrawIndexed(_indexBuffer.Count);
-    }
-
-    public void Dispose()
-    {
-        _vertexBuffer?.Dispose();
-        _indexBuffer?.Dispose();
-        _layout?.Dispose();
     }
 }

@@ -43,6 +43,22 @@ public readonly record struct BufferDescription
         where T : unmanaged =>
         Constant((uint)Unsafe.SizeOf<T>(), isDynamic);
 
+    public static BufferDescription Structured<T>(uint elementCount, bool isDynamic = false, bool allowUav = false)
+        where T : unmanaged =>
+        new(
+            elementCount * (uint)Unsafe.SizeOf<T>(),
+            BufferUsage.StructuredBuffer | BufferUsage.ShaderResource | (allowUav ? BufferUsage.UnorderedAccess : BufferUsage.None),
+            isDynamic ? CpuAccess.Write : CpuAccess.None,
+            (uint)Unsafe.SizeOf<T>());
+
+    public static BufferDescription IndirectArguments<T>(uint commandCount = 1u, bool allowUav = false)
+        where T : unmanaged =>
+        new(
+            commandCount * (uint)Unsafe.SizeOf<T>(),
+            BufferUsage.IndirectArguments | (allowUav ? BufferUsage.UnorderedAccess : BufferUsage.None),
+            CpuAccess.None,
+            (uint)Unsafe.SizeOf<T>());
+
     /// <summary>
     /// Aligns size up to the nearest multiple of 16 bytes (required by D3D11 constant buffers).
     /// </summary>

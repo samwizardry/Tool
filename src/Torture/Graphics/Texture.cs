@@ -7,7 +7,7 @@ namespace Torture.Graphics;
 /// <summary>
 /// Represents a GPU texture resource (1D, 2D, 3D, Cube, or Array).
 /// </summary>
-public abstract class Texture : IDisposable
+public abstract class Texture : IDisposable, IBindableResource
 {
     protected readonly TextureDescription _desc;
     protected bool _disposed;

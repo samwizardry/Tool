@@ -1,6 +1,6 @@
 ﻿namespace Torture.Graphics;
 
-public abstract class Buffer : IDisposable
+public abstract class Buffer : IDisposable, IBindableResource
 {
     protected bool _disposed;
 

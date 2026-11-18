@@ -92,7 +92,7 @@ public sealed partial class Luna : Application<Luna>
 
     private PipelineState _pipelineState = default!;
     private readonly List<Actor> _actors = [];
-    private Model<VertexPositionNormal, uint> _model = default!;
+    private Model _model = default!;
     private PerFrameData _perFrameData = default;
 
     public Luna()

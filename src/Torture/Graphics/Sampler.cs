@@ -7,7 +7,7 @@ namespace Torture.Graphics;
 /// <summary>
 /// Represents a GPU texture sampler state.
 /// </summary>
-public abstract class Sampler : IDisposable
+public abstract class Sampler : IDisposable, IBindableResource
 {
     protected readonly SamplerDescription _desc;
     protected bool _disposed;

@@ -289,3 +289,17 @@ public enum SamplerReductionType : byte
     Minimum,
     Maximum
 }
+
+/// <summary>
+/// Specifies the type of resource bound in a <see cref="BindingLayout"/> and <see cref="BindingSet"/>.
+/// </summary>
+public enum BindingResourceType : byte
+{
+    None = 0,
+    ConstantBuffer,
+    TextureSrv,
+    TextureUav,
+    BufferSrv,
+    BufferUav,
+    Sampler
+}

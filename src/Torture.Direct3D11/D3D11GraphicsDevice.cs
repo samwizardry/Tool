@@ -341,13 +341,13 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override Graphics.Buffer CreateBuffer<T>(ReadOnlySpan<T> data, in TortGfx.BufferDescription desc)
+    public override TortGfx.Buffer CreateBuffer<T>(ReadOnlySpan<T> data, in TortGfx.BufferDescription desc)
     {
         return D3D11Buffer.Create(_device, data, in desc);
     }
 
     /// <inheritdoc />
-    public override Graphics.Buffer CreateBuffer(in TortGfx.BufferDescription desc)
+    public override TortGfx.Buffer CreateBuffer(in TortGfx.BufferDescription desc)
     {
         return D3D11Buffer.Create(_device, in desc);
     }
@@ -380,6 +380,24 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     public override TortGfx.Sampler CreateSampler(in TortGfx.SamplerDescription desc)
     {
         return new D3D11Sampler(_device, in desc);
+    }
+
+    /// <inheritdoc />
+    public override TortGfx.GraphicsPipeline CreateGraphicsPipeline(in TortGfx.GraphicsPipelineDescription desc)
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <inheritdoc />
+    public override TortGfx.BindingLayout CreateBindingLayout(in TortGfx.BindingLayoutDescription desc)
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <inheritdoc />
+    public override TortGfx.BindingSet CreateBindingSet(in TortGfx.BindingSetDescription desc, TortGfx.BindingLayout layout)
+    {
+        throw new NotImplementedException();
     }
 
     /// <inheritdoc />
@@ -485,14 +503,14 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override void SetIndexBuffer(Graphics.Buffer buffer, uint byteOffset = 0)
+    public override void SetIndexBuffer(TortGfx.Buffer buffer, uint byteOffset = 0)
     {
         var d3dBuffer = (D3D11Buffer)buffer;
         _imContext.IASetIndexBuffer(d3dBuffer.Native, ((TortGfx.IndexFormat)d3dBuffer.ByteStride).ToDXGIFormat(), byteOffset);
     }
 
     /// <inheritdoc />
-    public override void SetConstantBuffer(Graphics.Buffer buffer, TortGfx.ShaderType stage, uint slot)
+    public override void SetConstantBuffer(TortGfx.Buffer buffer, TortGfx.ShaderType stage, uint slot)
     {
         var d3dBuffer = (D3D11Buffer)buffer;
 
@@ -602,6 +620,12 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
         }
     }
 
+    /// <inheritdoc />
+    public override void SetGraphicsState(in TortGfx.GraphicsState state)
+    {
+        throw new NotImplementedException();
+    }
+
     #endregion
 
     #region Drawing Commands (Direct, Instanced, Indirect)
@@ -640,13 +664,13 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override void DrawIndirect(Graphics.Buffer buffer, uint alignedByteOffset = 0)
+    public override void DrawIndirect(TortGfx.Buffer buffer, uint alignedByteOffset = 0)
     {
         _imContext.DrawInstancedIndirect(((D3D11Buffer)buffer).Native, alignedByteOffset);
     }
 
     /// <inheritdoc />
-    public override void DrawIndexedIndirect(Graphics.Buffer buffer, uint alignedByteOffset = 0)
+    public override void DrawIndexedIndirect(TortGfx.Buffer buffer, uint alignedByteOffset = 0)
     {
         _imContext.DrawIndexedInstancedIndirect(((D3D11Buffer)buffer).Native, alignedByteOffset);
     }
@@ -662,7 +686,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override void DispatchIndirect(Graphics.Buffer buffer, uint alignedByteOffset = 0)
+    public override void DispatchIndirect(TortGfx.Buffer buffer, uint alignedByteOffset = 0)
     {
         _imContext.DispatchIndirect(((D3D11Buffer)buffer).Native, alignedByteOffset);
     }

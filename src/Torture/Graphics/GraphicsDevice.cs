@@ -71,12 +71,16 @@ public abstract class GraphicsDevice : IDisposable
 
     public abstract Sampler CreateSampler(in SamplerDescription desc);
 
+    public abstract GraphicsPipeline CreateGraphicsPipeline(in GraphicsPipelineDescription desc);
+
+    public abstract BindingLayout CreateBindingLayout(in BindingLayoutDescription desc);
+
+    public abstract BindingSet CreateBindingSet(in BindingSetDescription desc, BindingLayout layout);
+
     public abstract void UpdateBuffer<T>(Buffer buffer, ReadOnlySpan<T> data, uint byteOffset = 0)
         where T : unmanaged;
 
-    /// <summary>
-    /// This method never modifies <paramref name="data"/>.
-    /// </summary>
+    /// <summary>This method never modifies <paramref name="data"/>.</summary>
     public abstract void UpdateBuffer<T>(Buffer buffer, ref T data, uint byteOffset = 0)
         where T : unmanaged;
 
@@ -102,6 +106,8 @@ public abstract class GraphicsDevice : IDisposable
     public abstract void SetTexture(Texture texture, ShaderType stage, uint slot);
 
     public abstract void SetSampler(Sampler sampler, ShaderType stage, uint slot);
+
+    public abstract void SetGraphicsState(in GraphicsState state);
 
     #endregion
 
