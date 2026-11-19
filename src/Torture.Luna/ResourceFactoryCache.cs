@@ -4,14 +4,12 @@ using Torture.Graphics;
 
 namespace Torture.Luna;
 
-public static class PipelineStates
+public static class ResourceFactoryCache
 {
     public static Shader PhongVs = default!;
     public static Shader PhongPs = default!;
-    public static Shader LunaVs = default!;
-    public static Shader LunaPs = default!;
 
-    public static InputLayout InputLayout = default!;
+    public static InputLayout PhongInputLayout = default!;
 
     public static RasterState Solid = default!;
     public static RasterState Wireframe = default!;
@@ -20,12 +18,21 @@ public static class PipelineStates
 
     public static Graphics.Buffer PerFrameCb = default!;
     public static Graphics.Buffer PerObjectCb = default!;
+
+    public static Texture WhitePixel = default!;
     public static Texture Container = default!;
     public static Texture ContainerSpecular = default!;
 
-    public static BindingLayout PhongBindingLayout = default!;
-    public static BindingSet PhongBindingSet = default!;
-    public static GraphicsPipeline Pipeline1 = default!;
+    public static BindingLayout MatBindingLayout = default!;
+    public static BindingSet MatBindingSet = default!;
+
+    public static BindingLayout PerFrameBindingLayout = default!;
+    public static BindingSet PerFrameBindingSet = default!;
+
+    public static BindingLayout PerObjBindingLayout = default!;
+    public static BindingSet PerObjBindingSet = default!;
+
+    public static GraphicsPipeline PhongPipeline = default!;
 
     public static Material PhongMaterial = null!;
 
@@ -42,17 +49,7 @@ public static class PipelineStates
            debug: true,
            debugName: "Triangle_PS"));
 
-        shaderSource = File.ReadAllBytes(Path.Combine("Shaders", "PosNormal.hlsl"));
-
-        LunaVs = device.CreateShader(shaderSource, ShaderDescription.Vertex(
-            debug: true,
-            debugName: "PosNormal_VS"));
-
-        LunaPs = device.CreateShader(shaderSource, ShaderDescription.Pixel(
-            debug: true,
-            debugName: "PosNormal_PS"));
-
-        InputLayout = device.CreateInputLayout(VertexPositionNormalTexture.Layout, PhongVs);
+        PhongInputLayout = device.CreateInputLayout(VertexPositionNormalTexture.Layout, PhongVs);
 
         Solid = device.CreateRasterState(RasterStateDescription.CullBack);
         Wireframe = device.CreateRasterState(RasterStateDescription.Wireframe);
@@ -61,6 +58,8 @@ public static class PipelineStates
 
         PerFrameCb = device.CreateBuffer(BufferDescription.Constant<PerFrameData>());
         PerObjectCb = device.CreateBuffer(BufferDescription.Constant<PerObjectData>());
+
+        WhitePixel = device.CreateTexture(new byte[] { 255, 255, 255, 255 }, TextureDescription.Texture2D(1u, 1u));
 
         using (var stream = File.OpenRead("resources/textures/container2.png"))
         {
@@ -78,17 +77,40 @@ public static class PipelineStates
                 TextureDescription.Texture2D((uint)image.Width, (uint)image.Height, mipLevels: 0));
         }
 
-        Pipeline1 = device.CreateGraphicsPipeline(new GraphicsPipelineDescription(
+        PhongPipeline = device.CreateGraphicsPipeline(new GraphicsPipelineDescription(
             PhongVs,
             PhongPs,
-            InputLayout,
+            PhongInputLayout,
             Solid,
             PrimitiveTopology.TriangleList));
 
-        PhongBindingLayout = device.CreateBindingLayout(new BindingLayoutDescription(
+        MatBindingLayout = device.CreateBindingLayout(new BindingLayoutDescription(
+            Visibility: ShaderType.Vertex | ShaderType.Pixel,
+            Bindings: [],
+            RegisterSpace: 0));
+
+        MatBindingSet = device.CreateBindingSet(
+            desc: new BindingSetDescription(
+                Bindings: []),
+            layout: MatBindingLayout);
+
+        PerFrameBindingLayout = device.CreateBindingLayout(new BindingLayoutDescription(
             Visibility: ShaderType.Vertex | ShaderType.Pixel,
             Bindings: [
                 new(0, BindingResourceType.ConstantBuffer),
+            ],
+            RegisterSpace: 0));
+
+        PerFrameBindingSet = device.CreateBindingSet(
+            desc: new BindingSetDescription(
+                Bindings: [
+                    new(0, BindingResourceType.ConstantBuffer, PerFrameCb),
+                ]),
+            layout: PerFrameBindingLayout);
+
+        PerObjBindingLayout = device.CreateBindingLayout(new BindingLayoutDescription(
+            Visibility: ShaderType.Vertex | ShaderType.Pixel,
+            Bindings: [
                 new(1, BindingResourceType.ConstantBuffer),
                 new(0, BindingResourceType.TextureSrv),
                 new(1, BindingResourceType.TextureSrv),
@@ -96,35 +118,44 @@ public static class PipelineStates
             ],
             RegisterSpace: 0));
 
-        PhongBindingSet = device.CreateBindingSet(
+        PerObjBindingSet = device.CreateBindingSet(
             desc: new BindingSetDescription(
                 Bindings: [
-                    new(0, BindingResourceType.ConstantBuffer, PerFrameCb),
                     new(1, BindingResourceType.ConstantBuffer, PerObjectCb),
                     new(0, BindingResourceType.TextureSrv, Container),
                     new(1, BindingResourceType.TextureSrv, ContainerSpecular),
                     new(0, BindingResourceType.Sampler, Anisotropic16),
                 ]),
-            layout: PhongBindingLayout);
+            layout: PerObjBindingLayout);
 
-        PhongMaterial = new Material(Pipeline1, PhongBindingSet, null);
+        PhongMaterial = new Material(PhongPipeline, MatBindingSet, null);
     }
 
     public static void Unload()
     {
         PhongVs?.Dispose();
         PhongPs?.Dispose();
-        LunaVs?.Dispose();
-        LunaPs?.Dispose();
-        InputLayout?.Dispose();
+        PhongInputLayout?.Dispose();
+
         Solid?.Dispose();
         Wireframe?.Dispose();
         Bilinear?.Dispose();
         Anisotropic16?.Dispose();
+
         PerFrameCb?.Dispose();
         PerObjectCb?.Dispose();
+
         Container?.Dispose();
         ContainerSpecular?.Dispose();
+
+        MatBindingLayout?.Dispose();
+        MatBindingSet?.Dispose();
+        PerFrameBindingLayout?.Dispose();
+        PerFrameBindingSet?.Dispose();
+        PerObjBindingLayout?.Dispose();
+        PerObjBindingSet?.Dispose();
+        PhongPipeline?.Dispose();
+        PhongMaterial?.Dispose();
     }
 
     public static void SetPerFrameData(GraphicsDevice device, ref PerFrameData data)

@@ -68,8 +68,11 @@ public sealed class FileLogSink : ILogSink
 
     public void Dispose()
     {
-        _writer.WriteLine($"=== Log closed {DateTime.Now:yyyy-MM-dd HH:mm:ss} ===");
-        _writer.Dispose();
+        if (_writer != null)
+        {
+            _writer.WriteLine($"=== Log closed {DateTime.Now:yyyy-MM-dd HH:mm:ss} ===");
+            _writer.Dispose();
+        }
     }
 
     private static StreamWriter Open(string path) => new(

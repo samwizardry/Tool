@@ -37,7 +37,7 @@ public sealed class Mesh : IDisposable
 
         _parts = parts ??
             [
-                indexBuffer is not null
+                indexBuffer != null
                     ? MeshPart.Indexed(indexBuffer.Count)
                     : MeshPart.NonIndexed(vertexBuffer.Count)
             ];
@@ -50,14 +50,14 @@ public sealed class Mesh : IDisposable
     public ReadOnlySpan<MeshPart> Parts => _parts.AsSpan();
 
     [MemberNotNullWhen(true, nameof(IndexBuffer))]
-    public bool IsIndexed => IndexBuffer is not null;
+    public bool IsIndexed => IndexBuffer != null;
 
     public void Dispose()
     {
         if (_disposed)
             return;
 
-        VertexBuffer.Dispose();
+        VertexBuffer?.Dispose();
         IndexBuffer?.Dispose();
 
         _disposed = true;
@@ -126,19 +126,19 @@ public class Model : IDisposable
 
     public void Dispose()
     {
-        if ( _disposed)
+        if (_disposed)
             return;
 
         foreach (Mesh mesh in _meshes)
         {
-            mesh.Dispose();
+            mesh?.Dispose();
         }
 
         if (_ownsMaterials)
         {
             foreach (Material material in _materials)
             {
-                material.Dispose();
+                material?.Dispose();
             }
         }
 
@@ -174,7 +174,7 @@ public static class ModelLoader
         while (!sr.EndOfStream)
         {
             var line = sr.ReadLine();
-            if (line is null)
+            if (line == null)
             {
                 continue;
             }
@@ -207,6 +207,10 @@ public static class ModelLoader
 
                     vertices[startVertLoc++] = float.Parse(token, CultureInfo.InvariantCulture);
                 }
+
+                // add TexCoord
+                vertices[startVertLoc++] = 0.0f;
+                vertices[startVertLoc++] = 0.0f;
             }
 
             // Indices
@@ -227,7 +231,7 @@ public static class ModelLoader
             if (lineAsSpan.Contains(vertexListLine.AsSpan(), StringComparison.Ordinal))
             {
                 startReadVertices = true;
-                vertices = new float[vertexCount * 6];
+                vertices = new float[vertexCount * VertexPositionNormalTexture.Layout.ByteStride / sizeof(float)];
                 continue;
             }
 
@@ -265,7 +269,7 @@ public static class ModelLoader
         }
 
         Mesh mesh = new(
-            graphicsDevice.CreateBuffer(vertices, BufferDescription.Vertex(0, VertexPositionNormal.Layout.ByteStride)),
+            graphicsDevice.CreateBuffer(vertices, BufferDescription.Vertex(0, VertexPositionNormalTexture.Layout.ByteStride)),
             graphicsDevice.CreateBuffer(indices, BufferDescription.Index(0)));
 
         return new Model(mesh, material, false);

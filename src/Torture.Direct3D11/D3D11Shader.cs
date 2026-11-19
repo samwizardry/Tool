@@ -93,7 +93,7 @@ internal sealed unsafe class D3D11Shader : TortGfx.Shader
         if (_disposed)
             return;
 
-        Native.Dispose();
+        Native?.Dispose();
         Bytecode = null;
 
         _disposed = true;

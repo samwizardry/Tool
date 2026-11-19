@@ -20,7 +20,7 @@ public abstract class Actor : IDisposable
 
     public virtual void Draw()
     {
-        _device.UpdateBuffer(PipelineStates.PerObjectCb, ref _perObjectData);
+        _device.UpdateBuffer(ResourceFactoryCache.PerObjectCb, ref _perObjectData);
     }
 
     public virtual void Dispose()

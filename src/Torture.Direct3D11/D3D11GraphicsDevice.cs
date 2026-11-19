@@ -419,11 +419,11 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
             throw new ArgumentException("Empty data.", nameof(data));
         }
 
-        var d3dBuffer = (D3D11Buffer)buffer;
+        var d3d11Buffer = (D3D11Buffer)buffer;
 
         uint dataByteSize = (uint)(sizeof(T) * data.Length);
 
-        if (byteOffset + dataByteSize > d3dBuffer.ByteSize)
+        if (byteOffset + dataByteSize > d3d11Buffer.ByteSize)
         {
             throw new ArgumentOutOfRangeException(nameof(data), "Data size exceeds buffer capacity.");
         }
@@ -431,53 +431,53 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
         fixed (T* srcPtr = data)
         {
             MapMode mode = byteOffset == 0 ? MapMode.WriteDiscard : MapMode.WriteNoOverwrite;
-            var map = _imContext.Map(d3dBuffer.Native, 0, mode, Vortice.Direct3D11.MapFlags.None);
+            var map = _imContext.Map(d3d11Buffer.Native, 0, mode, Vortice.Direct3D11.MapFlags.None);
 
             byte* dstPtr = (byte*)map.DataPointer + byteOffset;
-            Buffer.MemoryCopy(srcPtr, dstPtr, d3dBuffer.ByteSize - byteOffset, dataByteSize);
+            Buffer.MemoryCopy(srcPtr, dstPtr, d3d11Buffer.ByteSize - byteOffset, dataByteSize);
 
-            _imContext.Unmap(d3dBuffer.Native, 0);
+            _imContext.Unmap(d3d11Buffer.Native, 0);
         }
     }
 
     /// <inheritdoc />
     public override unsafe void UpdateBuffer<T>(TortGfx.Buffer buffer, ref T data, uint byteOffset = 0)
     {
-        var d3dBuffer = (D3D11Buffer)buffer;
+        var d3d11Buffer = (D3D11Buffer)buffer;
 
-        if (byteOffset + (uint)sizeof(T) > d3dBuffer.ByteSize)
+        if (byteOffset + (uint)sizeof(T) > d3d11Buffer.ByteSize)
         {
             throw new ArgumentOutOfRangeException(nameof(data), "Data size exceeds buffer capacity.");
         }
 
         MapMode mode = byteOffset == 0 ? MapMode.WriteDiscard : MapMode.WriteNoOverwrite;
-        var map = _imContext.Map(d3dBuffer.Native, 0, mode, Vortice.Direct3D11.MapFlags.None);
+        var map = _imContext.Map(d3d11Buffer.Native, 0, mode, Vortice.Direct3D11.MapFlags.None);
 
         *(T*)((byte*)map.DataPointer + byteOffset) = data;
 
-        _imContext.Unmap(d3dBuffer.Native, 0);
+        _imContext.Unmap(d3d11Buffer.Native, 0);
     }
 
     /// <inheritdoc />
     public override unsafe void UpdateTexture<T>(TortGfx.Texture texture, ReadOnlySpan<T> data, uint mipLevel = 0, uint arraySlice = 0)
     {
-        var d3dTexture = (D3D11Texture)texture;
+        var d3d11Texture = (D3D11Texture)texture;
 
-        if (mipLevel >= d3dTexture.MipLevels)
+        if (mipLevel >= d3d11Texture.MipLevels)
         {
             throw new ArgumentOutOfRangeException(nameof(mipLevel), "Mip level exceeds texture mip count.");
         }
 
-        if (arraySlice >= d3dTexture.ArraySize)
+        if (arraySlice >= d3d11Texture.ArraySize)
         {
             throw new ArgumentOutOfRangeException(nameof(arraySlice), "Array slice exceeds texture array size.");
         }
 
-        uint mipWidth = System.Math.Max(1u, d3dTexture.Width >> (int)mipLevel);
-        uint mipHeight = System.Math.Max(1u, d3dTexture.Height >> (int)mipLevel);
-        uint mipDepth = System.Math.Max(1u, d3dTexture.Depth >> (int)mipLevel);
-        uint subresource = mipLevel + (arraySlice * d3dTexture.MipLevels);
-        TortGfx.FormatInfo.GetSurfaceInfo(d3dTexture.Format, mipWidth, mipHeight, out uint rowPitch, out uint slicePitch);
+        uint mipWidth = System.Math.Max(1u, d3d11Texture.Width >> (int)mipLevel);
+        uint mipHeight = System.Math.Max(1u, d3d11Texture.Height >> (int)mipLevel);
+        uint mipDepth = System.Math.Max(1u, d3d11Texture.Depth >> (int)mipLevel);
+        uint subresource = mipLevel + (arraySlice * d3d11Texture.MipLevels);
+        TortGfx.FormatInfo.GetSurfaceInfo(d3d11Texture.Format, mipWidth, mipHeight, out uint rowPitch, out uint slicePitch);
 
         uint expectedBytes = slicePitch * mipDepth;
         uint actualBytes = (uint)(sizeof(T) * data.Length);
@@ -490,7 +490,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
 
         fixed (T* srcPtr = data)
         {
-            _imContext.UpdateSubresource(d3dTexture.Native, subresource, null, (nint)srcPtr, rowPitch, slicePitch);
+            _imContext.UpdateSubresource(d3d11Texture.Native, subresource, null, (nint)srcPtr, rowPitch, slicePitch);
         }
     }
 
@@ -509,45 +509,45 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     /// <inheritdoc />
     public override void SetVertexBuffer(TortGfx.Buffer buffer, uint slot = 0, uint byteOffset = 0)
     {
-        var d3dBuffer = (D3D11Buffer)buffer;
-        _imContext.IASetVertexBuffer(slot, d3dBuffer.Native, d3dBuffer.ByteStride, byteOffset);
+        var d3d11Buffer = (D3D11Buffer)buffer;
+        _imContext.IASetVertexBuffer(slot, d3d11Buffer.Native, d3d11Buffer.ByteStride, byteOffset);
     }
 
     /// <inheritdoc />
     public override void SetIndexBuffer(TortGfx.Buffer buffer, uint byteOffset = 0)
     {
-        var d3dBuffer = (D3D11Buffer)buffer;
-        _imContext.IASetIndexBuffer(d3dBuffer.Native, ((TortGfx.IndexFormat)d3dBuffer.ByteStride).ToDXGIFormat(), byteOffset);
+        var d3d11Buffer = (D3D11Buffer)buffer;
+        _imContext.IASetIndexBuffer(d3d11Buffer.Native, ((TortGfx.IndexFormat)d3d11Buffer.ByteStride).ToDXGIFormat(), byteOffset);
     }
 
     /// <inheritdoc />
     public override void SetConstantBuffer(TortGfx.Buffer buffer, TortGfx.ShaderType stage, uint slot)
     {
-        var d3dBuffer = (D3D11Buffer)buffer;
+        var d3d11Buffer = (D3D11Buffer)buffer;
 
         if ((stage & TortGfx.ShaderType.Vertex) == TortGfx.ShaderType.Vertex)
         {
-            _imContext.VSSetConstantBuffer(slot, d3dBuffer.Native);
+            _imContext.VSSetConstantBuffer(slot, d3d11Buffer.Native);
         }
         if ((stage & TortGfx.ShaderType.Hull) == TortGfx.ShaderType.Hull)
         {
-            _imContext.HSSetConstantBuffer(slot, d3dBuffer.Native);
+            _imContext.HSSetConstantBuffer(slot, d3d11Buffer.Native);
         }
         if ((stage & TortGfx.ShaderType.Domain) == TortGfx.ShaderType.Domain)
         {
-            _imContext.DSSetConstantBuffer(slot, d3dBuffer.Native);
+            _imContext.DSSetConstantBuffer(slot, d3d11Buffer.Native);
         }
         if ((stage & TortGfx.ShaderType.Geometry) == TortGfx.ShaderType.Geometry)
         {
-            _imContext.GSSetConstantBuffer(slot, d3dBuffer.Native);
+            _imContext.GSSetConstantBuffer(slot, d3d11Buffer.Native);
         }
         if ((stage & TortGfx.ShaderType.Pixel) == TortGfx.ShaderType.Pixel)
         {
-            _imContext.PSSetConstantBuffer(slot, d3dBuffer.Native);
+            _imContext.PSSetConstantBuffer(slot, d3d11Buffer.Native);
         }
         if ((stage & TortGfx.ShaderType.Compute) == TortGfx.ShaderType.Compute)
         {
-            _imContext.CSSetConstantBuffer(slot, d3dBuffer.Native);
+            _imContext.CSSetConstantBuffer(slot, d3d11Buffer.Native);
         }
     }
 
@@ -572,62 +572,62 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     /// <inheritdoc />
     public override void SetTexture(TortGfx.Texture texture, TortGfx.ShaderType stage, uint slot)
     {
-        var d3dTexture = (D3D11Texture)texture;
+        var d3d11Texture = (D3D11Texture)texture;
 
         if ((stage & TortGfx.ShaderType.Vertex) == TortGfx.ShaderType.Vertex)
         {
-            _imContext.VSSetShaderResource(slot, d3dTexture.Srv);
+            _imContext.VSSetShaderResource(slot, d3d11Texture.Srv);
         }
         if ((stage & TortGfx.ShaderType.Hull) == TortGfx.ShaderType.Hull)
         {
-            _imContext.HSSetShaderResource(slot, d3dTexture.Srv);
+            _imContext.HSSetShaderResource(slot, d3d11Texture.Srv);
         }
         if ((stage & TortGfx.ShaderType.Domain) == TortGfx.ShaderType.Domain)
         {
-            _imContext.DSSetShaderResource(slot, d3dTexture.Srv);
+            _imContext.DSSetShaderResource(slot, d3d11Texture.Srv);
         }
         if ((stage & TortGfx.ShaderType.Geometry) == TortGfx.ShaderType.Geometry)
         {
-            _imContext.GSSetShaderResource(slot, d3dTexture.Srv);
+            _imContext.GSSetShaderResource(slot, d3d11Texture.Srv);
         }
         if ((stage & TortGfx.ShaderType.Pixel) == TortGfx.ShaderType.Pixel)
         {
-            _imContext.PSSetShaderResource(slot, d3dTexture.Srv!);
+            _imContext.PSSetShaderResource(slot, d3d11Texture.Srv!);
         }
         if ((stage & TortGfx.ShaderType.Compute) == TortGfx.ShaderType.Compute)
         {
-            _imContext.CSSetShaderResource(slot, d3dTexture.Srv);
+            _imContext.CSSetShaderResource(slot, d3d11Texture.Srv);
         }
     }
 
     /// <inheritdoc />
     public override void SetSampler(TortGfx.Sampler sampler, TortGfx.ShaderType stage, uint slot)
     {
-        var d3dSampler = (D3D11Sampler)sampler;
+        var d3d11Sampler = (D3D11Sampler)sampler;
 
         if ((stage & TortGfx.ShaderType.Vertex) == TortGfx.ShaderType.Vertex)
         {
-            _imContext.VSSetSampler(slot, d3dSampler.Native);
+            _imContext.VSSetSampler(slot, d3d11Sampler.Native);
         }
         if ((stage & TortGfx.ShaderType.Hull) == TortGfx.ShaderType.Hull)
         {
-            _imContext.HSSetSampler(slot, d3dSampler.Native);
+            _imContext.HSSetSampler(slot, d3d11Sampler.Native);
         }
         if ((stage & TortGfx.ShaderType.Domain) == TortGfx.ShaderType.Domain)
         {
-            _imContext.DSSetSampler(slot, d3dSampler.Native);
+            _imContext.DSSetSampler(slot, d3d11Sampler.Native);
         }
         if ((stage & TortGfx.ShaderType.Geometry) == TortGfx.ShaderType.Geometry)
         {
-            _imContext.GSSetSampler(slot, d3dSampler.Native);
+            _imContext.GSSetSampler(slot, d3d11Sampler.Native);
         }
         if ((stage & TortGfx.ShaderType.Pixel) == TortGfx.ShaderType.Pixel)
         {
-            _imContext.PSSetSampler(slot, d3dSampler.Native);
+            _imContext.PSSetSampler(slot, d3d11Sampler.Native);
         }
         if ((stage & TortGfx.ShaderType.Compute) == TortGfx.ShaderType.Compute)
         {
-            _imContext.CSSetSampler(slot, d3dSampler.Native);
+            _imContext.CSSetSampler(slot, d3d11Sampler.Native);
         }
     }
 
@@ -644,22 +644,15 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
 
         for (int i = 0; i < TortGfx.BindingSetVector.MaxBindingSets; ++i)
         {
-            var bindingSet = state.Bindings[i];
+            var set = state.Bindings[i];
 
-            if (!ReferenceEquals(_currentBindings[i], bindingSet))
+            if (!ReferenceEquals(_currentBindings[i], set))
             {
                 // care: the previous binding set may be active
-                if (bindingSet is D3D11BindingSet bs)
+                if (set != null)
                 {
-                    bs.Apply(_imContext);
-                }
-
-                switch (i)
-                {
-                    case 0: _currentBindings.Set0 = bindingSet; break;
-                    case 1: _currentBindings.Set1 = bindingSet; break;
-                    case 2: _currentBindings.Set2 = bindingSet; break;
-                    case 3: _currentBindings.Set3 = bindingSet; break;
+                    ((D3D11BindingSet)set).Apply(_imContext);
+                    _currentBindings[i] = set;
                 }
             }
         }
@@ -871,7 +864,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
 
     private void FlushDebugMessages()
     {
-        if (_infoQueue is null || _infoQueue.NativePointer == nint.Zero)
+        if (_infoQueue == null || _infoQueue.NativePointer == nint.Zero)
             return;
 
         ulong count = _infoQueue.NumStoredMessages;
@@ -886,7 +879,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
 
     private static void ReportDxgiLiveObjects()
     {
-        if (DXGIGetDebugInterface1(out IDXGIDebug1? dxgiDebug).Failure || dxgiDebug is null)
+        if (DXGIGetDebugInterface1(out IDXGIDebug1? dxgiDebug).Failure || dxgiDebug == null)
         {
             return;
         }

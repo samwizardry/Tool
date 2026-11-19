@@ -39,7 +39,7 @@ public static class LogFormatter
         }
         writer.WriteLine(message.Text);
 
-        if (message.Exception is not null)
+        if (message.Exception != null)
         {
             writer.WriteLine(message.Exception.ToString());
         }

@@ -92,7 +92,7 @@ internal sealed class D3D11Texture : TortGfx.Texture
             case TortGfx.TextureDimension.Texture1D:
             case TortGfx.TextureDimension.Texture1DArray:
                 {
-                    Texture1DDescription d3dDesc = new(
+                    Texture1DDescription nativeDesc = new(
                         format: format,
                         width: desc.Width,
                         arraySize: desc.ArraySize,
@@ -102,8 +102,8 @@ internal sealed class D3D11Texture : TortGfx.Texture
                         cpuAccessFlags: cpuAccess,
                         miscFlags: miscFlags);
                     texture = initialData != null
-                        ? device.CreateTexture1D(d3dDesc, new Span<SubresourceData>(initialData, 1))
-                        : device.CreateTexture1D(d3dDesc);
+                        ? device.CreateTexture1D(nativeDesc, new Span<SubresourceData>(initialData, 1))
+                        : device.CreateTexture1D(nativeDesc);
                     break;
                 }
             case TortGfx.TextureDimension.Texture2D:
@@ -113,7 +113,7 @@ internal sealed class D3D11Texture : TortGfx.Texture
             case TortGfx.TextureDimension.Texture2DMS:
             case TortGfx.TextureDimension.Texture2DMSArray:
                 {
-                    Texture2DDescription d3dDesc = new(
+                    Texture2DDescription nativeDesc = new(
                         format: format,
                         width: desc.Width,
                         height: desc.Height,
@@ -126,13 +126,13 @@ internal sealed class D3D11Texture : TortGfx.Texture
                         sampleQuality: desc.SampleQuality,
                         miscFlags: miscFlags);
                     texture = initialData != null
-                        ? device.CreateTexture2D(d3dDesc, new Span<SubresourceData>(initialData, 1))
-                        : device.CreateTexture2D(d3dDesc);
+                        ? device.CreateTexture2D(nativeDesc, new Span<SubresourceData>(initialData, 1))
+                        : device.CreateTexture2D(nativeDesc);
                     break;
                 }
             case TortGfx.TextureDimension.Texture3D:
                 {
-                    Texture3DDescription d3dDesc = new(
+                    Texture3DDescription nativeDesc = new(
                         format: format,
                         width: desc.Width,
                         height: desc.Height,
@@ -143,8 +143,8 @@ internal sealed class D3D11Texture : TortGfx.Texture
                         cpuAccessFlags: cpuAccess,
                         miscFlags: miscFlags);
                     texture = initialData != null
-                        ? device.CreateTexture3D(d3dDesc, new Span<SubresourceData>(initialData, 1))
-                        : device.CreateTexture3D(d3dDesc);
+                        ? device.CreateTexture3D(nativeDesc, new Span<SubresourceData>(initialData, 1))
+                        : device.CreateTexture3D(nativeDesc);
                     break;
                 }
             default:
@@ -283,7 +283,7 @@ internal sealed class D3D11Texture : TortGfx.Texture
             return;
 
         Srv?.Dispose();
-        Native.Dispose();
+        Native?.Dispose();
 
         _disposed = true;
     }

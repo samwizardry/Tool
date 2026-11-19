@@ -27,14 +27,31 @@ public struct BindingSetVector
     public BindingSet? Set2;
     public BindingSet? Set3;
 
-    public readonly BindingSet? this[int index] => index switch
+    public BindingSet? this[int index]
     {
-        0 => Set0,
-        1 => Set1,
-        2 => Set2,
-        3 => Set3,
-        _ => throw new IndexOutOfRangeException()
-    };
+        readonly get
+        {
+            return index switch
+            {
+                0 => Set0,
+                1 => Set1,
+                2 => Set2,
+                3 => Set3,
+                _ => throw new IndexOutOfRangeException()
+            };
+        }
+        set
+        {
+            switch (index)
+            {
+                case 0: Set0 = value; break;
+                case 1: Set1 = value; break;
+                case 2: Set2 = value; break;
+                case 3: Set3 = value; break;
+                default: throw new IndexOutOfRangeException();
+            }
+        }
+    }
 }
 
 /// <summary>

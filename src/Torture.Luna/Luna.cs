@@ -135,9 +135,10 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void LoadContent()
     {
-        PipelineStates.Load(GraphicsDevice);
+        ResourceFactoryCache.Load(GraphicsDevice);
 
-        _actors.Add(new Box(GraphicsDevice, PipelineStates.PhongMaterial));
+        _actors.Add(new Box(GraphicsDevice, ResourceFactoryCache.PhongMaterial));
+        _actors.Add(new Car(GraphicsDevice, ResourceFactoryCache.PhongMaterial));
 
         _perFrameData.Light.DirLight.Direction = Vector3.Normalize(new Vector3(-0.2f, -1.0f, -0.3f));
         _perFrameData.Light.DirLight.Ambient = new Vector3(0.1f, 0.1f, 0.1f);
@@ -207,7 +208,7 @@ public sealed partial class Luna : Application<Luna>
         _perFrameData.Light.SpotLight.Position = _camera.Position;
         _perFrameData.Light.SpotLight.Direction = _camera.Direction;
 
-        PipelineStates.SetPerFrameData(GraphicsDevice, ref _perFrameData);
+        ResourceFactoryCache.SetPerFrameData(GraphicsDevice, ref _perFrameData);
 
         foreach (var actor in _actors)
         {
@@ -230,11 +231,11 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void UnloadContent()
     {
-        PipelineStates.Unload();
+        ResourceFactoryCache.Unload();
 
         foreach (var actor in _actors)
         {
-            actor.Dispose();
+            actor?.Dispose();
         }
     }
 

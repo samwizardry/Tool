@@ -60,7 +60,7 @@ internal sealed class D3D11Sampler : TortGfx.Sampler
         if (_disposed)
             return;
 
-        Native.Dispose();
+        Native?.Dispose();
 
         _disposed = true;
     }

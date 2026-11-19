@@ -25,7 +25,7 @@ public sealed class Material : IDisposable
         if (_disposed)
             return;
 
-        BindingSet.Dispose();
+        BindingSet?.Dispose();
         ConstantBuffer?.Dispose();
 
         _disposed = true;

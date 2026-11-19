@@ -130,7 +130,7 @@ public static class Log
         {
             foreach (ILogSink sink in s_sinks)
             {
-                try { sink.Flush(); sink.Dispose(); } catch { /* ignored on purpose */ }
+                try { sink?.Flush(); sink?.Dispose(); } catch { /* ignored on purpose */ }
             }
             s_sinks = [];
         }

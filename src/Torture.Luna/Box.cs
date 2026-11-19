@@ -47,7 +47,7 @@ public class Box : Actor
     public override void Draw()
     {
         base.Draw();
-        _model.Draw(_device, null, null);
+        _model.Draw(_device, ResourceFactoryCache.PerFrameBindingSet, ResourceFactoryCache.PerObjBindingSet);
     }
 
     public override void Dispose()
@@ -55,7 +55,7 @@ public class Box : Actor
         if (_disposed)
             return;
 
-        _model.Dispose();
+        _model?.Dispose();
         base.Dispose();
 
         _disposed = true;
