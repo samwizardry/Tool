@@ -11,7 +11,7 @@ using Vortice.Mathematics;
 namespace Torture.Luna;
 
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct Material
+public struct ModelMaterial
 {
     public float Shininess;
     public Vector3 Pad0;
@@ -75,7 +75,7 @@ public struct PerObjectData
 {
     public Matrix4x4 Model;
     public Matrix4x4 NormalMatrix;
-    public Material Material;
+    public ModelMaterial Material;
 }
 
 [SDL3.SDL.GenerateMain]
@@ -90,9 +90,7 @@ public sealed partial class Luna : Application<Luna>
     private float _elapsedSeconds;
     private int _frameCount;
 
-    private PipelineState _pipelineState = default!;
     private readonly List<Actor> _actors = [];
-    private Model _model = default!;
     private PerFrameData _perFrameData = default;
 
     public Luna()
@@ -137,8 +135,9 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void LoadContent()
     {
-        _pipelineState = new PipelineState(GraphicsDevice);
-        _actors.Add(new Box(GraphicsDevice));
+        PipelineStates.Load(GraphicsDevice);
+
+        _actors.Add(new Box(GraphicsDevice, PipelineStates.PhongMaterial));
 
         _perFrameData.Light.DirLight.Direction = Vector3.Normalize(new Vector3(-0.2f, -1.0f, -0.3f));
         _perFrameData.Light.DirLight.Ambient = new Vector3(0.1f, 0.1f, 0.1f);
@@ -160,8 +159,6 @@ public sealed partial class Luna : Application<Luna>
         _perFrameData.Light.SpotLight.OuterCutOff = MathF.Cos(float.DegreesToRadians(17.5f));
         _perFrameData.Light.SpotLight.Linear = 0.09f;
         _perFrameData.Light.SpotLight.Quadratic = 0.032f;
-
-        //_model = Model<VertexPositionNormal, uint>.FromLunaModel(GraphicsDevice, _pipelineState.LunaVS, "resources/objects/car.txt");
     }
 
     protected override unsafe void Update(GameTime gameTime)
@@ -188,20 +185,20 @@ public sealed partial class Luna : Application<Luna>
 
         if (Keyboard.IsKeyPressed(KeyboardKey.F1))
         {
-            _pipelineState.UseSolid();
+            //_pipelineState.UseSolid();
         }
         if (Keyboard.IsKeyPressed(KeyboardKey.F2))
         {
-            _pipelineState.UseWireframe();
+            //_pipelineState.UseWireframe();
         }
 
         if (Keyboard.IsKeyPressed(KeyboardKey.F3))
         {
-            _pipelineState.UseBilinear();
+            //_pipelineState.UseBilinear();
         }
         if (Keyboard.IsKeyPressed(KeyboardKey.F4))
         {
-            _pipelineState.UseAnisotropic();
+            //_pipelineState.UseAnisotropic();
         }
 
         _perFrameData.ViewProj = _camera.ViewProj;
@@ -210,7 +207,7 @@ public sealed partial class Luna : Application<Luna>
         _perFrameData.Light.SpotLight.Position = _camera.Position;
         _perFrameData.Light.SpotLight.Direction = _camera.Direction;
 
-        _pipelineState.SetPerFrameData(ref _perFrameData);
+        PipelineStates.SetPerFrameData(GraphicsDevice, ref _perFrameData);
 
         foreach (var actor in _actors)
         {
@@ -220,14 +217,10 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void Draw()
     {
-        _pipelineState.Apply();
-
         foreach (var actor in _actors)
         {
             actor.Draw();
         }
-
-        //_model.Draw();
     }
 
     protected override void OnResize(int width, int height)
@@ -237,14 +230,12 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void UnloadContent()
     {
-        _pipelineState.Dispose();
+        PipelineStates.Unload();
 
         foreach (var actor in _actors)
         {
             actor.Dispose();
         }
-
-        _model?.Dispose();
     }
 
     protected override void Cleanup()

@@ -48,7 +48,7 @@ internal sealed class D3D11RasterState : TortGfx.RasterState
         if (_disposed)
             return;
 
-        Native?.Dispose();
+        Native.Dispose();
 
         _disposed = true;
     }

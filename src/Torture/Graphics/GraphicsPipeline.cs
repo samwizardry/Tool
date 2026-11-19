@@ -8,7 +8,7 @@ public readonly record struct GraphicsPipelineDescription(
     Shader? PixelShader = null,
     InputLayout? InputLayout = null,
     RasterState? RasterState = null,
-    PrimitiveTopology PrimitiveTopology = PrimitiveTopology.TriangleList,
+    PrimitiveTopology Topology = PrimitiveTopology.TriangleList,
     BindingLayout[]? BindingLayouts = null);
 
 /// <summary>

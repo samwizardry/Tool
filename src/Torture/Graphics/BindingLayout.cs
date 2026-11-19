@@ -28,7 +28,7 @@ public readonly record struct BindingLayoutDescription(
 /// </summary>
 public abstract class BindingLayout : IDisposable
 {
-    private readonly BindingLayoutDescription _desc;
+    protected readonly BindingLayoutDescription _desc;
     protected bool _disposed;
 
     protected BindingLayout(in BindingLayoutDescription desc)
@@ -37,6 +37,12 @@ public abstract class BindingLayout : IDisposable
     }
 
     public ref readonly BindingLayoutDescription Desc => ref _desc;
+
+    public ShaderType Visibility => _desc.Visibility;
+
+    public ReadOnlySpan<BindingLayoutItem> Bindings => _desc.Bindings;
+
+    public uint RegisterSpace => _desc.RegisterSpace;
 
     public abstract void Dispose();
 }

@@ -1,21 +1,23 @@
 ﻿namespace Torture.Graphics;
 
 /// <summary>
-/// Combines a <see cref="Graphics.GraphicsPipeline"/> with a concrete <see cref="Graphics.BindingSet"/>.
+/// Combines a <see cref="GraphicsPipeline"/> with a concrete <see cref="Graphics.BindingSet"/>.
 /// </summary>
 public sealed class Material : IDisposable
 {
     private bool _disposed;
 
-    public Material(GraphicsPipeline graphicsPipeline, BindingSet bindingSet, Buffer? constantBuffer)
+    public Material(GraphicsPipeline pipeline, BindingSet bindingSet, Buffer? constantBuffer)
     {
-        GraphicsPipeline = graphicsPipeline;
+        Pipeline = pipeline;
         BindingSet = bindingSet;
         ConstantBuffer = constantBuffer;
     }
 
-    public GraphicsPipeline GraphicsPipeline { get; }
+    public GraphicsPipeline Pipeline { get; }
+
     public BindingSet BindingSet { get; private set; }
+
     public Buffer? ConstantBuffer { get; }
 
     public void Dispose()
@@ -23,7 +25,6 @@ public sealed class Material : IDisposable
         if (_disposed)
             return;
 
-        GraphicsPipeline.Dispose();
         BindingSet.Dispose();
         ConstantBuffer?.Dispose();
 

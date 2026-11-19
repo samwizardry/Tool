@@ -38,8 +38,7 @@ internal sealed class D3D11InputLayout : TortGfx.InputLayout
         if (_disposed)
             return;
 
-        Native?.Dispose();
-        Native = null!;
+        Native.Dispose();
 
         _disposed = true;
     }

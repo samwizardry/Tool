@@ -6,12 +6,18 @@ namespace Torture.Direct3D11;
 
 internal sealed class D3D11Buffer : TortGfx.Buffer
 {
-    private D3D11Buffer(ID3D11Buffer buffer)
+    private D3D11Buffer(ID3D11Buffer buffer, ID3D11ShaderResourceView? srv = null, ID3D11UnorderedAccessView? uav = null)
     {
         Native = buffer;
+        Srv = srv;
+        Uav = uav;
     }
 
     public ID3D11Buffer Native { get; private set; }
+
+    public ID3D11ShaderResourceView? Srv { get; private set; }
+
+    public ID3D11UnorderedAccessView? Uav { get; private set; }
 
     public static unsafe D3D11Buffer Create<T>(ID3D11Device5 device, ReadOnlySpan<T> data, in TortGfx.BufferDescription desc)
         where T : unmanaged
@@ -20,11 +26,13 @@ internal sealed class D3D11Buffer : TortGfx.Buffer
 
         uint vertexByteSize = (uint)sizeof(T);
 
-        uint byteSize = d3dDesc.ByteWidth > 0 ? d3dDesc.ByteWidth : vertexByteSize * (uint)data.Length;
-        uint byteStride = d3dDesc.StructureByteStride > 0 ? d3dDesc.StructureByteStride : vertexByteSize;
+        uint byteSize = desc.ByteSize > 0 ? desc.ByteSize : vertexByteSize * (uint)data.Length;
+        uint byteStride = desc.ByteStride > 0 ? desc.ByteStride : vertexByteSize;
 
-        bool isStructured = (d3dDesc.MiscFlags & ResourceOptionFlags.BufferStructured) == ResourceOptionFlags.BufferStructured;
-        uint structureByteStride = isStructured ? byteStride : 0;
+        uint structureByteStride =
+            (d3dDesc.MiscFlags & ResourceOptionFlags.BufferStructured) == ResourceOptionFlags.BufferStructured
+            ? byteStride
+            : 0;
 
         d3dDesc.ByteWidth = byteSize;
         d3dDesc.StructureByteStride = structureByteStride;
@@ -48,16 +56,19 @@ internal sealed class D3D11Buffer : TortGfx.Buffer
     {
         BufferDescription d3dDesc = ToD3DBufferDescription(desc, false);
 
-        bool isStructured = (d3dDesc.MiscFlags & ResourceOptionFlags.BufferStructured) == ResourceOptionFlags.BufferStructured;
-        uint structureByteStride = isStructured ? desc.ByteStride : 0;
+        uint structureByteStride =
+            (d3dDesc.MiscFlags & ResourceOptionFlags.BufferStructured) == ResourceOptionFlags.BufferStructured
+            ? desc.ByteStride
+            : 0;
 
+        d3dDesc.ByteWidth = desc.ByteSize;
         d3dDesc.StructureByteStride = structureByteStride;
 
         ID3D11Buffer buffer = device.CreateBuffer(d3dDesc, initialData: null);
 
         return new D3D11Buffer(buffer)
         {
-            ByteSize = d3dDesc.ByteWidth,
+            ByteSize = desc.ByteSize,
             ByteStride = desc.ByteStride
         };
     }
@@ -116,12 +127,12 @@ internal sealed class D3D11Buffer : TortGfx.Buffer
 
         return new BufferDescription
         {
-            ByteWidth = desc.ByteSize,
+            ByteWidth = 0,
             Usage = resourceUsage,
             BindFlags = bindFlags,
             CPUAccessFlags = cpuAccessFlags,
             MiscFlags = miscFlags,
-            StructureByteStride = isStructured ? desc.ByteStride : 0
+            StructureByteStride = 0
         };
     }
 
@@ -130,6 +141,8 @@ internal sealed class D3D11Buffer : TortGfx.Buffer
         if (_disposed)
             return;
 
+        Srv?.Dispose();
+        Uav?.Dispose();
         Native.Dispose();
 
         _disposed = true;

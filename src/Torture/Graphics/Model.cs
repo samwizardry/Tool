@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 
 namespace Torture.Graphics;
 
@@ -48,6 +49,7 @@ public sealed class Mesh : IDisposable
 
     public ReadOnlySpan<MeshPart> Parts => _parts.AsSpan();
 
+    [MemberNotNullWhen(true, nameof(IndexBuffer))]
     public bool IsIndexed => IndexBuffer is not null;
 
     public void Dispose()
@@ -62,16 +64,91 @@ public sealed class Mesh : IDisposable
     }
 }
 
+/// <summary>
+/// Represents a 3D model composed of one or more <see cref="Mesh"/> objects and their <see cref="Material"/> slots.
+/// </summary>
 public class Model : IDisposable
 {
     private readonly Mesh[] _meshes;
+    private readonly Material[] _materials;
+    private readonly bool _ownsMaterials;
 
-    public Model(Mesh[] meshes)
+    private bool _disposed;
+
+    public Model(Mesh[] meshes, Material[] materials, bool ownsMaterials = false)
     {
         _meshes = meshes;
+        _materials = materials;
+        _ownsMaterials = ownsMaterials;
     }
 
-    public static Model FromLunaModel(GraphicsDevice graphicsDevice, Shader shader, string path)
+    public Model(Mesh mesh, Material material, bool ownsMaterials = false)
+        : this([mesh], [material], ownsMaterials) { }
+
+    public void Draw(GraphicsDevice graphicsDevice, BindingSet? perFrameSet = null, BindingSet? perObjectSet = null)
+    {
+        foreach (Mesh mesh in _meshes)
+        {
+            VertexBufferBinding vbBinding = new(mesh.VertexBuffer);
+            IndexBufferBinding? ibBinding = mesh.IsIndexed
+                ? new IndexBufferBinding(mesh.IndexBuffer)
+                : null;
+
+            foreach (ref readonly MeshPart part in mesh.Parts)
+            {
+                Material material = _materials[part.MaterialIndex];
+
+                GraphicsState state = new(
+                    Pipeline: material.Pipeline,
+                    Bindings: new BindingSetVector
+                    {
+                        Set0 = perFrameSet,
+                        Set1 = null,
+                        Set2 = material.BindingSet,
+                        Set3 = perObjectSet
+                    },
+                    VertexBuffer: vbBinding,
+                    IndexBuffer: ibBinding);
+
+                graphicsDevice.SetGraphicsState(in state);
+
+                if (mesh.IsIndexed)
+                {
+                    graphicsDevice.DrawIndexed(part.IndexCount, part.StartIndexLocation, part.BaseVertexLocation);
+                }
+                else
+                {
+                    graphicsDevice.Draw(part.VertexCount, part.StartVertexLocation);
+                }
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        if ( _disposed)
+            return;
+
+        foreach (Mesh mesh in _meshes)
+        {
+            mesh.Dispose();
+        }
+
+        if (_ownsMaterials)
+        {
+            foreach (Material material in _materials)
+            {
+                material.Dispose();
+            }
+        }
+
+        _disposed = true;
+    }
+}
+
+public static class ModelLoader
+{
+    public static Model LoadLunaModel(GraphicsDevice graphicsDevice, Material material, string path)
     {
         using var fs = File.OpenRead(path);
 
@@ -124,7 +201,11 @@ public class Model : IDisposable
                 var s = lineAsSpan.Split(' ');
                 foreach (var r in s)
                 {
-                    vertices[startVertLoc++] = float.Parse(lineAsSpan[r].Trim(), CultureInfo.InvariantCulture);
+                    var token = lineAsSpan[r].Trim();
+                    if (token.Length == 0)
+                        continue;
+
+                    vertices[startVertLoc++] = float.Parse(token, CultureInfo.InvariantCulture);
                 }
             }
 
@@ -134,7 +215,11 @@ public class Model : IDisposable
                 var s = lineAsSpan.Split(' ');
                 foreach (var r in s)
                 {
-                    indices[startIndLoc++] = uint.Parse(lineAsSpan[r], NumberStyles.Integer);
+                    var token = lineAsSpan[r].Trim();
+                    if (token.Length == 0)
+                        continue;
+
+                    indices[startIndLoc++] = uint.Parse(token, NumberStyles.Integer);
                 }
             }
 
@@ -142,7 +227,7 @@ public class Model : IDisposable
             if (lineAsSpan.Contains(vertexListLine.AsSpan(), StringComparison.Ordinal))
             {
                 startReadVertices = true;
-                vertices = new float[vertexCount];
+                vertices = new float[vertexCount * 6];
                 continue;
             }
 
@@ -180,21 +265,9 @@ public class Model : IDisposable
         }
 
         Mesh mesh = new(
-            graphicsDevice.CreateBuffer(vertices, BufferDescription.Vertex(0, 0)),
+            graphicsDevice.CreateBuffer(vertices, BufferDescription.Vertex(0, VertexPositionNormal.Layout.ByteStride)),
             graphicsDevice.CreateBuffer(indices, BufferDescription.Index(0)));
 
-        return new Model([mesh]);
-    }
-
-    public void Draw()
-    {
-    }
-
-    public void Dispose()
-    {
-        for (int i = 0; i < _meshes.Length; i++)
-        {
-            _meshes[i].Dispose();
-        }
+        return new Model(mesh, material, false);
     }
 }

@@ -43,6 +43,6 @@ public struct BindingSetVector
 public readonly record struct GraphicsState(
     GraphicsPipeline Pipeline,
     BindingSetVector Bindings,
-    VertexBufferBinding? VertexBuffer,
-    IndexBufferBinding? IndexBuffer,
-    Buffer? IndirectParams);
+    VertexBufferBinding? VertexBuffer = null,
+    IndexBufferBinding? IndexBuffer = null,
+    Buffer? IndirectParams = null);

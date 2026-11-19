@@ -1,7 +1,5 @@
 ﻿using System.Numerics;
 
-using StbImageSharp;
-
 using Torture.Collections;
 using Torture.Graphics;
 
@@ -9,34 +7,18 @@ namespace Torture.Luna;
 
 public class Box : Actor
 {
-    private readonly Graphics.Buffer _vb = default!;
-    private readonly Graphics.Buffer _ib = default!;
-    private readonly Texture _container = default!;
-    private readonly Texture _containerSpecular = default!;
+    private readonly Model _model;
 
-    public Box(GraphicsDevice graphicsDevice)
-        : base(graphicsDevice)
+    public Box(GraphicsDevice device, Material material)
+        : base(device)
     {
-        var modelData = Geometry.ComputeBox(Vector3.One * 2.0f);
+        var data = Geometry.ComputeBox(Vector3.One * 2.0f);
 
-        _vb = graphicsDevice.CreateBuffer(modelData.Vertices.AsSpan(), BufferDescription.Vertex(0, 0));
-        _ib = graphicsDevice.CreateBuffer(modelData.Indices.AsSpan(), BufferDescription.Index(0));
-
-        using (var stream = File.OpenRead("resources/textures/container2.png"))
-        {
-            ImageResult image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
-            _container = graphicsDevice.CreateTexture(
-                image.Data.AsSpan(),
-                TextureDescription.Texture2D((uint)image.Width, (uint)image.Height, mipLevels: 0));
-        }
-
-        using (var stream = File.OpenRead("resources/textures/container2_specular.png"))
-        {
-            ImageResult image = ImageResult.FromStream(stream, ColorComponents.RedGreenBlueAlpha);
-            _containerSpecular = graphicsDevice.CreateTexture(
-                image.Data.AsSpan(),
-                TextureDescription.Texture2D((uint)image.Width, (uint)image.Height, mipLevels: 0));
-        }
+        _model = new Model(new Mesh(
+            device.CreateBuffer(data.Vertices.AsSpan(), BufferDescription.Vertex(0, 0)),
+            device.CreateBuffer(data.Indices.AsSpan(), BufferDescription.Index(0))),
+            material,
+            false);
 
         _perObjectData.Material = new()
         {
@@ -48,7 +30,7 @@ public class Box : Actor
 
     public override void Update(float dt)
     {
-        //_angle += 30.0f * dt;
+        _angle += 30.0f * dt;
         _perObjectData.Model = Matrix4x4.CreateRotationY(float.DegreesToRadians(_angle));
         
         if (Matrix4x4.Invert(_perObjectData.Model, out var inverseModel))
@@ -65,11 +47,7 @@ public class Box : Actor
     public override void Draw()
     {
         base.Draw();
-        _graphicsDevice.SetTexture(_container, ShaderType.Pixel, 0);
-        _graphicsDevice.SetTexture(_containerSpecular, ShaderType.Pixel, 1u);
-        _graphicsDevice.SetVertexBuffer(_vb);
-        _graphicsDevice.SetIndexBuffer(_ib);
-        _graphicsDevice.DrawIndexed(_ib.Count, 0, 0);
+        _model.Draw(_device, null, null);
     }
 
     public override void Dispose()
@@ -77,11 +55,7 @@ public class Box : Actor
         if (_disposed)
             return;
 
-        _vb?.Dispose();
-        _ib?.Dispose();
-        _container?.Dispose();
-        _containerSpecular?.Dispose();
-
+        _model.Dispose();
         base.Dispose();
 
         _disposed = true;

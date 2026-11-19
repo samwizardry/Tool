@@ -209,7 +209,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
     protected virtual void ConfigureLogging(string[] args)
     {
         Log.AddSink(new ConsoleLogSink());
-        Log.AddSink(new FileLogSink(GetDefaultLogFilePath()));
+        //Log.AddSink(new FileLogSink(GetDefaultLogFilePath()));
     }
 
     /// <summary>

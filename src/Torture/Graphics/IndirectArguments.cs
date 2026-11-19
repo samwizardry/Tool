@@ -24,6 +24,7 @@ public record struct DrawIndexedIndirectArguments(
     uint StartIndexLocation = 0,
     int BaseVertexLocation = 0,
     uint StartInstanceLocation = 0);
+
 /// <summary>
 /// Hardware-compatible indirect arguments for <see cref="GraphicsDevice.DispatchIndirect"/>.
 /// Matches D3D11_DISPATCH_INDIRECT_ARGS and VkDispatchIndirectCommand.

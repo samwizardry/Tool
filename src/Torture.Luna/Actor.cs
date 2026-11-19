@@ -4,17 +4,14 @@ namespace Torture.Luna;
 
 public abstract class Actor : IDisposable
 {
-    protected readonly GraphicsDevice _graphicsDevice;
+    protected readonly GraphicsDevice _device;
 
     protected bool _disposed;
     protected PerObjectData _perObjectData;
 
-    private readonly Graphics.Buffer _perObject = default!;
-
-    protected Actor(GraphicsDevice graphicsDevice)
+    protected Actor(GraphicsDevice device)
     {
-        _graphicsDevice = graphicsDevice;
-        _perObject = graphicsDevice.CreateBuffer(BufferDescription.Constant<PerObjectData>());
+        _device = device;
     }
 
     public virtual void Update(float dt)
@@ -23,12 +20,10 @@ public abstract class Actor : IDisposable
 
     public virtual void Draw()
     {
-        _graphicsDevice.UpdateBuffer(_perObject, ref _perObjectData);
-        _graphicsDevice.SetConstantBuffer(_perObject, ShaderType.Vertex | ShaderType.Pixel, 1u);
+        _device.UpdateBuffer(PipelineStates.PerObjectCb, ref _perObjectData);
     }
 
     public virtual void Dispose()
     {
-        _perObject?.Dispose();
     }
 }

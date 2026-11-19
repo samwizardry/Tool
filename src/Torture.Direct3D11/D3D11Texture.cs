@@ -283,7 +283,7 @@ internal sealed class D3D11Texture : TortGfx.Texture
             return;
 
         Srv?.Dispose();
-        Native?.Dispose();
+        Native.Dispose();
 
         _disposed = true;
     }

@@ -42,6 +42,12 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     private ID3D11Texture2D _depthStencilBuffer = null!;
     private ID3D11DepthStencilView _depthStencilView = null!;
 
+    // Cached state for SetGraphicsState diffing
+    private D3D11GraphicsPipeline? _currentPipeline;
+    private TortGfx.BindingSetVector _currentBindings;
+    private TortGfx.VertexBufferBinding? _currentVertexBuffer;
+    private TortGfx.IndexBufferBinding? _currentIndexBuffer;
+
     public D3D11GraphicsDevice(TortGfx.GraphicsDeviceOptions options,
         nint hwnd, SizeI clientSize, Format colorFormat = Format.B8G8R8A8_UNorm, Format depthStencilFormat = Format.D24_UNorm_S8_UInt)
         : base(options)
@@ -294,6 +300,11 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     /// <inheritdoc />
     public override bool BeginFrame()
     {
+        _currentPipeline = null;
+        _currentBindings = default;
+        _currentVertexBuffer = null;
+        _currentIndexBuffer = null;
+
         _imContext.ClearRenderTargetView(_renderTargetView, ClearColor);
         _imContext.ClearDepthStencilView(_depthStencilView, DepthStencilClearFlags.Depth | DepthStencilClearFlags.Stencil, 1.0f, 0);
 
@@ -385,19 +396,19 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     /// <inheritdoc />
     public override TortGfx.GraphicsPipeline CreateGraphicsPipeline(in TortGfx.GraphicsPipelineDescription desc)
     {
-        throw new NotImplementedException();
+        return new D3D11GraphicsPipeline(in desc);
     }
 
     /// <inheritdoc />
     public override TortGfx.BindingLayout CreateBindingLayout(in TortGfx.BindingLayoutDescription desc)
     {
-        throw new NotImplementedException();
+        return new D3D11BindingLayout(in desc);
     }
 
     /// <inheritdoc />
     public override TortGfx.BindingSet CreateBindingSet(in TortGfx.BindingSetDescription desc, TortGfx.BindingLayout layout)
     {
-        throw new NotImplementedException();
+        return new D3D11BindingSet(desc, (D3D11BindingLayout)layout);
     }
 
     /// <inheritdoc />
@@ -623,7 +634,55 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     /// <inheritdoc />
     public override void SetGraphicsState(in TortGfx.GraphicsState state)
     {
-        throw new NotImplementedException();
+        var pipeline = (D3D11GraphicsPipeline)state.Pipeline;
+        
+        if (!ReferenceEquals(_currentPipeline, pipeline))
+        {
+            pipeline.Apply(_imContext);
+            _currentPipeline = pipeline;
+        }
+
+        for (int i = 0; i < TortGfx.BindingSetVector.MaxBindingSets; ++i)
+        {
+            var bindingSet = state.Bindings[i];
+
+            if (!ReferenceEquals(_currentBindings[i], bindingSet))
+            {
+                // care: the previous binding set may be active
+                if (bindingSet is D3D11BindingSet bs)
+                {
+                    bs.Apply(_imContext);
+                }
+
+                switch (i)
+                {
+                    case 0: _currentBindings.Set0 = bindingSet; break;
+                    case 1: _currentBindings.Set1 = bindingSet; break;
+                    case 2: _currentBindings.Set2 = bindingSet; break;
+                    case 3: _currentBindings.Set3 = bindingSet; break;
+                }
+            }
+        }
+
+        if (_currentVertexBuffer != state.VertexBuffer)
+        {
+            if (state.VertexBuffer is { } vb)
+            {
+                SetVertexBuffer(vb.Buffer, vb.Slot, vb.ByteOffset);
+            }
+
+            _currentVertexBuffer = state.VertexBuffer;
+        }
+
+        if (_currentIndexBuffer != state.IndexBuffer)
+        {
+            if (state.IndexBuffer is { } ib)
+            {
+                SetIndexBuffer(ib.Buffer, ib.ByteOffset);
+            }
+
+            _currentIndexBuffer = state.IndexBuffer;
+        }
     }
 
     #endregion

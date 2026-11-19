@@ -12,13 +12,19 @@ public sealed record GraphicsDeviceOptions
     private const bool DebugByDefault = false;
 #endif
 
-    /// <summary>Enables the graphics API validation layer (D3D11 debug layer, Vulkan validation layers).</summary>
+    /// <summary>
+    /// Enables the graphics API validation layer (D3D11 debug layer, Vulkan validation layers).
+    /// </summary>
     public bool EnableValidation { get; init; } = DebugByDefault;
+
     /// <summary>
     /// Registers every native wrapper together with its creation stack trace to report leaks on shutdown.
     /// Allocates on every wrapper creation, so disable it when measuring managed allocations.
     /// </summary>
     public bool EnableObjectTracking { get; init; } = DebugByDefault;
-    /// <summary>Breaks into the debugger on validation errors. Ignored when no debugger is attached.</summary>
+
+    /// <summary>
+    /// Breaks into the debugger on validation errors. Ignored when no debugger is attached.
+    /// </summary>
     public bool BreakOnError { get; init; } = false;
 }
