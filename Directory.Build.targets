@@ -31,4 +31,10 @@
           DestinationFiles="@(ResourceFiles->'$(TargetDir)resources\%(RecursiveDir)%(Filename)%(Extension)')"
           SkipUnchangedFiles="true" />
   </Target>
+
+  <!-- Log severity validation -->
+  <Target Name="_ValidateTortureLogSeverity" BeforeTargets="CoreCompile">
+    <Error Condition="'$(TortureLogSeverity)' != 'Message' and '$(TortureLogSeverity)' != 'Info' and '$(TortureLogSeverity)' != 'Warning' and '$(TortureLogSeverity)' != 'Error' and '$(TortureLogSeverity)' != 'Fatal' and '$(TortureLogSeverity)' != 'None'"
+           Text="Invalid TortureLogSeverity '$(TortureLogSeverity)'. Valid values: Message, Info, Warning, Error, Fatal, None." />
+  </Target>
 </Project>

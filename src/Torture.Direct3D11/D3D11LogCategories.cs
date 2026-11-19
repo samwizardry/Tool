@@ -1,4 +1,4 @@
-﻿using Torture.Diagnostics;
+﻿using Torture.Logging;
 
 namespace Torture.Direct3D11;
 

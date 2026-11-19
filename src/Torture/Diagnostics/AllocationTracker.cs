@@ -1,6 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Text;
 
+using Torture.Logging;
+
 namespace Torture.Diagnostics;
 
 /// <summary>
@@ -15,9 +17,9 @@ public static class AllocationTracker
     private const int MaxDetailedLinesPerSecond = 5;
     private static readonly long WarmupTicks = Stopwatch.Frequency * 2; // 2 seconds of JIT warm-up
 
-    private static readonly string[] s_labels = new string[MaxMarks];
-    private static readonly long[] s_bytes = new long[MaxMarks];
-    private static readonly StringBuilder s_sb = new(256);
+    private static readonly string[] Labels = new string[MaxMarks];
+    private static readonly long[] Bytes = new long[MaxMarks];
+    private static readonly StringBuilder Sb = new(256);
     private static int s_count;
 
     private static long s_last;
@@ -36,7 +38,9 @@ public static class AllocationTracker
     public static long LastFrameBytes { get; private set; }
     public static long BytesLastSecond { get; private set; }
 
-    /// <summary>Call once before the main loop starts (after loading and the full GC).</summary>
+    /// <summary>
+    /// Call once before the main loop starts (after loading and the full GC).
+    /// </summary>
     [Conditional(Symbol)]
     public static void Reset()
     {
@@ -63,7 +67,9 @@ public static class AllocationTracker
         }
     }
 
-    /// <summary>Attributes bytes allocated since the previous mark to this label. Use string literals only.</summary>
+    /// <summary>
+    /// Attributes bytes allocated since the previous mark to this label. Use string literals only.
+    /// </summary>
     [Conditional(Symbol)]
     public static void Mark(string label)
     {
@@ -78,7 +84,7 @@ public static class AllocationTracker
         long total = 0;
         for (int i = 0; i < s_count; i++)
         {
-            total += s_bytes[i];
+            total += Bytes[i];
         }
 
         LastFrameBytes = total;
@@ -125,25 +131,25 @@ public static class AllocationTracker
     {
         if (s_count < MaxMarks)
         {
-            s_labels[s_count] = label;
-            s_bytes[s_count] = bytes;
+            Labels[s_count] = label;
+            Bytes[s_count] = bytes;
             s_count++;
         }
     }
 
     private static void ReportFrame(long total)
     {
-        s_sb.Clear().Append("Alloc: frame ").Append(s_frame).Append(": ").Append(total).Append(" B |");
+        Sb.Clear().Append("Alloc: frame ").Append(s_frame).Append(": ").Append(total).Append(" B |");
 
         for (int i = 0; i < s_count; i++)
         {
-            if (s_bytes[i] != 0)
+            if (Bytes[i] != 0)
             {
-                s_sb.Append(' ').Append(s_labels[i]).Append('=').Append(s_bytes[i]).Append(" B");
+                Sb.Append(' ').Append(Labels[i]).Append('=').Append(Bytes[i]).Append(" B");
             }
         }
 
-        Log.Info(LogCategories.Memory, $"{s_sb.ToString()}");
+        Log.Info(LogCategories.Memory, Sb.ToString());
     }
 
     private static void ReportCollections(bool print)

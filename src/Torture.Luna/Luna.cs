@@ -1,10 +1,9 @@
 ﻿using System.Numerics;
-using System.Runtime.InteropServices;
 
 using Torture.Core;
-using Torture.Diagnostics;
 using Torture.Graphics;
 using Torture.Input;
+using Torture.Logging;
 
 using Vortice.Mathematics;
 

@@ -1,11 +1,12 @@
 ﻿using System.Diagnostics;
-using System.Globalization;
 
 using SDL3;
 
 using Torture.Diagnostics;
 using Torture.Graphics;
 using Torture.Input;
+using Torture.Logging;
+using Torture.Logging.Sinks;
 
 using Vortice.Mathematics;
 
@@ -201,15 +202,10 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
 #endif
     }
 
-    /// <summary>%LocalAppData%/{Identifier}/Logs/latest.log on Windows, ~/.local/share/... on Linux.</summary>
-    protected string GetDefaultLogFilePath() => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), Identifier, "Logs", "latest.log");
-
     /// <summary>Registers log sinks. Called first, right after the application instance is created.</summary>
     protected virtual void ConfigureLogging(string[] args)
     {
-        Log.AddSink(new BackgroundLogSink(new ConsoleLogSink()));
-        Log.AddSink(new BackgroundLogSink(new FileLogSink(GetDefaultLogFilePath())));
+        Log.AddSink(new ConsoleLogSink());
     }
 
     /// <summary>
@@ -244,7 +240,6 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         appState = new TApp();
         appState.ConfigureLogging(args);
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
-        SdlLogBridge.Install();
 
         try
         {
@@ -453,7 +448,6 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         }
         finally
         {
-            SdlLogBridge.Uninstall();
             Log.Shutdown();
         }
     }

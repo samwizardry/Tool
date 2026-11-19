@@ -1,5 +1,7 @@
 ﻿using SharpGen.Runtime;
 
+using Torture.Logging;
+
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.Direct3D11.Debug;
@@ -11,7 +13,6 @@ using static Vortice.Direct3D11.D3D11;
 using static Vortice.DXGI.DXGI;
 
 using TortCore = Torture.Core;
-using TortDiag = Torture.Diagnostics;
 using TortGfx = Torture.Graphics;
 
 namespace Torture.Direct3D11;
@@ -106,8 +107,8 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
                     }
                     else
                     {
-                        TortDiag.Log.Warning(D3D11LogCategories.D3D11, $"Validation requested, but D3D11 SDK layers are not installed " +
-                            $"(Settings > System > Optional features > Graphics Tools).");
+                        Log.Warning(D3D11LogCategories.D3D11, "Validation requested, but D3D11 SDK layers are not installed " +
+                            "(Settings > System > Optional features > Graphics Tools).");
                     }
                 }
 
@@ -155,7 +156,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
             _infoQueue = options.EnableValidation ? _device.QueryInterfaceOrNull<ID3D11InfoQueue>() : null;
             if (_infoQueue != null)
             {
-                TortDiag.Log.Info(D3D11LogCategories.D3D11, $"Debug layer enabled.");
+                Log.Info(D3D11LogCategories.D3D11, $"Debug layer enabled.");
 
                 if (options.BreakOnError && System.Diagnostics.Debugger.IsAttached)
                 {
@@ -164,9 +165,9 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
                 }
 
                 // Drop low-severity messages at the source so GetMessage never allocates for them.
-                MessageSeverity[] denied = TortDiag.Log.IsEnabled(TortDiag.LogSeverity.Trace, D3D11LogCategories.D3D11)
-                    ? [MessageSeverity.Info]
-                    : [MessageSeverity.Message, MessageSeverity.Info];
+                MessageSeverity[] denied = Log.IsEnabled(LogSeverity.Message, D3D11LogCategories.D3D11)
+                    ? [MessageSeverity.Message]
+                    : [MessageSeverity.Info];
 
                 _infoQueue.PushStorageFilter(new Vortice.Direct3D11.Debug.InfoQueueFilter
                 {
@@ -819,22 +820,22 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
 
     #region Private
 
-    private static TortDiag.LogSeverity ToLogSeverity(MessageSeverity severity) => severity switch
+    private static LogSeverity ToLogSeverity(MessageSeverity severity) => severity switch
     {
-        MessageSeverity.Corruption => TortDiag.LogSeverity.Fatal,
-        MessageSeverity.Error => TortDiag.LogSeverity.Error,
-        MessageSeverity.Warning => TortDiag.LogSeverity.Warning,
-        MessageSeverity.Info => TortDiag.LogSeverity.Debug,
-        _ => TortDiag.LogSeverity.Trace
+        MessageSeverity.Corruption => LogSeverity.Fatal,
+        MessageSeverity.Error => LogSeverity.Error,
+        MessageSeverity.Warning => LogSeverity.Warning,
+        MessageSeverity.Info => LogSeverity.Info,
+        _ => LogSeverity.Message
     };
 
-    private static TortDiag.LogSeverity ToLogSeverity(InfoQueueMessageSeverity severity) => severity switch
+    private static LogSeverity ToLogSeverity(InfoQueueMessageSeverity severity) => severity switch
     {
-        InfoQueueMessageSeverity.Corruption => TortDiag.LogSeverity.Fatal,
-        InfoQueueMessageSeverity.Error => TortDiag.LogSeverity.Error,
-        InfoQueueMessageSeverity.Warning => TortDiag.LogSeverity.Warning,
-        InfoQueueMessageSeverity.Info => TortDiag.LogSeverity.Debug,
-        _ => TortDiag.LogSeverity.Trace
+        InfoQueueMessageSeverity.Corruption => LogSeverity.Fatal,
+        InfoQueueMessageSeverity.Error => LogSeverity.Error,
+        InfoQueueMessageSeverity.Warning => LogSeverity.Warning,
+        InfoQueueMessageSeverity.Info => LogSeverity.Info,
+        _ => LogSeverity.Message
     };
 
     private IDXGIAdapter1 GetHardwareAdapter()
@@ -887,7 +888,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
         for (ulong i = 0; i < count; i++)
         {
             Message msg = _infoQueue.GetMessage(i);
-            TortDiag.Log.Write(ToLogSeverity(msg.Severity), D3D11LogCategories.D3D11, $"{msg.Category}: {msg.Description}", (int)msg.Id);
+            Log.Write(ToLogSeverity(msg.Severity), D3D11LogCategories.D3D11, $"{msg.Category}: {msg.Description}", (int)msg.Id);
         }
 
         _infoQueue.ClearStoredMessages();
@@ -907,7 +908,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
             for (ulong i = 0; i < count; i++)
             {
                 InfoQueueMessage msg = dxgiInfoQueue.GetMessage(DebugAll, i);
-                TortDiag.Log.Write(ToLogSeverity(msg.Severity), D3D11LogCategories.Dxgi, $"{msg.Category}: {msg.Description}", id: msg.Id);
+                Log.Write(ToLogSeverity(msg.Severity), D3D11LogCategories.Dxgi, $"{msg.Category}: {msg.Description}", id: msg.Id);
             }
 
             dxgiInfoQueue.Dispose();
@@ -923,11 +924,11 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
         {
             if (leak.TryGetTarget(out var target))
             {
-                TortDiag.Log.Warning(D3D11LogCategories.SharpGen, $"(0x{target.NativePointer:X16}): Live instance of {target.GetType().Name} was not disposed.");
+                Log.Warning(D3D11LogCategories.SharpGen, $"(0x{target.NativePointer:X16}): Live instance of {target.GetType().Name} was not disposed.");
             }
             else
             {
-                TortDiag.Log.Warning(D3D11LogCategories.SharpGen, $"Active tracking reference with an already collected target.");
+                Log.Warning(D3D11LogCategories.SharpGen, $"Active tracking reference with an already collected target.");
             }
         }
     }

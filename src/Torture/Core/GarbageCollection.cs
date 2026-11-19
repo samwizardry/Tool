@@ -1,13 +1,15 @@
 ﻿using System.Diagnostics;
 using System.Runtime;
 
-using Torture.Diagnostics;
+using Torture.Logging;
 
 namespace Torture.Core;
 
 public static class GarbageCollection
 {
-    /// <summary>Full blocking compacting collection. Use on loading screens only.</summary>
+    /// <summary>
+    /// Full blocking compacting collection. Use on loading screens only.
+    /// </summary>
     public static void FullBlockingCollect()
     {
         long before = GC.GetTotalMemory(forceFullCollection: false);
@@ -26,11 +28,15 @@ public static class GarbageCollection
         LogStats(before, Stopwatch.GetElapsedTime(start));
     }
 
-    /// <summary>Gameplay mode: avoids blocking gen2 collections when possible.</summary>
+    /// <summary>
+    /// Gameplay mode: avoids blocking gen2 collections when possible.
+    /// </summary>
     public static void EnterGameplayMode()
         => GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
 
-    /// <summary>Loading mode: lets the GC work aggressively.</summary>
+    /// <summary>
+    /// Loading mode: lets the GC work aggressively.
+    /// </summary>
     public static void EnterLoadingMode()
         => GCSettings.LatencyMode = GCLatencyMode.Interactive;
 
