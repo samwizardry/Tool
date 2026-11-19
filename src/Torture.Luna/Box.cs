@@ -10,7 +10,7 @@ public class Box : Actor
     private readonly Model _model;
 
     public Box(GraphicsDevice device, Material material)
-        : base(device)
+        : base(device, ResourceFactoryCache.BoxPerObjectCb)
     {
         var data = Geometry.ComputeBox(Vector3.One * 2.0f);
 
@@ -20,10 +20,7 @@ public class Box : Actor
             material,
             false);
 
-        _perObjectData.Material = new()
-        {
-            Shininess = 32.0f
-        };
+        _actorData.SetShininess(16.0f);
     }
 
     float _angle = 0.0f;
@@ -31,23 +28,24 @@ public class Box : Actor
     public override void Update(float dt)
     {
         _angle += 30.0f * dt;
-        _perObjectData.Model = Matrix4x4.CreateRotationY(float.DegreesToRadians(_angle));
-        
-        if (Matrix4x4.Invert(_perObjectData.Model, out var inverseModel))
+        _actorData.SetModelMatrix(Matrix4x4.CreateRotationY(float.DegreesToRadians(_angle)));
+
+        if (Matrix4x4.Invert(_actorData.ModelMatrix, out var inverseModel))
         {
             inverseModel.Translation = Vector3.Zero;
-            _perObjectData.NormalMatrix = Matrix4x4.Transpose(inverseModel);
+            _actorData.SetNormalMatrix(Matrix4x4.Transpose(inverseModel));
         }
         else
         {
-            _perObjectData.NormalMatrix = Matrix4x4.Identity;
+            _actorData.SetNormalMatrix(Matrix4x4.Identity);
         }
+
+        _actorData.Update(_device);
     }
 
     public override void Draw()
     {
-        base.Draw();
-        _model.Draw(_device, ResourceFactoryCache.PerFrameBindingSet, ResourceFactoryCache.PerObjBindingSet);
+        _model.Draw(_device, ResourceFactoryCache.PhongPerFrameBindingSet, ResourceFactoryCache.BoxPerObjBindingSet);
     }
 
     public override void Dispose()

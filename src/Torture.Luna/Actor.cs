@@ -5,13 +5,14 @@ namespace Torture.Luna;
 public abstract class Actor : IDisposable
 {
     protected readonly GraphicsDevice _device;
+    protected readonly PhongPerObjectData _actorData;
 
     protected bool _disposed;
-    protected PerObjectData _perObjectData;
 
-    protected Actor(GraphicsDevice device)
+    protected Actor(GraphicsDevice device, Graphics.Buffer buffer)
     {
         _device = device;
+        _actorData = new PhongPerObjectData(buffer);
     }
 
     public virtual void Update(float dt)
@@ -20,7 +21,6 @@ public abstract class Actor : IDisposable
 
     public virtual void Draw()
     {
-        _device.UpdateBuffer(ResourceFactoryCache.PerObjectCb, ref _perObjectData);
     }
 
     public virtual void Dispose()

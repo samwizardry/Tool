@@ -7,7 +7,7 @@ public sealed class Material : IDisposable
 {
     private bool _disposed;
 
-    public Material(GraphicsPipeline pipeline, BindingSet bindingSet, Buffer? constantBuffer)
+    public Material(GraphicsPipeline pipeline, BindingSet? bindingSet, Buffer? constantBuffer)
     {
         Pipeline = pipeline;
         BindingSet = bindingSet;
@@ -16,7 +16,7 @@ public sealed class Material : IDisposable
 
     public GraphicsPipeline Pipeline { get; }
 
-    public BindingSet BindingSet { get; private set; }
+    public BindingSet? BindingSet { get; private set; }
 
     public Buffer? ConstantBuffer { get; }
 
@@ -24,9 +24,6 @@ public sealed class Material : IDisposable
     {
         if (_disposed)
             return;
-
-        BindingSet?.Dispose();
-        ConstantBuffer?.Dispose();
 
         _disposed = true;
     }

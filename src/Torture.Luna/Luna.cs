@@ -10,74 +10,6 @@ using Vortice.Mathematics;
 
 namespace Torture.Luna;
 
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct ModelMaterial
-{
-    public float Shininess;
-    public Vector3 Pad0;
-}
-
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct DirectionalLight
-{
-    public Vector3 Direction;
-    public float Pad0;
-    public Vector3 Ambient;
-    public float Pad1;
-    public Vector3 Diffuse;
-    public float Pad2;
-    public Vector3 Specular;
-    public float Pad3;
-};
-
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct PointLight
-{
-    public Vector3 Position;
-    public float Constant;
-    public Vector3 Diffuse;
-    public float Linear;
-    public Vector3 Specular;
-    public float Quadratic;
-};
-
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct SpotLight
-{
-    public Vector3 Position;
-    public float CutOff;
-    public Vector3 Direction;
-    public float OuterCutOff;
-    public Vector3 Diffuse;
-    public float Linear;
-    public Vector3 Specular;
-    public float Quadratic;
-};
-
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct Light
-{
-    public DirectionalLight DirLight;
-    public PointLight PointLight;
-    public SpotLight SpotLight;
-}
-
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct PerFrameData
-{
-    public Matrix4x4 ViewProj;
-    public Light Light;
-    public Vector3 ViewPosition;
-};
-
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct PerObjectData
-{
-    public Matrix4x4 Model;
-    public Matrix4x4 NormalMatrix;
-    public ModelMaterial Material;
-}
-
 [SDL3.SDL.GenerateMain]
 public sealed partial class Luna : Application<Luna>
 {
@@ -91,7 +23,7 @@ public sealed partial class Luna : Application<Luna>
     private int _frameCount;
 
     private readonly List<Actor> _actors = [];
-    private PerFrameData _perFrameData = default;
+    private PhongPerFrameData _sceneData = default!;
 
     public Luna()
     {
@@ -128,7 +60,7 @@ public sealed partial class Luna : Application<Luna>
     protected override void Initialize()
     {
         GraphicsDevice.VSync = true;
-        GraphicsDevice.ClearColor = new Color4(0.05f, 0.05f, 0.05f, 1.0f);
+        GraphicsDevice.ClearColor = new Color4(0.3f, 0.3f, 0.3f, 1.0f);
 
         base.Initialize();
     }
@@ -137,29 +69,40 @@ public sealed partial class Luna : Application<Luna>
     {
         ResourceFactoryCache.Load(GraphicsDevice);
 
-        _actors.Add(new Box(GraphicsDevice, ResourceFactoryCache.PhongMaterial));
-        _actors.Add(new Car(GraphicsDevice, ResourceFactoryCache.PhongMaterial));
+        _sceneData = new PhongPerFrameData(ResourceFactoryCache.PerFrameCb);
 
-        _perFrameData.Light.DirLight.Direction = Vector3.Normalize(new Vector3(-0.2f, -1.0f, -0.3f));
-        _perFrameData.Light.DirLight.Ambient = new Vector3(0.1f, 0.1f, 0.1f);
-        _perFrameData.Light.DirLight.Diffuse = new Vector3(0.4f, 0.4f, 0.4f);
-        _perFrameData.Light.DirLight.Specular = new Vector3(0.5f, 0.5f, 0.5f);
+        _actors.Add(new Box(GraphicsDevice, ResourceFactoryCache.BoxMaterial));
+        _actors.Add(new Car(GraphicsDevice, ResourceFactoryCache.CarMaterial));
 
-        _perFrameData.Light.PointLight.Position = new Vector3(1.2f, 1.0f, 2.0f);
-        _perFrameData.Light.PointLight.Diffuse = new Vector3(0.6f, 0.6f, 0.6f);
-        _perFrameData.Light.PointLight.Specular = new Vector3(1.0f, 1.0f, 1.0f);
-        _perFrameData.Light.PointLight.Constant = 1.0f;
-        _perFrameData.Light.PointLight.Linear = 0.22f;
-        _perFrameData.Light.PointLight.Quadratic = 0.20f;
+        _sceneData.SetDirLight(new DirectionalLight
+        {
+            Direction = Vector3.Normalize(new Vector3(-0.2f, -1.0f, -0.3f)),
+            Ambient = new Vector3(0.1f, 0.1f, 0.1f),
+            Diffuse = new Vector3(0.4f, 0.4f, 0.4f),
+            Specular = new Vector3(0.5f, 0.5f, 0.5f)
+        });
 
-        _perFrameData.Light.SpotLight.Position = _camera.Position;
-        _perFrameData.Light.SpotLight.Direction = _camera.Direction;
-        _perFrameData.Light.SpotLight.Diffuse = new Vector3(0.6f, 0.6f, 0.6f);
-        _perFrameData.Light.SpotLight.Specular = new Vector3(1.0f, 1.0f, 1.0f);
-        _perFrameData.Light.SpotLight.CutOff = MathF.Cos(float.DegreesToRadians(12.5f));
-        _perFrameData.Light.SpotLight.OuterCutOff = MathF.Cos(float.DegreesToRadians(17.5f));
-        _perFrameData.Light.SpotLight.Linear = 0.09f;
-        _perFrameData.Light.SpotLight.Quadratic = 0.032f;
+        _sceneData.SetPointLight(new PointLight()
+        {
+            Position = new Vector3(1.2f, 1.0f, 2.0f),
+            Diffuse = new Vector3(0.6f, 0.6f, 0.6f),
+            Specular = new Vector3(1.0f, 1.0f, 1.0f),
+            Constant = 1.0f,
+            Linear = 0.22f,
+            Quadratic = 0.20f
+        });
+
+        _sceneData.SetSpotLight(new SpotLight()
+        {
+            Position = _camera.Position,
+            Direction = _camera.Direction,
+            Diffuse = new Vector3(0.6f, 0.6f, 0.6f),
+            Specular = new Vector3(1.0f, 1.0f, 1.0f),
+            CutOff = MathF.Cos(float.DegreesToRadians(12.5f)),
+            OuterCutOff = MathF.Cos(float.DegreesToRadians(17.5f)),
+            Linear = 0.09f,
+            Quadratic = 0.032f,
+        });
     }
 
     protected override unsafe void Update(GameTime gameTime)
@@ -202,13 +145,12 @@ public sealed partial class Luna : Application<Luna>
             //_pipelineState.UseAnisotropic();
         }
 
-        _perFrameData.ViewProj = _camera.ViewProj;
-        _perFrameData.ViewPosition = _camera.Position;
+        _sceneData.SetViewProj(_camera.ViewProj);
+        _sceneData.SetViewPos(_camera.Position);
+        _sceneData.SetSpotLightPosition(_camera.Position);
+        _sceneData.SetSpotLightDirection(_camera.Direction);
 
-        _perFrameData.Light.SpotLight.Position = _camera.Position;
-        _perFrameData.Light.SpotLight.Direction = _camera.Direction;
-
-        ResourceFactoryCache.SetPerFrameData(GraphicsDevice, ref _perFrameData);
+        _sceneData.Update(GraphicsDevice);
 
         foreach (var actor in _actors)
         {

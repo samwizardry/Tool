@@ -635,7 +635,6 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     public override void SetGraphicsState(in TortGfx.GraphicsState state)
     {
         var pipeline = (D3D11GraphicsPipeline)state.Pipeline;
-        
         if (!ReferenceEquals(_currentPipeline, pipeline))
         {
             pipeline.Apply(_imContext);
