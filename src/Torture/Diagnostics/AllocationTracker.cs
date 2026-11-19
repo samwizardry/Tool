@@ -108,7 +108,7 @@ public static class AllocationTracker
             if (warmedUp && s_allocFramesThisSecond > 0)
             {
                 Log.Info(LogCategories.Memory,
-                    $"[Alloc] last second: {s_allocFramesThisSecond}/{s_framesThisSecond} frames allocated, {s_bytesThisSecond} B total");
+                    $"Alloc: last second {s_allocFramesThisSecond}/{s_framesThisSecond} frames allocated, {s_bytesThisSecond} B total");
             }
 
             BytesLastSecond = s_bytesThisSecond;
@@ -133,7 +133,8 @@ public static class AllocationTracker
 
     private static void ReportFrame(long total)
     {
-        s_sb.Clear().Append("[Alloc] frame ").Append(s_frame).Append(": ").Append(total).Append(" B |");
+        s_sb.Clear().Append("Alloc: frame ").Append(s_frame).Append(": ").Append(total).Append(" B |");
+
         for (int i = 0; i < s_count; i++)
         {
             if (s_bytes[i] != 0)
@@ -142,21 +143,24 @@ public static class AllocationTracker
             }
         }
 
-        Log.Info(LogCategories.Memory, s_sb.ToString());
+        Log.Info(LogCategories.Memory, $"{s_sb.ToString()}");
     }
 
     private static void ReportCollections(bool print)
     {
-        int g0 = GC.CollectionCount(0), g1 = GC.CollectionCount(1), g2 = GC.CollectionCount(2);
+        int g0 = GC.CollectionCount(0);
+        int g1 = GC.CollectionCount(1);
+        int g2 = GC.CollectionCount(2);
+
         if (print && g0 != s_gen0)
         {
-            Log.Info(LogCategories.Memory, $"frame {s_frame}: gen0 +{g0 - s_gen0}, gen1 +{g1 - s_gen1}, gen2 +{g2 - s_gen2}, " +
+            Log.Info(LogCategories.Memory,
+                $"GC: frame {s_frame}: gen0 +{g0 - s_gen0}, gen1 +{g1 - s_gen1}, gen2 +{g2 - s_gen2}, " +
                 $"total pause {GC.GetTotalPauseDuration().TotalMilliseconds:F2} ms");
-
-            //Console.WriteLine(
-            //    $"[GC] frame {s_frame}: gen0 +{g0 - s_gen0}, gen1 +{g1 - s_gen1}, gen2 +{g2 - s_gen2}, " +
-            //    $"total pause {GC.GetTotalPauseDuration().TotalMilliseconds:F2} ms");
         }
-        s_gen0 = g0; s_gen1 = g1; s_gen2 = g2;
+
+        s_gen0 = g0;
+        s_gen1 = g1;
+        s_gen2 = g2;
     }
 }

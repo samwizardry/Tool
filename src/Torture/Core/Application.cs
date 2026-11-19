@@ -208,8 +208,8 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
     /// <summary>Registers log sinks. Called first, right after the application instance is created.</summary>
     protected virtual void ConfigureLogging(string[] args)
     {
-        Log.AddSink(new ConsoleLogSink());
-        //Log.AddSink(new FileLogSink(GetDefaultLogFilePath()));
+        Log.AddSink(new BackgroundLogSink(new ConsoleLogSink()));
+        Log.AddSink(new BackgroundLogSink(new FileLogSink(GetDefaultLogFilePath())));
     }
 
     /// <summary>
@@ -243,8 +243,8 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
     {
         appState = new TApp();
         appState.ConfigureLogging(args);
-
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+        SdlLogBridge.Install();
 
         try
         {
@@ -252,7 +252,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         }
         catch (Exception ex)
         {
-            Log.Fatal(LogCategories.Core, "Initialization failed.", ex);
+            Log.Fatal(LogCategories.Core, $"Initialization failed.", ex);
             return SDL.AppResult.Failure;
         }
     }
@@ -365,7 +365,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         }
         catch (Exception ex)
         {
-            Log.Fatal(LogCategories.Core, "Unhandled exception in the main loop.", ex);
+            Log.Fatal(LogCategories.Core, $"Unhandled exception in the main loop.", ex);
             return SDL.AppResult.Failure;
         }
     }
@@ -414,7 +414,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         }
         catch (Exception ex)
         {
-            Log.Fatal(LogCategories.Core, "Unhandled exception in the main loop.", ex);
+            Log.Fatal(LogCategories.Core, $"Unhandled exception in the main loop.", ex);
             return SDL.AppResult.Failure;
         }
     }
@@ -449,10 +449,11 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         }
         catch (Exception ex)
         {
-            Log.Fatal(LogCategories.Core, "Shutdown failed.", ex);
+            Log.Fatal(LogCategories.Core, $"Shutdown failed.", ex);
         }
         finally
         {
+            SdlLogBridge.Uninstall();
             Log.Shutdown();
         }
     }
@@ -461,11 +462,13 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
 
     private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
-        Log.Fatal(LogCategories.Core, "Unhandled exception.", e.ExceptionObject as Exception);
+        Log.Fatal(LogCategories.Core, $"Unhandled exception.", e.ExceptionObject as Exception);
         Log.Shutdown();
     }
 
-    /// <summary>Returns true/false if the on/off switch is present (the last one wins), otherwise null.</summary>
+    /// <summary>
+    /// Returns true/false if the on/off switch is present (the last one wins), otherwise null.
+    /// </summary>
     private static bool? ReadSwitch(string[] args, string on, string off)
     {
         bool? result = null;

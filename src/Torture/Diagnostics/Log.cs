@@ -1,4 +1,6 @@
-﻿namespace Torture.Diagnostics;
+﻿using System.Runtime.CompilerServices;
+
+namespace Torture.Diagnostics;
 
 /// <summary>
 /// Static logging hub. It does not write anywhere by itself: messages are dispatched to registered sinks.
@@ -97,20 +99,54 @@ public static class Log
     }
 
     [System.Diagnostics.Conditional(Symbol)]
-    public static void Trace(LogCategory category, string text) => Write(LogSeverity.Trace, category, text);
+    public static void Trace(LogCategory category, [InterpolatedStringHandlerArgument(nameof(category))] ref LogInterpolatedStringHandler<LogLevels.Trace> text)
+    {
+        if (text.IsEnabled)
+        {
+            Write(LogSeverity.Trace, category, text.ToStringAndClear());
+        }
+    }
 
     [System.Diagnostics.Conditional(Symbol)]
-    public static void Debug(LogCategory category, string text) => Write(LogSeverity.Debug, category, text);
+    public static void Debug(LogCategory category, [InterpolatedStringHandlerArgument(nameof(category))] ref LogInterpolatedStringHandler<LogLevels.Debug> text)
+    {
+        if (text.IsEnabled)
+        {
+            Write(LogSeverity.Debug, category, text.ToStringAndClear());
+        }
+    }
 
-    public static void Info(LogCategory category, string text) => Write(LogSeverity.Info, category, text);
+    public static void Info(LogCategory category, [InterpolatedStringHandlerArgument(nameof(category))] ref LogInterpolatedStringHandler<LogLevels.Info> text)
+    {
+        if (text.IsEnabled)
+        {
+            Write(LogSeverity.Info, category, text.ToStringAndClear());
+        }
+    }
 
-    public static void Warning(LogCategory category, string text) => Write(LogSeverity.Warning, category, text);
+    public static void Warning(LogCategory category, [InterpolatedStringHandlerArgument(nameof(category))] ref LogInterpolatedStringHandler<LogLevels.Warning> text)
+    {
+        if (text.IsEnabled)
+        {
+            Write(LogSeverity.Warning, category, text.ToStringAndClear());
+        }
+    }
 
-    public static void Error(LogCategory category, string text, Exception? exception = null)
-        => Write(LogSeverity.Error, category, text, exception: exception);
+    public static void Error(LogCategory category, [InterpolatedStringHandlerArgument(nameof(category))] ref LogInterpolatedStringHandler<LogLevels.Error> text, Exception? exception = null)
+    {
+        if (text.IsEnabled)
+        {
+            Write(LogSeverity.Error, category, text.ToStringAndClear(), exception: exception);
+        }
+    }
 
-    public static void Fatal(LogCategory category, string text, Exception? exception = null)
-        => Write(LogSeverity.Fatal, category, text, exception: exception);
+    public static void Fatal(LogCategory category, [InterpolatedStringHandlerArgument(nameof(category))] ref LogInterpolatedStringHandler<LogLevels.Fatal> text, Exception? exception = null)
+    {
+        if (text.IsEnabled)
+        {
+            Write(LogSeverity.Fatal, category, text.ToStringAndClear(), exception: exception);
+        }
+    }
 
     public static void Flush()
     {

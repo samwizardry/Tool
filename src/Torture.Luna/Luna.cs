@@ -105,7 +105,7 @@ public sealed partial class Luna : Application<Luna>
         });
     }
 
-    protected override unsafe void Update(GameTime gameTime)
+    protected override void Update(GameTime gameTime)
     {
         if (Keyboard.IsKeyPressed(KeyboardKey.Escape))
         {
@@ -119,7 +119,7 @@ public sealed partial class Luna : Application<Luna>
             if (_elapsedSeconds >= 1.0f)
             {
                 double fps = _frameCount / _elapsedSeconds;
-                //Log.Info(LunaCat, $"FPS: {fps:F1}");
+                Log.Info(LunaCat, $"FPS: {fps:F1}");
                 _elapsedSeconds -= 1.0f;
                 _frameCount = 0;
             }
@@ -135,7 +135,6 @@ public sealed partial class Luna : Application<Luna>
         {
             //_pipelineState.UseWireframe();
         }
-
         if (Keyboard.IsKeyPressed(KeyboardKey.F3))
         {
             //_pipelineState.UseBilinear();

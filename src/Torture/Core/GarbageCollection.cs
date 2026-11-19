@@ -37,11 +37,9 @@ public static class GarbageCollection
     private static void LogStats(long before, TimeSpan elapsed)
     {
         long after = GC.GetTotalMemory(false);
+
         Log.Info(LogCategories.Memory,
-            $"{before / 1024} KB -> {after / 1024} KB in {elapsed.TotalMilliseconds:F2} ms; " +
+            $"GC: full collect {before / 1024} KB -> {after / 1024} KB in {elapsed.TotalMilliseconds:F2} ms; " +
             $"gen0={GC.CollectionCount(0)} gen1={GC.CollectionCount(1)} gen2={GC.CollectionCount(2)}");
-        //Log.Info(LogCategories.Memory,
-        //    $"{before / 1024} KB -> {after / 1024} KB in {elapsed.TotalMilliseconds:F2} ms; " +
-        //    $"gen0={GC.CollectionCount(0)} gen1={GC.CollectionCount(1)} gen2={GC.CollectionCount(2)}");
     }
 }

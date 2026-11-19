@@ -25,6 +25,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
         FeatureLevel.Level_11_1,
         FeatureLevel.Level_11_0];
 
+    private readonly int _renderThreadId;
     private readonly EventHandler<System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs>? _onFirstChanceException;
 
     private readonly bool _tearingSupported;
@@ -42,7 +43,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     private ID3D11Texture2D _depthStencilBuffer = null!;
     private ID3D11DepthStencilView _depthStencilView = null!;
 
-    // Cached state for SetGraphicsState diffing
+    // Cached state for SetGraphicsState diffing.
     private D3D11GraphicsPipeline? _currentPipeline;
     private TortGfx.BindingSetVector _currentBindings;
     private TortGfx.VertexBufferBinding? _currentVertexBuffer;
@@ -105,8 +106,8 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
                     }
                     else
                     {
-                        TortDiag.Log.Warning(D3D11LogCategories.D3D11, "Validation requested, but D3D11 SDK layers are not installed " +
-                            "(Settings > System > Optional features > Graphics Tools).");
+                        TortDiag.Log.Warning(D3D11LogCategories.D3D11, $"Validation requested, but D3D11 SDK layers are not installed " +
+                            $"(Settings > System > Optional features > Graphics Tools).");
                     }
                 }
 
@@ -154,18 +155,34 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
             _infoQueue = options.EnableValidation ? _device.QueryInterfaceOrNull<ID3D11InfoQueue>() : null;
             if (_infoQueue != null)
             {
-                TortDiag.Log.Info(D3D11LogCategories.D3D11, "Debug layer enabled.");
+                TortDiag.Log.Info(D3D11LogCategories.D3D11, $"Debug layer enabled.");
+
                 if (options.BreakOnError && System.Diagnostics.Debugger.IsAttached)
                 {
                     _infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, true);
                     _infoQueue.SetBreakOnSeverity(MessageSeverity.Error, true);
                 }
 
+                // Drop low-severity messages at the source so GetMessage never allocates for them.
+                MessageSeverity[] denied = TortDiag.Log.IsEnabled(TortDiag.LogSeverity.Trace, D3D11LogCategories.D3D11)
+                    ? [MessageSeverity.Info]
+                    : [MessageSeverity.Message, MessageSeverity.Info];
+
+                _infoQueue.PushStorageFilter(new Vortice.Direct3D11.Debug.InfoQueueFilter
+                {
+                    DenyList = new Vortice.Direct3D11.Debug.InfoQueueFilterDescription { Severities = denied }
+                });
+
+                _renderThreadId = Environment.CurrentManagedThreadId;
                 _onFirstChanceException = (_, args) =>
                 {
-                    if (args.Exception is SharpGenException)
+                    if (args.Exception is SharpGenException && Environment.CurrentManagedThreadId == _renderThreadId)
                     {
-                        FlushDebugMessages();
+                        try { FlushDebugMessages(); }
+                        catch
+                        {
+                            // Never throw from a first-chance handler.
+                        }
                     }
                 };
 
@@ -205,7 +222,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
             _factory.MakeWindowAssociation(hwnd, WindowAssociationFlags.IgnoreAltEnter)
                 .CheckError();
 
-            // Handle color space settings for HDR
+            // Handle color space settings for HDR.
             UpdateColorSpace();
 
             OnResize(clientSize.Width, clientSize.Height);
@@ -247,29 +264,29 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
         _imContext.OMSetRenderTargets((ID3D11RenderTargetView)null!);
 
         // Release the old views, as they hold references to the buffers we
-        // will be destroying. Also release the old depth/stencil buffer
+        // will be destroying. Also release the old depth/stencil buffer.
         _renderTargetView?.Dispose();
         _rtvBackBuffer?.Dispose();
         _depthStencilView?.Dispose();
         _depthStencilBuffer?.Dispose();
 
-        // Resize the swap chain and recreate the render target view
+        // Resize the swap chain and recreate the render target view.
         _swapChain.ResizeBuffers(BufferCount, (uint)width, (uint)height, _colorFormat, _swapChainFlags).CheckError();
 
         _rtvBackBuffer = _swapChain.GetBuffer<ID3D11Texture2D>(0);
         _renderTargetView = _device.CreateRenderTargetView(_rtvBackBuffer);
 
-        // Create the depth/stencil buffer and view
+        // Create the depth/stencil buffer and view.
         _depthStencilBuffer = _device.CreateTexture2D(_depthStencilFormat, (uint)width, (uint)height,
                 arraySize: 1, mipLevels: 1, initialData: null,
                 bindFlags: BindFlags.DepthStencil, miscFlags: ResourceOptionFlags.None,
                 usage: ResourceUsage.Default, cpuAccessFlags: CpuAccessFlags.None);
         _depthStencilView = _device.CreateDepthStencilView(_depthStencilBuffer, new DepthStencilViewDescription(_depthStencilBuffer, DepthStencilViewDimension.Texture2D));
 
-        // Bind the render target view and depth/stencil view to the pipeline
+        // Bind the render target view and depth/stencil view to the pipeline.
         _imContext.OMSetRenderTargets(_renderTargetView, _depthStencilView);
 
-        // Set the viewport and scissor rect
+        // Set the viewport and scissor rect.
         _imContext.RSSetViewport(Viewport);
         _imContext.RSSetScissorRect(ScissorRect);
     }
@@ -330,7 +347,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
             presentFlags |= PresentFlags.AllowTearing;
         }
 
-        _swapChain.Present(syncInterval, presentFlags).CheckError();
+        _swapChain.Present(syncInterval, presentFlags);
         FlushDebugMessages();
         return true;
     }
@@ -879,9 +896,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     private static void ReportDxgiLiveObjects()
     {
         if (DXGIGetDebugInterface1(out IDXGIDebug1? dxgiDebug).Failure || dxgiDebug == null)
-        {
             return;
-        }
 
         if (DXGIGetDebugInterface1(out IDXGIInfoQueue? dxgiInfoQueue).Success && dxgiInfoQueue != null)
         {
@@ -908,12 +923,11 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
         {
             if (leak.TryGetTarget(out var target))
             {
-                // Same style as D3D11/DXGI output: [SharpGen Warning] (0x000001DF...): Live instance of ...
                 TortDiag.Log.Warning(D3D11LogCategories.SharpGen, $"(0x{target.NativePointer:X16}): Live instance of {target.GetType().Name} was not disposed.");
             }
             else
             {
-                TortDiag.Log.Warning(D3D11LogCategories.SharpGen, "Active tracking reference with an already collected target.");
+                TortDiag.Log.Warning(D3D11LogCategories.SharpGen, $"Active tracking reference with an already collected target.");
             }
         }
     }
