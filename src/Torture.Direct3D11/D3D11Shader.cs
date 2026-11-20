@@ -62,7 +62,7 @@ internal sealed unsafe class D3D11Shader : TortGfx.Shader
             if (result.Failure)
             {
                 string error = errorMsgs != null ? errorMsgs.AsString() : "Unknown shader compilation error.";
-                throw new InvalidOperationException($"Shader compilation failed ({desc.DebugName}): {error}");
+                throw new InvalidOperationException($"Shader compilation failed. {desc.DebugName}: {error}");
             }
 
             Native = desc.ShaderType switch

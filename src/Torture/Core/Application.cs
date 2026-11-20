@@ -73,7 +73,6 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
     public SizeI PreferredWindowSize { get; protected init; } = new(1280, 720);
     public bool IsResizable { get; protected init; } = true;
     public GraphicsAPI PreferredGraphicsAPI { get; protected init; } = GraphicsAPI.Default;
-    public bool CollectGarbageBeforeRun { get; protected init; } = true;
 
     #region Game
 
@@ -225,7 +224,6 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
             options = options with { EnableObjectTracking = tracking };
         }
 
-        Log.Info(LogCategories.Graphics, $"Validation={options.EnableValidation}, ObjectTracking={options.EnableObjectTracking}");
         return options;
     }
 
@@ -247,18 +245,19 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         }
         catch (Exception ex)
         {
-            Log.Fatal(LogCategories.Core, $"Initialization failed.", ex);
+            Log.Fatal(LogCategories.Core, "Initialization failed.", ex);
             return SDL.AppResult.Failure;
         }
     }
 
     private SDL.AppResult InternalInit(string[] args)
     {
+        // Initialize SDL
         SDL.SetAppMetadata(Title, Version, Identifier);
 
         if (!SDL.Init(SDL.InitFlags.Video))
         {
-            Log.Error(LogCategories.Core, $"Couldn't initialize SDL: {SDL.GetError()}");
+            Log.Fatal(LogCategories.Core, $"Couldn't initialize SDL: {SDL.GetError()}");
             return SDL.AppResult.Failure;
         }
 
@@ -267,10 +266,11 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         Window = SDL.CreateWindow(Title, PreferredWindowSize.Width, PreferredWindowSize.Height, windowFlags);
         if (Window == IntPtr.Zero)
         {
-            Log.Error(LogCategories.Core, $"Couldn't create window: {SDL.GetError()}");
+            Log.Fatal(LogCategories.Core, $"Couldn't create window: {SDL.GetError()}");
             return SDL.AppResult.Failure;
         }
 
+        // Initialize graphics device
         GraphicsDeviceOptions graphicsOptions = CreateGraphicsDeviceOptions(args);
         GraphicsDevice = CreateGraphicsDevice(PreferredGraphicsAPI, GetNativeWindowInfo(Window), graphicsOptions);
 
@@ -278,15 +278,15 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         Keyboard.Initialize();
         Mouse.Initialize(Window);
 
+        // Initialize application
         Initialize();
         BeginRun();
 
-        if (CollectGarbageBeforeRun)
-        {
-            GarbageCollection.FullBlockingCollect();
-        }
+        // Collect garbage
+        GarbageCollection.FullBlockingCollect();
         GarbageCollection.EnterGameplayMode();
 
+        // Start timers
         AllocationTracker.Reset();
         _timer.Start();
 
@@ -360,7 +360,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         }
         catch (Exception ex)
         {
-            Log.Fatal(LogCategories.Core, $"Unhandled exception in the main loop.", ex);
+            Log.Fatal(LogCategories.Core, "Unhandled exception in the main loop.", ex);
             return SDL.AppResult.Failure;
         }
     }
@@ -409,7 +409,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         }
         catch (Exception ex)
         {
-            Log.Fatal(LogCategories.Core, $"Unhandled exception in the main loop.", ex);
+            Log.Fatal(LogCategories.Core, "Unhandled exception in the main loop.", ex);
             return SDL.AppResult.Failure;
         }
     }
@@ -440,11 +440,11 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
 
             SDL.Quit();
 
-            Log.Info(LogCategories.Core, $"Shutdown complete ({result}).");
+            Log.Info(LogCategories.Core, $"Successful completion with status code: {result}.");
         }
         catch (Exception ex)
         {
-            Log.Fatal(LogCategories.Core, $"Shutdown failed.", ex);
+            Log.Fatal(LogCategories.Core, "Shutdown failed.", ex);
         }
         finally
         {
@@ -456,7 +456,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
 
     private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
-        Log.Fatal(LogCategories.Core, $"Unhandled exception.", e.ExceptionObject as Exception);
+        Log.Fatal(LogCategories.Core, "Unhandled exception.", e.ExceptionObject as Exception);
         Log.Shutdown();
     }
 

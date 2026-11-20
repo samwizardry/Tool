@@ -12,8 +12,10 @@ public static class GarbageCollection
     /// </summary>
     public static void FullBlockingCollect()
     {
-        long before = GC.GetTotalMemory(forceFullCollection: false);
+#if TRACK_ALLOCATIONS
+        long before = GC.GetTotalMemory(false);
         long start = Stopwatch.GetTimestamp();
+#endif
 
         // LOH is not compacted by default; CompactOnce resets itself after the next full blocking GC.
         GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
@@ -25,7 +27,9 @@ public static class GarbageCollection
         // Pass 2: collect objects released by finalizers.
         GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
 
+#if TRACK_ALLOCATIONS
         LogStats(before, Stopwatch.GetElapsedTime(start));
+#endif
     }
 
     /// <summary>

@@ -34,11 +34,14 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     private readonly Format _colorFormat;
     private readonly Format _depthStencilFormat;
 
+    // Debug
+    private readonly ID3D11InfoQueue? _infoQueue;
+
+    // D3D11
     private readonly IDXGIFactory7 _factory;
     private readonly ID3D11Device5 _device;
     private readonly ID3D11DeviceContext4 _imContext;
     private readonly IDXGISwapChain1 _swapChain;
-    private readonly ID3D11InfoQueue? _infoQueue;
     private ID3D11Texture2D _rtvBackBuffer = null!;
     private ID3D11RenderTargetView _renderTargetView = null!;
     private ID3D11Texture2D _depthStencilBuffer = null!;
@@ -107,8 +110,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
                     }
                     else
                     {
-                        Log.Warning(D3D11LogCategories.D3D11, "Validation requested, but D3D11 SDK layers are not installed " +
-                            "(Settings > System > Optional features > Graphics Tools).");
+                        Log.Warning(D3D11LogCategories.D3D11, "Validation requested, but D3D11 SDK layers are not installed.");
                     }
                 }
 
@@ -152,26 +154,53 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
                 }
             }
 
-            // QueryInterface returns null when the device was created without the debug layer.
             _infoQueue = options.EnableValidation ? _device.QueryInterfaceOrNull<ID3D11InfoQueue>() : null;
             if (_infoQueue != null)
             {
-                Log.Info(D3D11LogCategories.D3D11, $"Debug layer enabled.");
-
                 if (options.BreakOnError && System.Diagnostics.Debugger.IsAttached)
                 {
                     _infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, true);
                     _infoQueue.SetBreakOnSeverity(MessageSeverity.Error, true);
                 }
 
-                // Drop low-severity messages at the source so GetMessage never allocates for them.
-                MessageSeverity[] denied = Log.IsEnabled(LogSeverity.Message, D3D11LogCategories.D3D11)
-                    ? [MessageSeverity.Message]
-                    : [MessageSeverity.Info];
+                LogSeverity effectiveSeverity = Log.MinimumSeverity > D3D11LogCategories.D3D11.MinimumSeverity
+                    ? Log.MinimumSeverity
+                    : D3D11LogCategories.D3D11.MinimumSeverity;
+
+                if (!Log.IsEnabled(effectiveSeverity, D3D11LogCategories.D3D11))
+                {
+                    effectiveSeverity = LogSeverity.None;
+                }
+
+                MessageSeverity[] denyList;
+
+                switch (effectiveSeverity)
+                {
+                    case LogSeverity.Message:
+                        denyList = [];
+                        break;
+                    case LogSeverity.Info:
+                        denyList = [MessageSeverity.Message];
+                        break;
+                    case LogSeverity.Warning:
+                        denyList = [MessageSeverity.Message, MessageSeverity.Info];
+                        break;
+                    case LogSeverity.Error:
+                        denyList = [MessageSeverity.Message, MessageSeverity.Info, MessageSeverity.Warning];
+                        break;
+                    case LogSeverity.Fatal:
+                        denyList = [MessageSeverity.Message, MessageSeverity.Info, MessageSeverity.Warning, MessageSeverity.Error];
+                        break;
+                    case LogSeverity.None:
+                        denyList = [MessageSeverity.Message, MessageSeverity.Info, MessageSeverity.Warning, MessageSeverity.Error, MessageSeverity.Corruption];
+                        break;
+                    default:
+                        throw new NotSupportedException();
+                }
 
                 _infoQueue.PushStorageFilter(new Vortice.Direct3D11.Debug.InfoQueueFilter
                 {
-                    DenyList = new Vortice.Direct3D11.Debug.InfoQueueFilterDescription { Severities = denied }
+                    DenyList = new Vortice.Direct3D11.Debug.InfoQueueFilterDescription { Severities = denyList }
                 });
 
                 _renderThreadId = Environment.CurrentManagedThreadId;
@@ -179,7 +208,10 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
                 {
                     if (args.Exception is SharpGenException && Environment.CurrentManagedThreadId == _renderThreadId)
                     {
-                        try { FlushDebugMessages(); }
+                        try
+                        {
+                            FlushDebugMessages();
+                        }
                         catch
                         {
                             // Never throw from a first-chance handler.
@@ -282,6 +314,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
                 arraySize: 1, mipLevels: 1, initialData: null,
                 bindFlags: BindFlags.DepthStencil, miscFlags: ResourceOptionFlags.None,
                 usage: ResourceUsage.Default, cpuAccessFlags: CpuAccessFlags.None);
+
         _depthStencilView = _device.CreateDepthStencilView(_depthStencilBuffer, new DepthStencilViewDescription(_depthStencilBuffer, DepthStencilViewDimension.Texture2D));
 
         // Bind the render target view and depth/stencil view to the pipeline.
@@ -348,8 +381,14 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
             presentFlags |= PresentFlags.AllowTearing;
         }
 
-        _swapChain.Present(syncInterval, presentFlags);
+#if GRAPHICS_DEBUG
+        var result = _swapChain.Present(syncInterval, presentFlags);
         FlushDebugMessages();
+        result.CheckError();
+#else
+        _swapChain.Present(syncInterval, presentFlags);
+#endif
+
         return true;
     }
 
@@ -432,19 +471,24 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     /// <inheritdoc />
     public override unsafe void UpdateBuffer<T>(TortGfx.Buffer buffer, ReadOnlySpan<T> data, uint byteOffset = 0)
     {
+#if GRAPHICS_DEBUG
         if (data.IsEmpty)
         {
-            throw new ArgumentException("Empty data.", nameof(data));
+            Log.Warning(D3D11LogCategories.D3D11, "Empty data received.");
+            return;
         }
+#endif
 
         var d3d11Buffer = (D3D11Buffer)buffer;
-
         uint dataByteSize = (uint)(sizeof(T) * data.Length);
 
+#if GRAPHICS_DEBUG
         if (byteOffset + dataByteSize > d3d11Buffer.ByteSize)
         {
-            throw new ArgumentOutOfRangeException(nameof(data), "Data size exceeds buffer capacity.");
+            Log.Error(D3D11LogCategories.D3D11, "Data size exceeds buffer capacity.");
+            return;
         }
+#endif
 
         fixed (T* srcPtr = data)
         {
@@ -463,10 +507,13 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     {
         var d3d11Buffer = (D3D11Buffer)buffer;
 
+#if GRAPHICS_DEBUG
         if (byteOffset + (uint)sizeof(T) > d3d11Buffer.ByteSize)
         {
-            throw new ArgumentOutOfRangeException(nameof(data), "Data size exceeds buffer capacity.");
+            Log.Error(D3D11LogCategories.D3D11, "Data size exceeds buffer capacity.");
+            return;
         }
+#endif
 
         MapMode mode = byteOffset == 0 ? MapMode.WriteDiscard : MapMode.WriteNoOverwrite;
         var map = _imContext.Map(d3d11Buffer.Native, 0, mode, Vortice.Direct3D11.MapFlags.None);
@@ -481,15 +528,19 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     {
         var d3d11Texture = (D3D11Texture)texture;
 
+#if GRAPHICS_DEBUG
         if (mipLevel >= d3d11Texture.MipLevels)
         {
-            throw new ArgumentOutOfRangeException(nameof(mipLevel), "Mip level exceeds texture mip count.");
+            Log.Error(D3D11LogCategories.D3D11, "Mip level exceeds texture mip count.");
+            return;
         }
 
         if (arraySlice >= d3d11Texture.ArraySize)
         {
-            throw new ArgumentOutOfRangeException(nameof(arraySlice), "Array slice exceeds texture array size.");
+            Log.Error(D3D11LogCategories.D3D11, "Array slice exceeds texture array size.");
+            return;
         }
+#endif
 
         uint mipWidth = System.Math.Max(1u, d3d11Texture.Width >> (int)mipLevel);
         uint mipHeight = System.Math.Max(1u, d3d11Texture.Height >> (int)mipLevel);
@@ -497,14 +548,16 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
         uint subresource = mipLevel + (arraySlice * d3d11Texture.MipLevels);
         TortGfx.FormatInfo.GetSurfaceInfo(d3d11Texture.Format, mipWidth, mipHeight, out uint rowPitch, out uint slicePitch);
 
+#if GRAPHICS_DEBUG
         uint expectedBytes = slicePitch * mipDepth;
         uint actualBytes = (uint)(sizeof(T) * data.Length);
 
         if (actualBytes < expectedBytes)
         {
-            throw new ArgumentOutOfRangeException(nameof(data),
-                $"Provided data size ({actualBytes} bytes) is smaller than the target mip level size ({expectedBytes} bytes).");
+            Log.Error(D3D11LogCategories.D3D11, $"Provided data size ({actualBytes} bytes) is smaller than the target mip level size ({expectedBytes} bytes).");
+            return;
         }
+#endif
 
         fixed (T* srcPtr = data)
         {
@@ -695,7 +748,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
         }
     }
 
-    #endregion
+#endregion
 
     #region Drawing Commands (Direct, Instanced, Indirect)
 
@@ -876,7 +929,6 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
 
     private void UpdateColorSpace()
     {
-        // TBD:
     }
 
     private void FlushDebugMessages()
