@@ -28,7 +28,7 @@ struct PointLight
 
 struct SpotLight
 {
-    float3 Position
+    float3 Position;
     float CutOff;
     float3 Direction;
     float OuterCutOff;
