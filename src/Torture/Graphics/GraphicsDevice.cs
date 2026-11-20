@@ -6,13 +6,6 @@ namespace Torture.Graphics;
 
 public abstract class GraphicsDevice : IDisposable
 {
-    protected GraphicsDevice(GraphicsDeviceOptions options)
-    {
-        Options = options;
-    }
-
-    public GraphicsDeviceOptions Options { get; }
-
     public virtual GraphicsAPI API { get; }
 
     public virtual SizeI ClientSize { get; protected set; }

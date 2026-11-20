@@ -207,27 +207,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         Log.AddSink(new ConsoleLogSink());
     }
 
-    /// <summary>
-    /// Builds graphics device options from build defaults and command-line switches:
-    /// --gfx-debug / --no-gfx-debug and --gfx-track-objects / --no-gfx-track-objects.
-    /// </summary>
-    protected virtual GraphicsDeviceOptions CreateGraphicsDeviceOptions(string[] args)
-    {
-        var options = new GraphicsDeviceOptions();
-
-        if (ReadSwitch(args, "--gfx-debug", "--no-gfx-debug") is bool validation)
-        {
-            options = options with { EnableValidation = validation };
-        }
-        if (ReadSwitch(args, "--gfx-track-objects", "--no-gfx-track-objects") is bool tracking)
-        {
-            options = options with { EnableObjectTracking = tracking };
-        }
-
-        return options;
-    }
-
-    protected abstract GraphicsDevice CreateGraphicsDevice(GraphicsAPI api, NativeWindowInfo window, GraphicsDeviceOptions options);
+    protected abstract GraphicsDevice CreateGraphicsDevice(GraphicsAPI api, NativeWindowInfo window);
 
     #endregion
 
@@ -271,8 +251,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         }
 
         // Initialize graphics device
-        GraphicsDeviceOptions graphicsOptions = CreateGraphicsDeviceOptions(args);
-        GraphicsDevice = CreateGraphicsDevice(PreferredGraphicsAPI, GetNativeWindowInfo(Window), graphicsOptions);
+        GraphicsDevice = CreateGraphicsDevice(PreferredGraphicsAPI, GetNativeWindowInfo(Window));
 
         // Initialize systems
         Keyboard.Initialize();
@@ -458,26 +437,6 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
     {
         Log.Fatal(LogCategories.Core, "Unhandled exception.", e.ExceptionObject as Exception);
         Log.Shutdown();
-    }
-
-    /// <summary>
-    /// Returns true/false if the on/off switch is present (the last one wins), otherwise null.
-    /// </summary>
-    private static bool? ReadSwitch(string[] args, string on, string off)
-    {
-        bool? result = null;
-        foreach (string arg in args)
-        {
-            if (arg.Equals(on, StringComparison.OrdinalIgnoreCase))
-            {
-                result = true;
-            }
-            else if (arg.Equals(off, StringComparison.OrdinalIgnoreCase))
-            {
-                result = false;
-            }
-        }
-        return result;
     }
 
     private SDL.WindowFlags BuildInitialWindowFlags()

@@ -24,8 +24,12 @@
 
   <PropertyGroup>
     <_TortureDebugConfig Condition="'$(Configuration)' == 'Debug' or '$(Configuration)' == ''">true</_TortureDebugConfig>
-    <TrackAllocations Condition="'$(TrackAllocations)' == ''">$(_TortureDebugConfig)</TrackAllocations>
-    <GraphicsDebug Condition="'$(GraphicsDebug)' == ''">$(_TortureDebugConfig)</GraphicsDebug>
+
+    <TrackAllocations Condition="'$(TrackAllocations)' == '' and '$(_TortureDebugConfig)' == 'true'">true</TrackAllocations>
+    <TrackAllocations Condition="'$(TrackAllocations)' == ''">None</TrackAllocations>
+
+    <GraphicsDebug Condition="'$(GraphicsDebug)' == '' and '$(_TortureDebugConfig)' == 'true'">true</GraphicsDebug>
+    <GraphicsDebug Condition="'$(GraphicsDebug)' == ''">None</GraphicsDebug>
 
     <!-- Compile-time minimum log severity: Message, Info, Warning, Error, Fatal, None -->
     <TortureLogSeverity Condition="'$(TortureLogSeverity)' == '' and '$(_TortureDebugConfig)' == 'true'">Message</TortureLogSeverity>

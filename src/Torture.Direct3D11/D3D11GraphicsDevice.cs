@@ -26,18 +26,18 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
         FeatureLevel.Level_11_1,
         FeatureLevel.Level_11_0];
 
-    private readonly int _renderThreadId;
-    private readonly EventHandler<System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs>? _onFirstChanceException;
-
     private readonly bool _tearingSupported;
     private readonly SwapChainFlags _swapChainFlags;
     private readonly Format _colorFormat;
     private readonly Format _depthStencilFormat;
 
-    // Debug
+#if GRAPHICS_DEBUG
+    private readonly int _renderThreadId;
+    private readonly EventHandler<System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs>? _onFirstChanceException;
     private readonly ID3D11InfoQueue? _infoQueue;
+#endif
 
-    // D3D11
+    // Direct3D 11 interface
     private readonly IDXGIFactory7 _factory;
     private readonly ID3D11Device5 _device;
     private readonly ID3D11DeviceContext4 _imContext;
@@ -47,21 +47,21 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     private ID3D11Texture2D _depthStencilBuffer = null!;
     private ID3D11DepthStencilView _depthStencilView = null!;
 
-    // Cached state for SetGraphicsState diffing.
+    // Cached state for SetGraphicsState diffing
     private D3D11GraphicsPipeline? _currentPipeline;
     private TortGfx.BindingSetVector _currentBindings;
     private TortGfx.VertexBufferBinding? _currentVertexBuffer;
     private TortGfx.IndexBufferBinding? _currentIndexBuffer;
 
-    public D3D11GraphicsDevice(TortGfx.GraphicsDeviceOptions options,
-        nint hwnd, SizeI clientSize, Format colorFormat = Format.B8G8R8A8_UNorm, Format depthStencilFormat = Format.D24_UNorm_S8_UInt)
-        : base(options)
+    public D3D11GraphicsDevice(
+        nint hwnd,
+        SizeI clientSize,
+        Format colorFormat = Format.B8G8R8A8_UNorm,
+        Format depthStencilFormat = Format.D24_UNorm_S8_UInt)
     {
-        // Global SharpGen switch: must be set before the first COM wrapper is created.
-        if (options.EnableObjectTracking)
-        {
+#if GRAPHICS_DEBUG
             Configuration.EnableObjectTracking = true;
-        }
+#endif
 
         try
         {
@@ -102,17 +102,16 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
             {
                 DeviceCreationFlags deviceCreationFlags = DeviceCreationFlags.BgraSupport;
 
-                if (options.EnableValidation)
+#if GRAPHICS_DEBUG
+                if (SdkLayersAvailable())
                 {
-                    if (SdkLayersAvailable())
-                    {
-                        deviceCreationFlags |= DeviceCreationFlags.Debug;
-                    }
-                    else
-                    {
-                        Log.Warning(D3D11LogCategories.D3D11, "Validation requested, but D3D11 SDK layers are not installed.");
-                    }
+                    deviceCreationFlags |= DeviceCreationFlags.Debug;
                 }
+                else
+                {
+                    Log.Warning(D3D11LogCategories.D3D11, "Validation requested, but D3D11 SDK layers are not installed.");
+                }
+#endif
 
                 ID3D11Device? device = null;
                 ID3D11DeviceContext? imContext = null;
@@ -154,10 +153,11 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
                 }
             }
 
-            _infoQueue = options.EnableValidation ? _device.QueryInterfaceOrNull<ID3D11InfoQueue>() : null;
+#if GRAPHICS_DEBUG
+            _infoQueue = _device.QueryInterfaceOrNull<ID3D11InfoQueue>();
             if (_infoQueue != null)
             {
-                if (options.BreakOnError && System.Diagnostics.Debugger.IsAttached)
+                if (System.Diagnostics.Debugger.IsAttached)
                 {
                     _infoQueue.SetBreakOnSeverity(MessageSeverity.Corruption, true);
                     _infoQueue.SetBreakOnSeverity(MessageSeverity.Error, true);
@@ -221,6 +221,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
 
                 AppDomain.CurrentDomain.FirstChanceException += _onFirstChanceException;
             }
+#endif
 
             _swapChainFlags = SwapChainFlags.None;
             if (_tearingSupported)
@@ -823,10 +824,12 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
         if (_disposed)
             return;
 
+#if GRAPHICS_DEBUG
         if (_onFirstChanceException != null)
         {
             AppDomain.CurrentDomain.FirstChanceException -= _onFirstChanceException;
         }
+#endif
 
         _depthStencilView?.Dispose();
         _depthStencilBuffer?.Dispose();
@@ -842,6 +845,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
 
         _swapChain?.Dispose();
 
+#if GRAPHICS_DEBUG
         if (_infoQueue != null && _device != null)
         {
             if (_device.QueryInterfaceOrNull<ID3D11Debug>() is ID3D11Debug d3d11Debug)
@@ -851,45 +855,23 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
                 d3d11Debug.Dispose();
             }
         }
-
         _infoQueue?.Dispose();
+#endif
+
         _device?.Dispose();
         _factory?.Dispose();
 
-        if (Options.EnableValidation)
-        {
-            ReportDxgiLiveObjects();
-        }
-
-        if (Options.EnableObjectTracking)
-        {
-            ReportSharpGenLeaks();
-        }
+#if GRAPHICS_DEBUG
+        ReportDxgiLiveObjects();
+        ReportSharpGenLeaks();
+#endif
 
         _disposed = true;
     }
 
-    #endregion
+#endregion
 
     #region Private
-
-    private static LogSeverity ToLogSeverity(MessageSeverity severity) => severity switch
-    {
-        MessageSeverity.Corruption => LogSeverity.Fatal,
-        MessageSeverity.Error => LogSeverity.Error,
-        MessageSeverity.Warning => LogSeverity.Warning,
-        MessageSeverity.Info => LogSeverity.Info,
-        _ => LogSeverity.Message
-    };
-
-    private static LogSeverity ToLogSeverity(InfoQueueMessageSeverity severity) => severity switch
-    {
-        InfoQueueMessageSeverity.Corruption => LogSeverity.Fatal,
-        InfoQueueMessageSeverity.Error => LogSeverity.Error,
-        InfoQueueMessageSeverity.Warning => LogSeverity.Warning,
-        InfoQueueMessageSeverity.Info => LogSeverity.Info,
-        _ => LogSeverity.Message
-    };
 
     private IDXGIAdapter1 GetHardwareAdapter()
     {
@@ -930,6 +912,25 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     private void UpdateColorSpace()
     {
     }
+
+#if GRAPHICS_DEBUG
+    private static LogSeverity ToLogSeverity(MessageSeverity severity) => severity switch
+    {
+        MessageSeverity.Corruption => LogSeverity.Fatal,
+        MessageSeverity.Error => LogSeverity.Error,
+        MessageSeverity.Warning => LogSeverity.Warning,
+        MessageSeverity.Info => LogSeverity.Info,
+        _ => LogSeverity.Message
+    };
+
+    private static LogSeverity ToLogSeverity(InfoQueueMessageSeverity severity) => severity switch
+    {
+        InfoQueueMessageSeverity.Corruption => LogSeverity.Fatal,
+        InfoQueueMessageSeverity.Error => LogSeverity.Error,
+        InfoQueueMessageSeverity.Warning => LogSeverity.Warning,
+        InfoQueueMessageSeverity.Info => LogSeverity.Info,
+        _ => LogSeverity.Message
+    };
 
     private void FlushDebugMessages()
     {
@@ -984,6 +985,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
             }
         }
     }
+#endif
 
-    #endregion
+#endregion
 }

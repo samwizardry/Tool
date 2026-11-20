@@ -31,14 +31,14 @@ public sealed partial class Luna : Application<Luna>
         _camera = new Camera(60.0f, PreferredWindowSize.Width, PreferredWindowSize.Height);
     }
 
-    protected override GraphicsDevice CreateGraphicsDevice(GraphicsAPI api, NativeWindowInfo window, GraphicsDeviceOptions options)
+    protected override GraphicsDevice CreateGraphicsDevice(GraphicsAPI api, NativeWindowInfo window)
     {
         if (api == GraphicsAPI.Default)
         {
 #if SUPPORT_DIRECTX
             api = GraphicsAPI.D3D11;
 #elif SUPPORT_VULKAN
-            //api = GraphicsAPI.Vulkan;
+            api = GraphicsAPI.Vulkan;
 #endif
         }
 
@@ -46,7 +46,7 @@ public sealed partial class Luna : Application<Luna>
         {
 #if SUPPORT_DIRECTX
             GraphicsAPI.D3D11
-                => new Direct3D11.D3D11GraphicsDevice(options, window.WindowHandle, window.ClientSize),
+                => new Direct3D11.D3D11GraphicsDevice(window.WindowHandle, window.ClientSize),
 #endif
 #if SUPPORT_VULKAN
             //GraphicsAPI.Vulkan
@@ -121,7 +121,7 @@ public sealed partial class Luna : Application<Luna>
             if (_elapsedSeconds >= 1.0f)
             {
                 double fps = _frameCount / _elapsedSeconds;
-                // (LunaCat, $"FPS: {fps:F1}");
+                //Log.Info(LogCat, $"FPS: {fps:F1}");
                 _elapsedSeconds -= 1.0f;
                 _frameCount = 0;
             }
