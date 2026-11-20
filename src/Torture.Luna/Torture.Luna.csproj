@@ -12,6 +12,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AssimpNetter" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Torture\Torture.csproj" />
     <ProjectReference Include="..\Torture.Direct3D11\Torture.Direct3D11.csproj" Condition="'$(TortureTargetOS)' == 'Windows'" />
     <ProjectReference Include="..\Torture.Vulkan\Torture.Vulkan.csproj" Condition="'$(TortureTargetOS)' == 'Linux' or '$(TortureTargetOS)' == 'Windows'" />

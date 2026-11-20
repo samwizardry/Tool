@@ -17,8 +17,6 @@ public static class ResourceFactoryCache
     public static Sampler Anisotropic16 = default!;
 
     public static Graphics.Buffer PerFrameCb = default!;
-    public static Graphics.Buffer BoxPerObjectCb = default!;
-    public static Graphics.Buffer CarPerObjectCb = default!;
 
     public static Texture WhitePixel = default!;
     public static Texture Container = default!;
@@ -35,11 +33,9 @@ public static class ResourceFactoryCache
     // Material binding sets
     public static BindingSet BoxMatBindingSet = default!;
     public static BindingSet CarMatBindingSet = default!;
+
     // Per frame binding set
     public static BindingSet PhongPerFrameBindingSet = default!;
-    // Per object binding sets
-    public static BindingSet BoxPerObjBindingSet = default!;
-    public static BindingSet CarPerObjBindingSet = default!;
 
     // Materials
     public static Material BoxMaterial = null!;
@@ -66,8 +62,6 @@ public static class ResourceFactoryCache
         Anisotropic16 = device.CreateSampler(SamplerDescription.AnisotropicWrap(16.0f));
 
         PerFrameCb = device.CreateBuffer(BufferDescription.Constant<PhongPerFrame>());
-        BoxPerObjectCb = device.CreateBuffer(BufferDescription.Constant<PhongObject>());
-        CarPerObjectCb = device.CreateBuffer(BufferDescription.Constant<PhongObject>());
 
         WhitePixel = device.CreateTexture(new byte[] { 255, 255, 255, 255 }, TextureDescription.Texture2D(1u, 1u));
 
@@ -101,7 +95,8 @@ public static class ResourceFactoryCache
             Bindings: [
                 new(0, BindingResourceType.TextureSrv),
                 new(1, BindingResourceType.TextureSrv),
-                new(0, BindingResourceType.Sampler)],
+                new(0, BindingResourceType.Sampler),
+                new(1, BindingResourceType.Sampler)],
             RegisterSpace: 0));
 
         PhongPerFrameBindingLayout = device.CreateBindingLayout(new BindingLayoutDescription(
@@ -124,7 +119,8 @@ public static class ResourceFactoryCache
                 Bindings: [
                     new(0, BindingResourceType.TextureSrv, Container),
                     new(1, BindingResourceType.TextureSrv, ContainerSpecular),
-                    new(0, BindingResourceType.Sampler, Anisotropic16)]),
+                    new(0, BindingResourceType.Sampler, Anisotropic16),
+                    new(1, BindingResourceType.Sampler, Anisotropic16)]),
             layout: PhongBindingLayout);
 
         CarMatBindingSet = device.CreateBindingSet(
@@ -132,7 +128,8 @@ public static class ResourceFactoryCache
                 Bindings: [
                     new(0, BindingResourceType.TextureSrv, WhitePixel),
                     new(1, BindingResourceType.TextureSrv, WhitePixel),
-                    new(0, BindingResourceType.Sampler, Anisotropic16)]),
+                    new(0, BindingResourceType.Sampler, Anisotropic16),
+                    new(1, BindingResourceType.Sampler, Anisotropic16)]),
             layout: PhongBindingLayout);
 
         // Per frame binding set
@@ -142,21 +139,6 @@ public static class ResourceFactoryCache
                     new(0, BindingResourceType.ConstantBuffer, PerFrameCb),
                 ]),
             layout: PhongPerFrameBindingLayout);
-
-        // Per object binding sets
-        BoxPerObjBindingSet = device.CreateBindingSet(
-            desc: new BindingSetDescription(
-                Bindings: [
-                    new(1, BindingResourceType.ConstantBuffer, BoxPerObjectCb)
-                ]),
-            layout: PhongPerObjBindingLayout);
-
-        CarPerObjBindingSet = device.CreateBindingSet(
-            desc: new BindingSetDescription(
-                Bindings: [
-                    new(1, BindingResourceType.ConstantBuffer, CarPerObjectCb)
-                ]),
-            layout: PhongPerObjBindingLayout);
 
         // Materials
         BoxMaterial = new Material(PhongPipeline, BoxMatBindingSet, null);
@@ -178,8 +160,6 @@ public static class ResourceFactoryCache
 
         // Constant buffers
         PerFrameCb?.Dispose();
-        BoxPerObjectCb?.Dispose();
-        CarPerObjectCb?.Dispose();
 
         // Textures
         Container?.Dispose();
@@ -199,9 +179,6 @@ public static class ResourceFactoryCache
         CarMatBindingSet?.Dispose();
         // Per frame binding set
         PhongPerFrameBindingSet?.Dispose();
-        // Per object binding sets
-        BoxPerObjBindingSet?.Dispose();
-        CarPerObjBindingSet?.Dispose();
 
         // Materials
         BoxMaterial?.Dispose();

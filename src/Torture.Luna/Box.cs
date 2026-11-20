@@ -7,10 +7,8 @@ namespace Torture.Luna;
 
 public class Box : Actor
 {
-    private readonly Model _model;
-
     public Box(GraphicsDevice device, Material material)
-        : base(device, ResourceFactoryCache.BoxPerObjectCb)
+        : base(device)
     {
         var data = Geometry.ComputeBox(Vector3.One * 2.0f);
 
@@ -40,22 +38,11 @@ public class Box : Actor
             _actorData.SetNormalMatrix(Matrix4x4.Identity);
         }
 
-        _actorData.Update(_device);
+        base.Update(dt);
     }
 
     public override void Draw()
     {
-        _model.Draw(_device, ResourceFactoryCache.PhongPerFrameBindingSet, ResourceFactoryCache.BoxPerObjBindingSet);
-    }
-
-    public override void Dispose()
-    {
-        if (_disposed)
-            return;
-
-        _model?.Dispose();
-        base.Dispose();
-
-        _disposed = true;
+        base.Draw();
     }
 }

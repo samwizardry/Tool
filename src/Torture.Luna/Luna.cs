@@ -12,7 +12,7 @@ namespace Torture.Luna;
 [SDL3.SDL.GenerateMain]
 public sealed partial class Luna : Application<Luna>
 {
-    public static readonly LogCategory LunaCat = new("Luna");
+    public static readonly LogCategory LogCat = new("Luna");
 
     private readonly Camera _camera;
 
@@ -68,10 +68,13 @@ public sealed partial class Luna : Application<Luna>
     {
         ResourceFactoryCache.Load(GraphicsDevice);
 
+        AssimpModelLoader.GraphicsDevice = GraphicsDevice;
+
         _sceneData = new PhongPerFrameData(ResourceFactoryCache.PerFrameCb);
 
         _actors.Add(new Box(GraphicsDevice, ResourceFactoryCache.BoxMaterial));
         _actors.Add(new Car(GraphicsDevice, ResourceFactoryCache.CarMaterial));
+        _actors.Add(new Backpack(GraphicsDevice));
 
         _sceneData.SetDirLight(new DirectionalLight
         {
@@ -171,12 +174,14 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void UnloadContent()
     {
-        ResourceFactoryCache.Unload();
+        AssimpModelLoader.Dispose();
 
         foreach (var actor in _actors)
         {
             actor?.Dispose();
         }
+
+        ResourceFactoryCache.Unload();
     }
 
     protected override void Cleanup()

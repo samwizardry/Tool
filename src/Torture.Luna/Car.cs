@@ -6,9 +6,7 @@ namespace Torture.Luna;
 
 public sealed class Car : Actor
 {
-    private readonly Model _model;
-
-    public Car(GraphicsDevice device, Material material) : base(device, ResourceFactoryCache.CarPerObjectCb)
+    public Car(GraphicsDevice device, Material material) : base(device)
     {
         _model = ModelLoader.LoadLunaModel(device, material, "resources/objects/car.txt");
 
@@ -34,22 +32,11 @@ public sealed class Car : Actor
             _actorData.SetNormalMatrix(Matrix4x4.Identity);
         }
 
-        _actorData.Update(_device);
+        base.Update(dt);
     }
 
     public override void Draw()
     {
-        _model.Draw(_device, ResourceFactoryCache.PhongPerFrameBindingSet, ResourceFactoryCache.CarPerObjBindingSet);
-    }
-
-    public override void Dispose()
-    {
-        if (_disposed)
-            return;
-
-        _model?.Dispose();
-        base.Dispose();
-
-        _disposed = true;
+        base.Draw();
     }
 }
