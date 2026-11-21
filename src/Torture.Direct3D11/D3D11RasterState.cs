@@ -41,13 +41,8 @@ internal sealed class D3D11RasterState : CoreRasterState
 
     public ID3D11RasterizerState Native { get; }
 
-    public override void Dispose()
+    protected override void FreeUnmanagedResources()
     {
-        if (_disposed)
-            return;
-
         Native?.Dispose();
-
-        _disposed = true;
     }
 }

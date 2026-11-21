@@ -31,13 +31,8 @@ internal sealed class D3D11InputLayout : CoreInputLayout
 
     public ID3D11InputLayout Native { get; private set; }
 
-    public override void Dispose()
+    protected override void FreeUnmanagedResources()
     {
-        if (_disposed)
-            return;
-
         Native?.Dispose();
-
-        _disposed = true;
     }
 }

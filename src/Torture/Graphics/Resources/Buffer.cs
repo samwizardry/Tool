@@ -65,10 +65,8 @@ public readonly record struct BufferDescription
     private static uint Align16(uint size) => (size + 15u) & ~15u;
 }
 
-public abstract class Buffer : IDisposable, IBindableResource
+public abstract class Buffer : GraphicsResource, IBindableResource
 {
-    protected bool _disposed;
-
     /// <summary>
     /// Buffer size in bytes.
     /// </summary>
@@ -83,6 +81,4 @@ public abstract class Buffer : IDisposable, IBindableResource
     /// Buffer element count.
     /// </summary>
     public uint Count => ByteSize / ByteStride;
-
-    public abstract void Dispose();
 }

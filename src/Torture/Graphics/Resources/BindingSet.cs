@@ -27,10 +27,9 @@ public readonly record struct BindingSetItem(
 /// </summary>
 public readonly record struct BindingSetDescription(BindingSetItem[] Bindings);
 
-public abstract class BindingSet : IDisposable
+public abstract class BindingSet : GraphicsResource
 {
     private readonly BindingSetDescription _desc;
-    protected bool _disposed;
 
     protected BindingSet(in BindingSetDescription desc)
     {
@@ -38,6 +37,4 @@ public abstract class BindingSet : IDisposable
     }
 
     public ref readonly BindingSetDescription Desc => ref _desc;
-
-    public abstract void Dispose();
 }

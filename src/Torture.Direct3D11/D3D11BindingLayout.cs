@@ -6,12 +6,4 @@ internal sealed class D3D11BindingLayout : CoreBindingLayout
         : base(desc)
     {
     }
-
-    public override void Dispose()
-    {
-        if (_disposed)
-            return;
-
-        _disposed = true;
-    }
 }

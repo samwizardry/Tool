@@ -15,8 +15,7 @@ public class Box : Actor
         _model = new Model(new Mesh(
             device.CreateBuffer(data.Vertices.AsSpan(), BufferDescription.Vertex(0, 0)),
             device.CreateBuffer(data.Indices.AsSpan(), BufferDescription.Index(0))),
-            material,
-            false);
+            material);
 
         _actorData.SetShininess(16.0f);
     }

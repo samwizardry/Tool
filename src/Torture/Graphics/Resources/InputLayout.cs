@@ -1,8 +1,5 @@
 ﻿namespace Torture.Graphics;
 
-public abstract class InputLayout : IDisposable
+public abstract class InputLayout : GraphicsResource
 {
-    protected bool _disposed;
-
-    public abstract void Dispose();
 }

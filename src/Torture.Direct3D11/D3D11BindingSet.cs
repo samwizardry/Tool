@@ -113,12 +113,4 @@ internal sealed class D3D11BindingSet : CoreBindingSet
             }
         }
     }
-
-    public override void Dispose()
-    {
-        if (_disposed)
-            return;
-
-        _disposed = true;
-    }
 }

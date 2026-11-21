@@ -14,10 +14,9 @@ public readonly record struct GraphicsPipelineDescription(
 /// <summary>
 /// Represents an immutable graphics pipeline state object (PSO).
 /// </summary>
-public abstract class GraphicsPipeline : IDisposable
+public abstract class GraphicsPipeline : GraphicsResource
 {
     protected readonly GraphicsPipelineDescription _desc;
-    protected bool _disposed;
 
     protected GraphicsPipeline(in GraphicsPipelineDescription desc)
     {
@@ -25,6 +24,4 @@ public abstract class GraphicsPipeline : IDisposable
     }
 
     public ref readonly GraphicsPipelineDescription Desc => ref _desc;
-
-    public abstract void Dispose();
 }

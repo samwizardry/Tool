@@ -134,15 +134,10 @@ internal sealed class D3D11Buffer : CoreBuffer
         };
     }
 
-    public override void Dispose()
+    protected override void FreeUnmanagedResources()
     {
-        if (_disposed)
-            return;
-
         Srv?.Dispose();
         Uav?.Dispose();
         Native?.Dispose();
-
-        _disposed = true;
     }
 }

@@ -71,19 +71,17 @@ public class Model : IDisposable
 {
     private readonly Mesh[] _meshes;
     private readonly Material[] _materials;
-    private readonly bool _ownsMaterials;
 
     private bool _disposed;
 
-    public Model(Mesh[] meshes, Material[] materials, bool ownsMaterials = false)
+    public Model(Mesh[] meshes, Material[] materials)
     {
         _meshes = meshes;
         _materials = materials;
-        _ownsMaterials = ownsMaterials;
     }
 
-    public Model(Mesh mesh, Material material, bool ownsMaterials = false)
-        : this([mesh], [material], ownsMaterials) { }
+    public Model(Mesh mesh, Material material)
+        : this([mesh], [material]) { }
 
     public void Draw(GraphicsDevice graphicsDevice, BindingSet? perFrameSet = null, BindingSet? perObjectSet = null)
     {
@@ -132,14 +130,6 @@ public class Model : IDisposable
         foreach (Mesh mesh in _meshes)
         {
             mesh?.Dispose();
-        }
-
-        if (_ownsMaterials)
-        {
-            foreach (Material material in _materials)
-            {
-                material?.Dispose();
-            }
         }
 
         _disposed = true;
@@ -231,7 +221,7 @@ public static class ModelLoader
             if (lineAsSpan.Contains(vertexListLine.AsSpan(), StringComparison.Ordinal))
             {
                 startReadVertices = true;
-                vertices = new float[vertexCount * VertexPositionNormalTexture.Layout.ByteStride / sizeof(float)];
+                vertices = new float[vertexCount * 8];
                 continue;
             }
 
@@ -269,9 +259,9 @@ public static class ModelLoader
         }
 
         Mesh mesh = new(
-            graphicsDevice.CreateBuffer(vertices, BufferDescription.Vertex(0, VertexPositionNormalTexture.Layout.ByteStride)),
+            graphicsDevice.CreateBuffer(vertices, BufferDescription.Vertex(0, 8 * sizeof(float))),
             graphicsDevice.CreateBuffer(indices, BufferDescription.Index(0)));
 
-        return new Model(mesh, material, false);
+        return new Model(mesh, material);
     }
 }

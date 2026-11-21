@@ -26,10 +26,9 @@ public readonly record struct BindingLayoutDescription(
 /// <summary>
 /// Represents a compiled resource binding layout schema.
 /// </summary>
-public abstract class BindingLayout : IDisposable
+public abstract class BindingLayout : GraphicsResource
 {
     protected readonly BindingLayoutDescription _desc;
-    protected bool _disposed;
 
     protected BindingLayout(in BindingLayoutDescription desc)
     {
@@ -43,6 +42,4 @@ public abstract class BindingLayout : IDisposable
     public ReadOnlySpan<BindingLayoutItem> Bindings => _desc.Bindings;
 
     public uint RegisterSpace => _desc.RegisterSpace;
-
-    public abstract void Dispose();
 }

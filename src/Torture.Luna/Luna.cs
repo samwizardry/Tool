@@ -67,7 +67,7 @@ public sealed partial class Luna : Application<Luna>
     protected override void LoadContent()
     {
         ResourceFactoryCache.Load(GraphicsDevice);
-
+        
         AssimpModelLoader.GraphicsDevice = GraphicsDevice;
 
         _sceneData = new PhongPerFrameData(ResourceFactoryCache.PerFrameCb);

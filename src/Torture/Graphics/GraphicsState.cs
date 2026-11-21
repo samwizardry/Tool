@@ -22,9 +22,21 @@ public struct BindingSetVector
 {
     public const int MaxBindingSets = 4;
 
+    /// <summary>
+    /// PerFrame
+    /// </summary>
     public BindingSet? Set0;
+    /// <summary>
+    /// PerPass
+    /// </summary>
     public BindingSet? Set1;
+    /// <summary>
+    /// PerMaterial
+    /// </summary>
     public BindingSet? Set2;
+    /// <summary>
+    /// PerObject
+    /// </summary>
     public BindingSet? Set3;
 
     public BindingSet? this[int index]

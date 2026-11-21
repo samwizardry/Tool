@@ -53,13 +53,8 @@ internal sealed class D3D11Sampler : CoreSampler
             _ => TextureAddressMode.Clamp
         };
 
-    public override void Dispose()
+    protected override void FreeUnmanagedResources()
     {
-        if (_disposed)
-            return;
-
         Native?.Dispose();
-
-        _disposed = true;
     }
 }

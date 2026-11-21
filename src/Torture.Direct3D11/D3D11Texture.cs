@@ -275,14 +275,9 @@ internal sealed class D3D11Texture : CoreTexture
             ? ResourceOptionFlags.TextureCube
             : ResourceOptionFlags.None;
 
-    public override void Dispose()
+    protected override void FreeUnmanagedResources()
     {
-        if (_disposed)
-            return;
-
         Srv?.Dispose();
         Native?.Dispose();
-
-        _disposed = true;
     }
 }

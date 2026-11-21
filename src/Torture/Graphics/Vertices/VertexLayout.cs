@@ -31,14 +31,14 @@ public readonly record struct VertexLayout : IEquatable<VertexLayout>
                 _elements[i].ByteOffset = 0;
             }
 
-            ByteStride += _elements[i].Format.ByteSize();
+            ByteSize += _elements[i].Format.ByteSize();
         }
     }
 
     /// <summary>
     /// Layout size in bytes.
     /// </summary>
-    public uint ByteStride { get; }
+    public uint ByteSize { get; }
 
     public ReadOnlySpan<VertexElement> Elements => _elements;
 

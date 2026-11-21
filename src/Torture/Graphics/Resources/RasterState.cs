@@ -24,10 +24,9 @@ public readonly record struct RasterStateDescription(
     public static RasterStateDescription Wireframe => new(FillMode: RasterFillMode.Wireframe, CullMode: RasterCullMode.None);
 }
 
-public abstract class RasterState : IDisposable
+public abstract class RasterState : GraphicsResource
 {
     protected readonly RasterStateDescription _desc;
-    protected bool _disposed;
 
     protected RasterState(in RasterStateDescription desc)
     {
@@ -35,6 +34,4 @@ public abstract class RasterState : IDisposable
     }
 
     public ref readonly RasterStateDescription Desc => ref _desc;
-
-    public abstract void Dispose();
 }

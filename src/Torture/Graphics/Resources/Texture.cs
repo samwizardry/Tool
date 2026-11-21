@@ -117,10 +117,9 @@ public readonly record struct TextureDescription
 /// <summary>
 /// Represents a GPU texture resource (1D, 2D, 3D, Cube, or Array).
 /// </summary>
-public abstract class Texture : IDisposable, IBindableResource
+public abstract class Texture : GraphicsResource, IBindableResource
 {
     protected readonly TextureDescription _desc;
-    protected bool _disposed;
 
     protected Texture(in TextureDescription desc)
     {
@@ -144,6 +143,4 @@ public abstract class Texture : IDisposable, IBindableResource
     public TextureDimension Dimension => _desc.Dimension;
 
     public TextureUsage Usage => _desc.Usage;
-
-    public abstract void Dispose();
 }

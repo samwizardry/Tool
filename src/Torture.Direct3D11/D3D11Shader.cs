@@ -86,14 +86,9 @@ internal sealed unsafe class D3D11Shader : CoreShader
 
     public byte[]? Bytecode { get; private set; }
 
-    public override void Dispose()
+    protected override void FreeUnmanagedResources()
     {
-        if (_disposed)
-            return;
-
         Native?.Dispose();
         Bytecode = null;
-
-        _disposed = true;
     }
 }

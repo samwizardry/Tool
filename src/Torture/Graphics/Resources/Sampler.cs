@@ -74,10 +74,9 @@ public readonly record struct SamplerDescription
 /// <summary>
 /// Represents a GPU texture sampler state.
 /// </summary>
-public abstract class Sampler : IDisposable, IBindableResource
+public abstract class Sampler : GraphicsResource, IBindableResource
 {
     protected readonly SamplerDescription _desc;
-    protected bool _disposed;
 
     protected Sampler(in SamplerDescription desc)
     {
@@ -85,6 +84,4 @@ public abstract class Sampler : IDisposable, IBindableResource
     }
 
     public ref readonly SamplerDescription Desc => ref _desc;
-
-    public abstract void Dispose();
 }

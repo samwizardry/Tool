@@ -43,10 +43,9 @@ public readonly record struct ShaderDescription
         new(ShaderType.Compute, entryPoint, packAsRowMajor, debug, debugName);
 }
 
-public abstract class Shader : IDisposable
+public abstract class Shader : GraphicsResource, IDisposable
 {
     private readonly ShaderDescription _desc;
-    protected bool _disposed;
 
     protected Shader(in ShaderDescription desc)
     {
@@ -56,6 +55,4 @@ public abstract class Shader : IDisposable
     public ref readonly ShaderDescription Desc => ref _desc;
 
     public ShaderType ShaderType => _desc.ShaderType;
-
-    public abstract void Dispose();
 }

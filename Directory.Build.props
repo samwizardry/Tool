@@ -44,7 +44,7 @@
     <DefineConstants>$(DefineConstants);GRAPHICS_DEBUG</DefineConstants>
   </PropertyGroup>
 
-  <!-- Cascade: enabling a log level automatically enables all higher severities -->
+  <!-- Cascade: enabling a log severity automatically enables all higher severities -->
   <PropertyGroup>
     <_LogMessage Condition="'$(TortureLogSeverity)' == 'Message'">true</_LogMessage>
     <_LogInfo    Condition="'$(TortureLogSeverity)' == 'Info'    or '$(_LogMessage)' == 'true'">true</_LogInfo>

@@ -42,12 +42,4 @@ internal sealed class D3D11GraphicsPipeline : CoreGraphicsPipeline
         imContext.PSSetShader(_pixelShader);
         imContext.RSSetState(_rasterState);
     }
-
-    public override void Dispose()
-    {
-        if (_disposed)
-            return;
-
-        _disposed = true;
-    }
 }

@@ -55,7 +55,7 @@ public static class AssimpModelLoader
 
         ProcessNode(scene.RootNode, scene);
 
-        return new Model(Meshes, Materials, false);
+        return new Model(Meshes, Materials);
     }
 
     private static void ProcessNode(Node node, Scene scene)
