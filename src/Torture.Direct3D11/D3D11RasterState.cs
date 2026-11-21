@@ -4,28 +4,26 @@
 
 using Vortice.Direct3D11;
 
-using TortGfx = Torture.Graphics;
-
 namespace Torture.Direct3D11;
 
-internal sealed class D3D11RasterState : TortGfx.RasterState
+internal sealed class D3D11RasterState : CoreRasterState
 {
-    public D3D11RasterState(ID3D11Device5 device, in TortGfx.RasterStateDescription desc)
+    public D3D11RasterState(ID3D11Device5 device, in CoreRasterStateDesc desc)
         : base(in desc)
     {
         Native = device.CreateRasterizerState2(new()
         {
             FillMode = desc.FillMode switch
             {
-                TortGfx.RasterFillMode.Solid => FillMode.Solid,
-                TortGfx.RasterFillMode.Wireframe => FillMode.Wireframe,
+                CoreRasterFillMode.Solid => FillMode.Solid,
+                CoreRasterFillMode.Wireframe => FillMode.Wireframe,
                 _ => throw new NotSupportedException()
             },
             CullMode = desc.CullMode switch
             {
-                TortGfx.RasterCullMode.Back => CullMode.Back,
-                TortGfx.RasterCullMode.Front => CullMode.Front,
-                TortGfx.RasterCullMode.None => CullMode.None,
+                CoreRasterCullMode.Back => CullMode.Back,
+                CoreRasterCullMode.Front => CullMode.Front,
+                CoreRasterCullMode.None => CullMode.None,
                 _ => throw new NotSupportedException()
             },
             FrontCounterClockwise = desc.FrontCounterClockwise,

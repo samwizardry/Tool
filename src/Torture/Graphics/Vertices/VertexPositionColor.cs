@@ -5,13 +5,13 @@ using Vortice.Mathematics;
 
 namespace Torture.Graphics;
 
-[StructLayout(LayoutKind.Sequential, Pack = 4)]
-public record struct VertexPositionColor(Vector3 position, Color4 color)
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public record struct VertexPositionColor
 {
     public static readonly VertexLayout Layout;
 
-    public Vector3 Position = position;
-    public Color4 Color = color;
+    public Vector3 Position;
+    public Color4 Color;
 
     static VertexPositionColor()
     {
@@ -19,5 +19,11 @@ public record struct VertexPositionColor(Vector3 position, Color4 color)
             new VertexElement(VertexElementSemantic.Position, VertexElementFormat.Float3),
             new VertexElement(VertexElementSemantic.Color, VertexElementFormat.Float4),
         ]);
+    }
+
+    public VertexPositionColor(Vector3 position, Color4 color)
+    {
+        Position = position;
+        Color = color;
     }
 }

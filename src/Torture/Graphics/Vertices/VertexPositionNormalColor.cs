@@ -5,14 +5,14 @@ using Vortice.Mathematics;
 
 namespace Torture.Graphics;
 
-[StructLayout(LayoutKind.Sequential, Pack = 4)]
-public record struct VertexPositionNormalColor(Vector3 position, Vector3 normal, Color4 color)
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public record struct VertexPositionNormalColor
 {
     public static readonly VertexLayout Layout;
 
-    public Vector3 Position = position;
-    public Vector3 Normal = normal;
-    public Color4 Color = color;
+    public Vector3 Position;
+    public Vector3 Normal;
+    public Color4 Color;
 
     static VertexPositionNormalColor()
     {
@@ -21,5 +21,12 @@ public record struct VertexPositionNormalColor(Vector3 position, Vector3 normal,
             new VertexElement(VertexElementSemantic.Normal, VertexElementFormat.Float3),
             new VertexElement(VertexElementSemantic.Color, VertexElementFormat.Float4)
         ]);
+    }
+
+    public VertexPositionNormalColor(Vector3 position, Vector3 normal, Color4 color)
+    {
+        Position = position;
+        Normal = normal;
+        Color = color;
     }
 }

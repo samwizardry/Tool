@@ -4,13 +4,11 @@ using Vortice.D3DCompiler;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 
-using TortGfx = Torture.Graphics;
-
 namespace Torture.Direct3D11;
 
-internal sealed unsafe class D3D11Shader : TortGfx.Shader
+internal sealed unsafe class D3D11Shader : CoreShader
 {
-    public D3D11Shader(ID3D11Device5 device, ReadOnlySpan<byte> source, in TortGfx.ShaderDescription desc)
+    public D3D11Shader(ID3D11Device5 device, ReadOnlySpan<byte> source, in CoreShaderDesc desc)
         : base(in desc)
     {
         Blob code = default!;
@@ -20,8 +18,8 @@ internal sealed unsafe class D3D11Shader : TortGfx.Shader
         {
             string profile = desc.ShaderType switch
             {
-                TortGfx.ShaderType.Vertex => "vs_5_0",
-                TortGfx.ShaderType.Pixel => "ps_5_0",
+                CoreShaderType.Vertex => "vs_5_0",
+                CoreShaderType.Pixel => "ps_5_0",
                 _ => throw new NotSupportedException()
             };
 
@@ -67,12 +65,12 @@ internal sealed unsafe class D3D11Shader : TortGfx.Shader
 
             Native = desc.ShaderType switch
             {
-                TortGfx.ShaderType.Vertex => device.CreateVertexShader(code),
-                TortGfx.ShaderType.Pixel => device.CreatePixelShader(code),
+                CoreShaderType.Vertex => device.CreateVertexShader(code),
+                CoreShaderType.Pixel => device.CreatePixelShader(code),
                 _ => throw new NotSupportedException(),
             };
 
-            if (desc.ShaderType == TortGfx.ShaderType.Vertex)
+            if (desc.ShaderType == CoreShaderType.Vertex)
             {
                 Bytecode = code.AsBytes();
             }

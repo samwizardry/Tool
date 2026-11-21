@@ -1,10 +1,8 @@
 ﻿using Vortice.Direct3D11;
 
-using TortGfx = Torture.Graphics;
-
 namespace Torture.Direct3D11;
 
-internal sealed class D3D11Buffer : TortGfx.Buffer
+internal sealed class D3D11Buffer : CoreBuffer
 {
     private D3D11Buffer(ID3D11Buffer buffer, ID3D11ShaderResourceView? srv = null, ID3D11UnorderedAccessView? uav = null)
     {
@@ -19,7 +17,7 @@ internal sealed class D3D11Buffer : TortGfx.Buffer
 
     public ID3D11UnorderedAccessView? Uav { get; private set; }
 
-    public static unsafe D3D11Buffer Create<T>(ID3D11Device5 device, ReadOnlySpan<T> data, in TortGfx.BufferDescription desc)
+    public static unsafe D3D11Buffer Create<T>(ID3D11Device5 device, ReadOnlySpan<T> data, in CoreBufferDesc desc)
         where T : unmanaged
     {
         BufferDescription nativeDesc = ToNativeBufferDescription(desc, true);
@@ -52,7 +50,7 @@ internal sealed class D3D11Buffer : TortGfx.Buffer
         };
     }
 
-    public static D3D11Buffer Create(ID3D11Device5 device, in TortGfx.BufferDescription desc)
+    public static D3D11Buffer Create(ID3D11Device5 device, in CoreBufferDesc desc)
     {
         BufferDescription nativeDesc = ToNativeBufferDescription(desc, false);
 
@@ -73,22 +71,22 @@ internal sealed class D3D11Buffer : TortGfx.Buffer
         };
     }
 
-    private static BufferDescription ToNativeBufferDescription(in TortGfx.BufferDescription desc, bool hasInitialData)
+    private static BufferDescription ToNativeBufferDescription(in CoreBufferDesc desc, bool hasInitialData)
     {
         ResourceUsage resourceUsage;
         CpuAccessFlags cpuAccessFlags = CpuAccessFlags.None;
 
         switch (desc.CpuAccess)
         {
-            case TortGfx.CpuAccess.None:
+            case CoreCpuAccess.None:
                 // If we have an initial data, we can set Immutable for best performance
                 resourceUsage = hasInitialData ? ResourceUsage.Immutable : ResourceUsage.Default;
                 break;
-            case TortGfx.CpuAccess.Write:
+            case CoreCpuAccess.Write:
                 resourceUsage = ResourceUsage.Dynamic;
                 cpuAccessFlags = CpuAccessFlags.Write;
                 break;
-            case TortGfx.CpuAccess.Read:
+            case CoreCpuAccess.Read:
                 resourceUsage = ResourceUsage.Staging;
                 cpuAccessFlags = CpuAccessFlags.Read;
                 break;
@@ -98,29 +96,29 @@ internal sealed class D3D11Buffer : TortGfx.Buffer
 
         // If cpu access is read, then d3d11 resource usage is staging, for staging buffers BindFlags should be None
         BindFlags bindFlags = BindFlags.None;
-        if (desc.CpuAccess != TortGfx.CpuAccess.Read)
+        if (desc.CpuAccess != CoreCpuAccess.Read)
         {
-            if ((desc.Usage & TortGfx.BufferUsage.VertexBuffer) == TortGfx.BufferUsage.VertexBuffer) bindFlags |= BindFlags.VertexBuffer;
-            if ((desc.Usage & TortGfx.BufferUsage.IndexBuffer) == TortGfx.BufferUsage.IndexBuffer) bindFlags |= BindFlags.IndexBuffer;
-            if ((desc.Usage & TortGfx.BufferUsage.ConstantBuffer) == TortGfx.BufferUsage.ConstantBuffer) bindFlags |= BindFlags.ConstantBuffer;
-            if ((desc.Usage & TortGfx.BufferUsage.ShaderResource) == TortGfx.BufferUsage.ShaderResource ||
-                (desc.Usage & TortGfx.BufferUsage.StructuredBuffer) == TortGfx.BufferUsage.StructuredBuffer) bindFlags |= BindFlags.ShaderResource;
-            if ((desc.Usage & TortGfx.BufferUsage.UnorderedAccess) == TortGfx.BufferUsage.UnorderedAccess) bindFlags |= BindFlags.UnorderedAccess;
+            if ((desc.Usage & CoreBufferUsage.VertexBuffer) == CoreBufferUsage.VertexBuffer) bindFlags |= BindFlags.VertexBuffer;
+            if ((desc.Usage & CoreBufferUsage.IndexBuffer) == CoreBufferUsage.IndexBuffer) bindFlags |= BindFlags.IndexBuffer;
+            if ((desc.Usage & CoreBufferUsage.ConstantBuffer) == CoreBufferUsage.ConstantBuffer) bindFlags |= BindFlags.ConstantBuffer;
+            if ((desc.Usage & CoreBufferUsage.ShaderResource) == CoreBufferUsage.ShaderResource ||
+                (desc.Usage & CoreBufferUsage.StructuredBuffer) == CoreBufferUsage.StructuredBuffer) bindFlags |= BindFlags.ShaderResource;
+            if ((desc.Usage & CoreBufferUsage.UnorderedAccess) == CoreBufferUsage.UnorderedAccess) bindFlags |= BindFlags.UnorderedAccess;
         }
 
         ResourceOptionFlags miscFlags = ResourceOptionFlags.None;
-        if ((desc.Usage & TortGfx.BufferUsage.IndirectArguments) == TortGfx.BufferUsage.IndirectArguments)
+        if ((desc.Usage & CoreBufferUsage.IndirectArguments) == CoreBufferUsage.IndirectArguments)
         {
             miscFlags |= ResourceOptionFlags.DrawIndirectArguments;
         }
 
-        bool isStructured = (desc.Usage & TortGfx.BufferUsage.StructuredBuffer) == TortGfx.BufferUsage.StructuredBuffer;
+        bool isStructured = (desc.Usage & CoreBufferUsage.StructuredBuffer) == CoreBufferUsage.StructuredBuffer;
         if (isStructured)
         {
             miscFlags |= ResourceOptionFlags.BufferStructured;
         }
 
-        if ((desc.Usage & TortGfx.BufferUsage.RawBuffer) == TortGfx.BufferUsage.RawBuffer)
+        if ((desc.Usage & CoreBufferUsage.RawBuffer) == CoreBufferUsage.RawBuffer)
         {
             miscFlags |= ResourceOptionFlags.BufferAllowRawViews;
         }

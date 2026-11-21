@@ -1,7 +1,5 @@
 ﻿using SharpGen.Runtime;
 
-using Torture.Logging;
-
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 using Vortice.Direct3D11.Debug;
@@ -12,13 +10,10 @@ using Vortice.Mathematics;
 using static Vortice.Direct3D11.D3D11;
 using static Vortice.DXGI.DXGI;
 
-using TortCore = Torture.Core;
-using TortGfx = Torture.Graphics;
-
 namespace Torture.Direct3D11;
 
 /// <inheritdoc />
-public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
+public sealed class D3D11GraphicsDevice : CoreGraphicsDevice
 {
     private const int BufferCount = 2;
 
@@ -49,9 +44,9 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
 
     // Cached state for SetGraphicsState diffing
     private D3D11GraphicsPipeline? _currentPipeline;
-    private TortGfx.BindingSetVector _currentBindings;
-    private TortGfx.VertexBufferBinding? _currentVertexBuffer;
-    private TortGfx.IndexBufferBinding? _currentIndexBuffer;
+    private CoreBindingSetVector _currentBindings;
+    private CoreVertexBufferBinding? _currentVertexBuffer;
+    private CoreIndexBufferBinding? _currentIndexBuffer;
 
     public D3D11GraphicsDevice(
         nint hwnd,
@@ -163,35 +158,35 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
                     _infoQueue.SetBreakOnSeverity(MessageSeverity.Error, true);
                 }
 
-                LogSeverity effectiveSeverity = Log.MinimumSeverity > D3D11LogCategories.D3D11.MinimumSeverity
+                CoreLogSeverity effectiveSeverity = Log.MinimumSeverity > D3D11LogCategories.D3D11.MinimumSeverity
                     ? Log.MinimumSeverity
                     : D3D11LogCategories.D3D11.MinimumSeverity;
 
                 if (!Log.IsEnabled(effectiveSeverity, D3D11LogCategories.D3D11))
                 {
-                    effectiveSeverity = LogSeverity.None;
+                    effectiveSeverity = CoreLogSeverity.None;
                 }
 
                 MessageSeverity[] denyList;
 
                 switch (effectiveSeverity)
                 {
-                    case LogSeverity.Message:
+                    case CoreLogSeverity.Message:
                         denyList = [];
                         break;
-                    case LogSeverity.Info:
+                    case CoreLogSeverity.Info:
                         denyList = [MessageSeverity.Message];
                         break;
-                    case LogSeverity.Warning:
+                    case CoreLogSeverity.Warning:
                         denyList = [MessageSeverity.Message, MessageSeverity.Info];
                         break;
-                    case LogSeverity.Error:
+                    case CoreLogSeverity.Error:
                         denyList = [MessageSeverity.Message, MessageSeverity.Info, MessageSeverity.Warning];
                         break;
-                    case LogSeverity.Fatal:
+                    case CoreLogSeverity.Fatal:
                         denyList = [MessageSeverity.Message, MessageSeverity.Info, MessageSeverity.Warning, MessageSeverity.Error];
                         break;
-                    case LogSeverity.None:
+                    case CoreLogSeverity.None:
                         denyList = [MessageSeverity.Message, MessageSeverity.Info, MessageSeverity.Warning, MessageSeverity.Error, MessageSeverity.Corruption];
                         break;
                     default:
@@ -269,7 +264,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override TortGfx.GraphicsAPI API => TortGfx.GraphicsAPI.D3D11;
+    public override CoreGraphicsAPI API => CoreGraphicsAPI.D3D11;
 
     /// <inheritdoc />
     public override SizeI ClientSize { get; protected set; }
@@ -330,7 +325,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     public override void OnWindowMoved(RectI bounds) { }
 
     /// <inheritdoc />
-    public override void OnWindowModeChanged(TortCore.WindowMode mode) { }
+    public override void OnWindowModeChanged(CoreWindowMode mode) { }
 
     /// <inheritdoc />
     public override void OnMinimized() { }
@@ -404,73 +399,73 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     #region Resource Creation & Binding
 
     /// <inheritdoc />
-    public override TortGfx.RasterState CreateRasterState(in TortGfx.RasterStateDescription desc)
+    public override CoreRasterState CreateRasterState(in CoreRasterStateDesc desc)
     {
         return new D3D11RasterState(_device, in desc);
     }
 
     /// <inheritdoc />
-    public override TortGfx.Buffer CreateBuffer<T>(ReadOnlySpan<T> data, in TortGfx.BufferDescription desc)
+    public override CoreBuffer CreateBuffer<T>(ReadOnlySpan<T> data, in CoreBufferDesc desc)
     {
         return D3D11Buffer.Create(_device, data, in desc);
     }
 
     /// <inheritdoc />
-    public override TortGfx.Buffer CreateBuffer(in TortGfx.BufferDescription desc)
+    public override CoreBuffer CreateBuffer(in CoreBufferDesc desc)
     {
         return D3D11Buffer.Create(_device, in desc);
     }
 
     /// <inheritdoc />
-    public override TortGfx.Shader CreateShader(ReadOnlySpan<byte> source, in TortGfx.ShaderDescription desc)
+    public override CoreShader CreateShader(ReadOnlySpan<byte> source, in CoreShaderDesc desc)
     {
         return new D3D11Shader(_device, source, in desc);
     }
 
     /// <inheritdoc />
-    public override TortGfx.InputLayout CreateInputLayout(in TortGfx.VertexLayout layout, TortGfx.Shader shader)
+    public override CoreInputLayout CreateInputLayout(in CoreVertexLayout layout, CoreShader shader)
     {
         return new D3D11InputLayout(_device, in layout, (D3D11Shader)shader);
     }
 
     /// <inheritdoc />
-    public override TortGfx.Texture CreateTexture<T>(ReadOnlySpan<T> data, in TortGfx.TextureDescription desc)
+    public override CoreTexture CreateTexture<T>(ReadOnlySpan<T> data, in CoreTextureDesc desc)
     {
         return D3D11Texture.Create(_device, _imContext, data, in desc);
     }
 
     /// <inheritdoc />
-    public override TortGfx.Texture CreateTexture(in TortGfx.TextureDescription desc)
+    public override CoreTexture CreateTexture(in CoreTextureDesc desc)
     {
         return D3D11Texture.Create(_device, in desc);
     }
 
     /// <inheritdoc />
-    public override TortGfx.Sampler CreateSampler(in TortGfx.SamplerDescription desc)
+    public override CoreSampler CreateSampler(in CoreSamplerDesc desc)
     {
         return new D3D11Sampler(_device, in desc);
     }
 
     /// <inheritdoc />
-    public override TortGfx.GraphicsPipeline CreateGraphicsPipeline(in TortGfx.GraphicsPipelineDescription desc)
+    public override CoreGraphicsPipeline CreateGraphicsPipeline(in CoreGraphicsPipelineDesc desc)
     {
         return new D3D11GraphicsPipeline(in desc);
     }
 
     /// <inheritdoc />
-    public override TortGfx.BindingLayout CreateBindingLayout(in TortGfx.BindingLayoutDescription desc)
+    public override CoreBindingLayout CreateBindingLayout(in CoreBindingLayoutDesc desc)
     {
         return new D3D11BindingLayout(in desc);
     }
 
     /// <inheritdoc />
-    public override TortGfx.BindingSet CreateBindingSet(in TortGfx.BindingSetDescription desc, TortGfx.BindingLayout layout)
+    public override CoreBindingSet CreateBindingSet(in CoreBindingSetDesc desc, CoreBindingLayout layout)
     {
         return new D3D11BindingSet(desc, (D3D11BindingLayout)layout);
     }
 
     /// <inheritdoc />
-    public override unsafe void UpdateBuffer<T>(TortGfx.Buffer buffer, ReadOnlySpan<T> data, uint byteOffset = 0)
+    public override unsafe void UpdateBuffer<T>(CoreBuffer buffer, ReadOnlySpan<T> data, uint byteOffset = 0)
     {
 #if GRAPHICS_DEBUG
         if (data.IsEmpty)
@@ -497,14 +492,14 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
             var map = _imContext.Map(d3d11Buffer.Native, 0, mode, Vortice.Direct3D11.MapFlags.None);
 
             byte* dstPtr = (byte*)map.DataPointer + byteOffset;
-            Buffer.MemoryCopy(srcPtr, dstPtr, d3d11Buffer.ByteSize - byteOffset, dataByteSize);
+            System.Buffer.MemoryCopy(srcPtr, dstPtr, d3d11Buffer.ByteSize - byteOffset, dataByteSize);
 
             _imContext.Unmap(d3d11Buffer.Native, 0);
         }
     }
 
     /// <inheritdoc />
-    public override unsafe void UpdateBuffer<T>(TortGfx.Buffer buffer, ref T data, uint byteOffset = 0)
+    public override unsafe void UpdateBuffer<T>(CoreBuffer buffer, ref T data, uint byteOffset = 0)
     {
         var d3d11Buffer = (D3D11Buffer)buffer;
 
@@ -525,7 +520,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override unsafe void UpdateTexture<T>(TortGfx.Texture texture, ReadOnlySpan<T> data, uint mipLevel = 0, uint arraySlice = 0)
+    public override unsafe void UpdateTexture<T>(CoreTexture texture, ReadOnlySpan<T> data, uint mipLevel = 0, uint arraySlice = 0)
     {
         var d3d11Texture = (D3D11Texture)texture;
 
@@ -547,7 +542,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
         uint mipHeight = System.Math.Max(1u, d3d11Texture.Height >> (int)mipLevel);
         uint mipDepth = System.Math.Max(1u, d3d11Texture.Depth >> (int)mipLevel);
         uint subresource = mipLevel + (arraySlice * d3d11Texture.MipLevels);
-        TortGfx.FormatInfo.GetSurfaceInfo(d3d11Texture.Format, mipWidth, mipHeight, out uint rowPitch, out uint slicePitch);
+        CoreFormatInfo.GetSurfaceInfo(d3d11Texture.Format, mipWidth, mipHeight, out uint rowPitch, out uint slicePitch);
 
 #if GRAPHICS_DEBUG
         uint expectedBytes = slicePitch * mipDepth;
@@ -567,144 +562,144 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override void SetRasterState(TortGfx.RasterState state)
+    public override void SetRasterState(CoreRasterState state)
     {
         _imContext.RSSetState(((D3D11RasterState)state).Native);
     }
 
     /// <inheritdoc />
-    public override void SetPrimitiveTopology(TortGfx.PrimitiveTopology primitiveTopology)
+    public override void SetPrimitiveTopology(CorePrimitiveTopology primitiveTopology)
     {
         _imContext.IASetPrimitiveTopology(primitiveTopology.ToD3D11PrimitiveTopology());
     }
 
     /// <inheritdoc />
-    public override void SetVertexBuffer(TortGfx.Buffer buffer, uint slot = 0, uint byteOffset = 0)
+    public override void SetVertexBuffer(CoreBuffer buffer, uint slot = 0, uint byteOffset = 0)
     {
         var d3d11Buffer = (D3D11Buffer)buffer;
         _imContext.IASetVertexBuffer(slot, d3d11Buffer.Native, d3d11Buffer.ByteStride, byteOffset);
     }
 
     /// <inheritdoc />
-    public override void SetIndexBuffer(TortGfx.Buffer buffer, uint byteOffset = 0)
+    public override void SetIndexBuffer(CoreBuffer buffer, uint byteOffset = 0)
     {
         var d3d11Buffer = (D3D11Buffer)buffer;
-        _imContext.IASetIndexBuffer(d3d11Buffer.Native, ((TortGfx.IndexFormat)d3d11Buffer.ByteStride).ToDXGIFormat(), byteOffset);
+        _imContext.IASetIndexBuffer(d3d11Buffer.Native, ((CoreIndexFormat)d3d11Buffer.ByteStride).ToDXGIFormat(), byteOffset);
     }
 
     /// <inheritdoc />
-    public override void SetConstantBuffer(TortGfx.Buffer buffer, TortGfx.ShaderType stage, uint slot)
+    public override void SetConstantBuffer(CoreBuffer buffer, CoreShaderType stage, uint slot)
     {
         var d3d11Buffer = (D3D11Buffer)buffer;
 
-        if ((stage & TortGfx.ShaderType.Vertex) == TortGfx.ShaderType.Vertex)
+        if ((stage & CoreShaderType.Vertex) == CoreShaderType.Vertex)
         {
             _imContext.VSSetConstantBuffer(slot, d3d11Buffer.Native);
         }
-        if ((stage & TortGfx.ShaderType.Hull) == TortGfx.ShaderType.Hull)
+        if ((stage & CoreShaderType.Hull) == CoreShaderType.Hull)
         {
             _imContext.HSSetConstantBuffer(slot, d3d11Buffer.Native);
         }
-        if ((stage & TortGfx.ShaderType.Domain) == TortGfx.ShaderType.Domain)
+        if ((stage & CoreShaderType.Domain) == CoreShaderType.Domain)
         {
             _imContext.DSSetConstantBuffer(slot, d3d11Buffer.Native);
         }
-        if ((stage & TortGfx.ShaderType.Geometry) == TortGfx.ShaderType.Geometry)
+        if ((stage & CoreShaderType.Geometry) == CoreShaderType.Geometry)
         {
             _imContext.GSSetConstantBuffer(slot, d3d11Buffer.Native);
         }
-        if ((stage & TortGfx.ShaderType.Pixel) == TortGfx.ShaderType.Pixel)
+        if ((stage & CoreShaderType.Pixel) == CoreShaderType.Pixel)
         {
             _imContext.PSSetConstantBuffer(slot, d3d11Buffer.Native);
         }
-        if ((stage & TortGfx.ShaderType.Compute) == TortGfx.ShaderType.Compute)
+        if ((stage & CoreShaderType.Compute) == CoreShaderType.Compute)
         {
             _imContext.CSSetConstantBuffer(slot, d3d11Buffer.Native);
         }
     }
 
     /// <inheritdoc />
-    public override void SetVertexShader(TortGfx.Shader shader)
+    public override void SetVertexShader(CoreShader shader)
     {
         _imContext.VSSetShader((ID3D11VertexShader)((D3D11Shader)shader).Native);
     }
 
     /// <inheritdoc />
-    public override void SetPixelShader(TortGfx.Shader shader)
+    public override void SetPixelShader(CoreShader shader)
     {
         _imContext.PSSetShader((ID3D11PixelShader)((D3D11Shader)shader).Native);
     }
 
     /// <inheritdoc />
-    public override void SetInputLayout(TortGfx.InputLayout inputLayout)
+    public override void SetInputLayout(CoreInputLayout inputLayout)
     {
         _imContext.IASetInputLayout(((D3D11InputLayout)inputLayout).Native);
     }
 
     /// <inheritdoc />
-    public override void SetTexture(TortGfx.Texture texture, TortGfx.ShaderType stage, uint slot)
+    public override void SetTexture(CoreTexture texture, CoreShaderType stage, uint slot)
     {
         var d3d11Texture = (D3D11Texture)texture;
 
-        if ((stage & TortGfx.ShaderType.Vertex) == TortGfx.ShaderType.Vertex)
+        if ((stage & CoreShaderType.Vertex) == CoreShaderType.Vertex)
         {
             _imContext.VSSetShaderResource(slot, d3d11Texture.Srv);
         }
-        if ((stage & TortGfx.ShaderType.Hull) == TortGfx.ShaderType.Hull)
+        if ((stage & CoreShaderType.Hull) == CoreShaderType.Hull)
         {
             _imContext.HSSetShaderResource(slot, d3d11Texture.Srv);
         }
-        if ((stage & TortGfx.ShaderType.Domain) == TortGfx.ShaderType.Domain)
+        if ((stage & CoreShaderType.Domain) == CoreShaderType.Domain)
         {
             _imContext.DSSetShaderResource(slot, d3d11Texture.Srv);
         }
-        if ((stage & TortGfx.ShaderType.Geometry) == TortGfx.ShaderType.Geometry)
+        if ((stage & CoreShaderType.Geometry) == CoreShaderType.Geometry)
         {
             _imContext.GSSetShaderResource(slot, d3d11Texture.Srv);
         }
-        if ((stage & TortGfx.ShaderType.Pixel) == TortGfx.ShaderType.Pixel)
+        if ((stage & CoreShaderType.Pixel) == CoreShaderType.Pixel)
         {
             _imContext.PSSetShaderResource(slot, d3d11Texture.Srv!);
         }
-        if ((stage & TortGfx.ShaderType.Compute) == TortGfx.ShaderType.Compute)
+        if ((stage & CoreShaderType.Compute) == CoreShaderType.Compute)
         {
             _imContext.CSSetShaderResource(slot, d3d11Texture.Srv);
         }
     }
 
     /// <inheritdoc />
-    public override void SetSampler(TortGfx.Sampler sampler, TortGfx.ShaderType stage, uint slot)
+    public override void SetSampler(CoreSampler sampler, CoreShaderType stage, uint slot)
     {
         var d3d11Sampler = (D3D11Sampler)sampler;
 
-        if ((stage & TortGfx.ShaderType.Vertex) == TortGfx.ShaderType.Vertex)
+        if ((stage & CoreShaderType.Vertex) == CoreShaderType.Vertex)
         {
             _imContext.VSSetSampler(slot, d3d11Sampler.Native);
         }
-        if ((stage & TortGfx.ShaderType.Hull) == TortGfx.ShaderType.Hull)
+        if ((stage & CoreShaderType.Hull) == CoreShaderType.Hull)
         {
             _imContext.HSSetSampler(slot, d3d11Sampler.Native);
         }
-        if ((stage & TortGfx.ShaderType.Domain) == TortGfx.ShaderType.Domain)
+        if ((stage & CoreShaderType.Domain) == CoreShaderType.Domain)
         {
             _imContext.DSSetSampler(slot, d3d11Sampler.Native);
         }
-        if ((stage & TortGfx.ShaderType.Geometry) == TortGfx.ShaderType.Geometry)
+        if ((stage & CoreShaderType.Geometry) == CoreShaderType.Geometry)
         {
             _imContext.GSSetSampler(slot, d3d11Sampler.Native);
         }
-        if ((stage & TortGfx.ShaderType.Pixel) == TortGfx.ShaderType.Pixel)
+        if ((stage & CoreShaderType.Pixel) == CoreShaderType.Pixel)
         {
             _imContext.PSSetSampler(slot, d3d11Sampler.Native);
         }
-        if ((stage & TortGfx.ShaderType.Compute) == TortGfx.ShaderType.Compute)
+        if ((stage & CoreShaderType.Compute) == CoreShaderType.Compute)
         {
             _imContext.CSSetSampler(slot, d3d11Sampler.Native);
         }
     }
 
     /// <inheritdoc />
-    public override void SetGraphicsState(in TortGfx.GraphicsState state)
+    public override void SetGraphicsState(in CoreGraphicsState state)
     {
         var pipeline = (D3D11GraphicsPipeline)state.Pipeline;
         if (!ReferenceEquals(_currentPipeline, pipeline))
@@ -713,7 +708,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
             _currentPipeline = pipeline;
         }
 
-        for (int i = 0; i < TortGfx.BindingSetVector.MaxBindingSets; ++i)
+        for (int i = 0; i < CoreBindingSetVector.MaxBindingSets; ++i)
         {
             var set = state.Bindings[i];
 
@@ -787,13 +782,13 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override void DrawIndirect(TortGfx.Buffer buffer, uint alignedByteOffset = 0)
+    public override void DrawIndirect(CoreBuffer buffer, uint alignedByteOffset = 0)
     {
         _imContext.DrawInstancedIndirect(((D3D11Buffer)buffer).Native, alignedByteOffset);
     }
 
     /// <inheritdoc />
-    public override void DrawIndexedIndirect(TortGfx.Buffer buffer, uint alignedByteOffset = 0)
+    public override void DrawIndexedIndirect(CoreBuffer buffer, uint alignedByteOffset = 0)
     {
         _imContext.DrawIndexedInstancedIndirect(((D3D11Buffer)buffer).Native, alignedByteOffset);
     }
@@ -809,7 +804,7 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     }
 
     /// <inheritdoc />
-    public override void DispatchIndirect(TortGfx.Buffer buffer, uint alignedByteOffset = 0)
+    public override void DispatchIndirect(CoreBuffer buffer, uint alignedByteOffset = 0)
     {
         _imContext.DispatchIndirect(((D3D11Buffer)buffer).Native, alignedByteOffset);
     }
@@ -914,22 +909,22 @@ public sealed class D3D11GraphicsDevice : TortGfx.GraphicsDevice
     }
 
 #if GRAPHICS_DEBUG
-    private static LogSeverity ToLogSeverity(MessageSeverity severity) => severity switch
+    private static CoreLogSeverity ToLogSeverity(MessageSeverity severity) => severity switch
     {
-        MessageSeverity.Corruption => LogSeverity.Fatal,
-        MessageSeverity.Error => LogSeverity.Error,
-        MessageSeverity.Warning => LogSeverity.Warning,
-        MessageSeverity.Info => LogSeverity.Info,
-        _ => LogSeverity.Message
+        MessageSeverity.Corruption => CoreLogSeverity.Fatal,
+        MessageSeverity.Error => CoreLogSeverity.Error,
+        MessageSeverity.Warning => CoreLogSeverity.Warning,
+        MessageSeverity.Info => CoreLogSeverity.Info,
+        _ => CoreLogSeverity.Message
     };
 
-    private static LogSeverity ToLogSeverity(InfoQueueMessageSeverity severity) => severity switch
+    private static CoreLogSeverity ToLogSeverity(InfoQueueMessageSeverity severity) => severity switch
     {
-        InfoQueueMessageSeverity.Corruption => LogSeverity.Fatal,
-        InfoQueueMessageSeverity.Error => LogSeverity.Error,
-        InfoQueueMessageSeverity.Warning => LogSeverity.Warning,
-        InfoQueueMessageSeverity.Info => LogSeverity.Info,
-        _ => LogSeverity.Message
+        InfoQueueMessageSeverity.Corruption => CoreLogSeverity.Fatal,
+        InfoQueueMessageSeverity.Error => CoreLogSeverity.Error,
+        InfoQueueMessageSeverity.Warning => CoreLogSeverity.Warning,
+        InfoQueueMessageSeverity.Info => CoreLogSeverity.Info,
+        _ => CoreLogSeverity.Message
     };
 
     private void FlushDebugMessages()

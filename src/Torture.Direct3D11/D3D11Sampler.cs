@@ -4,13 +4,11 @@
 
 using Vortice.Direct3D11;
 
-using TortGfx = Torture.Graphics;
-
 namespace Torture.Direct3D11;
 
-internal sealed class D3D11Sampler : TortGfx.Sampler
+internal sealed class D3D11Sampler : CoreSampler
 {
-    public D3D11Sampler(ID3D11Device5 device, in TortGfx.SamplerDescription desc)
+    public D3D11Sampler(ID3D11Device5 device, in CoreSamplerDesc desc)
         : base(in desc)
     {
         Native = device.CreateSamplerState(new SamplerDescription(
@@ -20,7 +18,7 @@ internal sealed class D3D11Sampler : TortGfx.Sampler
             addressW: ConvertAddressMode(desc.AddressW),
             mipLODBias: desc.MipBias,
             maxAnisotropy: System.Math.Max(1u, (uint)desc.MaxAnisotropy),
-            comparisonFunc: desc.ReductionType == TortGfx.SamplerReductionType.Comparison
+            comparisonFunc: desc.ReductionType == CoreSamplerReductionType.Comparison
                 ? ComparisonFunction.Less
                 : ComparisonFunction.Never,
             borderColor: desc.BorderColor,
@@ -30,7 +28,7 @@ internal sealed class D3D11Sampler : TortGfx.Sampler
 
     public ID3D11SamplerState Native { get; }
 
-    private static Filter ConvertFilter(in TortGfx.SamplerDescription desc)
+    private static Filter ConvertFilter(in CoreSamplerDesc desc)
     {
         // Matches D3D11_ENCODE_BASIC_FILTER and D3D11_ENCODE_ANISOTROPIC_FILTER macros from d3d11.h
         uint reduction = (uint)desc.ReductionType & 0x3u;
@@ -44,14 +42,14 @@ internal sealed class D3D11Sampler : TortGfx.Sampler
         return (Filter)((min << 4) | (mag << 2) | mip | (reduction << 7));
     }
 
-    private static TextureAddressMode ConvertAddressMode(TortGfx.SamplerAddressMode mode) =>
+    private static TextureAddressMode ConvertAddressMode(CoreSamplerAddressMode mode) =>
         mode switch
         {
-            TortGfx.SamplerAddressMode.Clamp => TextureAddressMode.Clamp,
-            TortGfx.SamplerAddressMode.Wrap => TextureAddressMode.Wrap,
-            TortGfx.SamplerAddressMode.Border => TextureAddressMode.Border,
-            TortGfx.SamplerAddressMode.Mirror => TextureAddressMode.Mirror,
-            TortGfx.SamplerAddressMode.MirrorOnce => TextureAddressMode.MirrorOnce,
+            CoreSamplerAddressMode.Clamp => TextureAddressMode.Clamp,
+            CoreSamplerAddressMode.Wrap => TextureAddressMode.Wrap,
+            CoreSamplerAddressMode.Border => TextureAddressMode.Border,
+            CoreSamplerAddressMode.Mirror => TextureAddressMode.Mirror,
+            CoreSamplerAddressMode.MirrorOnce => TextureAddressMode.MirrorOnce,
             _ => TextureAddressMode.Clamp
         };
 

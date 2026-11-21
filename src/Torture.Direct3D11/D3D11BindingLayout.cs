@@ -1,10 +1,8 @@
-﻿using TortGfx = Torture.Graphics;
+﻿namespace Torture.Direct3D11;
 
-namespace Torture.Direct3D11;
-
-internal sealed class D3D11BindingLayout : TortGfx.BindingLayout
+internal sealed class D3D11BindingLayout : CoreBindingLayout
 {
-    public D3D11BindingLayout(in TortGfx.BindingLayoutDescription desc)
+    public D3D11BindingLayout(in CoreBindingLayoutDesc desc)
         : base(desc)
     {
     }

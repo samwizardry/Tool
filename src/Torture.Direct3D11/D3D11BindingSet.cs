@@ -2,24 +2,22 @@
 
 using Vortice.Direct3D11;
 
-using TortGfx = Torture.Graphics;
-
 namespace Torture.Direct3D11;
 
-internal sealed class D3D11BindingSet : TortGfx.BindingSet
+internal sealed class D3D11BindingSet : CoreBindingSet
 {
     internal readonly record struct BufferSlot(uint Slot, ID3D11Buffer Buffer);
     internal readonly record struct SrvSlot(uint Slot, ID3D11ShaderResourceView? Srv);
     internal readonly record struct UavSlot(uint Slot, ID3D11UnorderedAccessView? Uav);
     internal readonly record struct SamplerSlot(uint Slot, ID3D11SamplerState Sampler);
 
-    private readonly TortGfx.ShaderType _visibility;
+    private readonly CoreShaderType _visibility;
     private readonly BufferSlot[] _constantBuffers;
     private readonly SrvSlot[] _srvSlots;
     private readonly UavSlot[] _uavSlots;
     private readonly SamplerSlot[] _samplerSlots;
 
-    public D3D11BindingSet(in TortGfx.BindingSetDescription desc, D3D11BindingLayout layout)
+    public D3D11BindingSet(in CoreBindingSetDesc desc, D3D11BindingLayout layout)
         : base(desc)
     {
         _visibility = layout.Visibility;
@@ -29,31 +27,31 @@ internal sealed class D3D11BindingSet : TortGfx.BindingSet
         List<UavSlot> uavSlots = [];
         List<SamplerSlot> samplerSlots = [];
 
-        foreach (ref readonly TortGfx.BindingSetItem item in desc.Bindings.AsSpan())
+        foreach (ref readonly CoreBindingSetItem item in desc.Bindings.AsSpan())
         {
             switch (item.Type)
             {
-                case TortGfx.BindingResourceType.ConstantBuffer:
+                case CoreBindingResourceType.ConstantBuffer:
                     constantBuffers.Add(new(item.Slot, ((D3D11Buffer)item.Resource).Native));
                     break;
 
-                case TortGfx.BindingResourceType.TextureSrv:
+                case CoreBindingResourceType.TextureSrv:
                     srvSlots.Add(new(item.Slot, ((D3D11Texture)item.Resource).Srv));
                     break;
 
-                //case TortGfx.BindingResourceType.TextureUav:
+                //case CoreBindingResourceType.TextureUav:
                 //    uavSlots.Add(new(item.Slot, ((D3D11Texture)item.Resource).Uav));
                 //    break;
 
-                case TortGfx.BindingResourceType.BufferSrv:
+                case CoreBindingResourceType.BufferSrv:
                     srvSlots.Add(new(item.Slot, ((D3D11Buffer)item.Resource).Srv));
                     break;
 
-                case TortGfx.BindingResourceType.BufferUav:
+                case CoreBindingResourceType.BufferUav:
                     uavSlots.Add(new(item.Slot, ((D3D11Buffer)item.Resource).Uav));
                     break;
 
-                case TortGfx.BindingResourceType.Sampler:
+                case CoreBindingResourceType.Sampler:
                     samplerSlots.Add(new(item.Slot, ((D3D11Sampler)item.Resource).Native));
                     break;
 
@@ -70,12 +68,12 @@ internal sealed class D3D11BindingSet : TortGfx.BindingSet
 
     public void Apply(ID3D11DeviceContext4 imContext)
     {
-        bool vs = (_visibility & TortGfx.ShaderType.Vertex) == TortGfx.ShaderType.Vertex;
-        bool hs = (_visibility & TortGfx.ShaderType.Hull) == TortGfx.ShaderType.Hull;
-        bool ds = (_visibility & TortGfx.ShaderType.Domain) == TortGfx.ShaderType.Domain;
-        bool gs = (_visibility & TortGfx.ShaderType.Geometry) == TortGfx.ShaderType.Geometry;
-        bool ps = (_visibility & TortGfx.ShaderType.Pixel) == TortGfx.ShaderType.Pixel;
-        bool cs = (_visibility & TortGfx.ShaderType.Compute) == TortGfx.ShaderType.Compute;
+        bool vs = (_visibility & CoreShaderType.Vertex) == CoreShaderType.Vertex;
+        bool hs = (_visibility & CoreShaderType.Hull) == CoreShaderType.Hull;
+        bool ds = (_visibility & CoreShaderType.Domain) == CoreShaderType.Domain;
+        bool gs = (_visibility & CoreShaderType.Geometry) == CoreShaderType.Geometry;
+        bool ps = (_visibility & CoreShaderType.Pixel) == CoreShaderType.Pixel;
+        bool cs = (_visibility & CoreShaderType.Compute) == CoreShaderType.Compute;
 
         foreach (ref readonly BufferSlot cb in _constantBuffers.AsSpan())
         {

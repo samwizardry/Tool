@@ -1,11 +1,9 @@
 ﻿using Vortice.Direct3D;
 using Vortice.Direct3D11;
 
-using TortGfx = Torture.Graphics;
-
 namespace Torture.Direct3D11;
 
-internal sealed class D3D11GraphicsPipeline : TortGfx.GraphicsPipeline
+internal sealed class D3D11GraphicsPipeline : CoreGraphicsPipeline
 {
     private readonly ID3D11VertexShader? _vertexShader;
     private readonly ID3D11PixelShader? _pixelShader;
@@ -13,7 +11,7 @@ internal sealed class D3D11GraphicsPipeline : TortGfx.GraphicsPipeline
     private readonly ID3D11RasterizerState? _rasterState;
     private readonly PrimitiveTopology _topology;
 
-    public D3D11GraphicsPipeline(in TortGfx.GraphicsPipelineDescription desc)
+    public D3D11GraphicsPipeline(in CoreGraphicsPipelineDesc desc)
         : base(desc)
     {
         if (desc.VertexShader is D3D11Shader vs)

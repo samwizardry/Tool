@@ -1,14 +1,12 @@
 ﻿using Vortice.Direct3D11;
 
-using TortGfx = Torture.Graphics;
-
 namespace Torture.Direct3D11;
 
-internal sealed class D3D11InputLayout : TortGfx.InputLayout
+internal sealed class D3D11InputLayout : CoreInputLayout
 {
-    public D3D11InputLayout(ID3D11Device5 device, in TortGfx.VertexLayout layout, D3D11Shader shader)
+    public D3D11InputLayout(ID3D11Device5 device, in CoreVertexLayout layout, D3D11Shader shader)
     {
-        if (shader.ShaderType != TortGfx.ShaderType.Vertex)
+        if (shader.ShaderType != CoreShaderType.Vertex)
         {
             throw new InvalidOperationException();
         }
@@ -17,7 +15,7 @@ internal sealed class D3D11InputLayout : TortGfx.InputLayout
 
         for (int i = 0; i < layout.Elements.Length; ++i)
         {
-            TortGfx.VertexElement element = layout.Elements[i];
+            CoreVertexElement element = layout.Elements[i];
 
             nativeDescription[i].SemanticName = element.SemanticName.ToD3D11SemanticName();
             nativeDescription[i].SemanticIndex = element.SemanticIndex;

@@ -5,19 +5,18 @@ using Vortice.Mathematics.PackedVector;
 
 namespace Torture.Graphics;
 
-[StructLayout(LayoutKind.Sequential, Pack = 4)]
-public record struct VertexPositionNormalTangentColorTextureSkinning(
-    Vector3 position, Vector3 normal, Vector4 tangent, UByte4Normalized color, Vector2 texCoord, UByte4 blendIndices, UByte4Normalized blendWeight)
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public record struct VertexPositionNormalTangentColorTextureSkinning
 {
     public static readonly VertexLayout Layout;
 
-    public Vector3 Position = position;
-    public Vector3 Normal = normal;
-    public Vector4 Tangent = tangent;
-    public UByte4Normalized Color = color;
-    public Vector2 TexCoord = texCoord;
-    public UByte4 BlendIndices = blendIndices;
-    public UByte4Normalized BlendWeight = blendWeight;
+    public Vector3 Position;
+    public Vector3 Normal;
+    public Vector4 Tangent;
+    public UByte4Normalized Color;
+    public Vector2 TexCoord;
+    public UByte4 BlendIndices;
+    public UByte4Normalized BlendWeight;
 
     static VertexPositionNormalTangentColorTextureSkinning()
     {
@@ -30,5 +29,16 @@ public record struct VertexPositionNormalTangentColorTextureSkinning(
             new VertexElement(VertexElementSemantic.BlendIndices, VertexElementFormat.UByte4),
             new VertexElement(VertexElementSemantic.BlendWeight, VertexElementFormat.UNormByte4),
         ]);
+    }
+
+    public VertexPositionNormalTangentColorTextureSkinning(Vector3 position, Vector3 normal, Vector4 tangent, UByte4Normalized color, Vector2 texCoord, UByte4 blendIndices, UByte4Normalized blendWeight)
+    {
+        Position = position;
+        Normal = normal;
+        Tangent = tangent;
+        Color = color;
+        TexCoord = texCoord;
+        BlendIndices = blendIndices;
+        BlendWeight = blendWeight;
     }
 }

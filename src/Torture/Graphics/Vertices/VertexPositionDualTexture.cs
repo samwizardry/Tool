@@ -3,14 +3,14 @@ using System.Runtime.InteropServices;
 
 namespace Torture.Graphics;
 
-[StructLayout(LayoutKind.Sequential, Pack = 4)]
-public record struct VertexPositionDualTexture(Vector3 position, Vector2 texCoord0, Vector2 texCoord1)
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public record struct VertexPositionDualTexture
 {
     public static readonly VertexLayout Layout;
 
-    public Vector3 Position = position;
-    public Vector2 TexCoord0 = texCoord0;
-    public Vector2 TexCoord1 = texCoord1;
+    public Vector3 Position;
+    public Vector2 TexCoord0;
+    public Vector2 TexCoord1;
 
     static VertexPositionDualTexture()
     {
@@ -19,5 +19,12 @@ public record struct VertexPositionDualTexture(Vector3 position, Vector2 texCoor
             new VertexElement(VertexElementSemantic.TexCoord, VertexElementFormat.Float2),
             new VertexElement(VertexElementSemantic.TexCoord, VertexElementFormat.Float2)
         ]);
+    }
+
+    public VertexPositionDualTexture(Vector3 position, Vector2 texCoord0, Vector2 texCoord1)
+    {
+        Position = position;
+        TexCoord0 = texCoord0;
+        TexCoord1 = texCoord1;
     }
 }

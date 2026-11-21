@@ -1,7 +1,7 @@
 ﻿namespace Torture.Graphics;
 
 /// <summary>
-/// Combines a <see cref="GraphicsPipeline"/> with a concrete <see cref="Graphics.BindingSet"/>.
+/// Combines a <see cref="GraphicsPipeline"/> with a concrete <see cref="Resources.BindingSet"/>.
 /// </summary>
 public sealed class Material : IDisposable
 {

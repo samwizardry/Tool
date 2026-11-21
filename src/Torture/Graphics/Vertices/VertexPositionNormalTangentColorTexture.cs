@@ -6,17 +6,16 @@ using Vortice.Mathematics.PackedVector;
 
 namespace Torture.Graphics;
 
-[StructLayout(LayoutKind.Sequential, Pack = 4)]
-public record struct VertexPositionNormalTangentColorTexture(
-    Vector3 position, Vector3 normal, Vector4 tangent, UByte4Normalized color, Vector2 texCoord)
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public record struct VertexPositionNormalTangentColorTexture
 {
     public static readonly VertexLayout Layout;
 
-    public Vector3 Position = position;
-    public Vector3 Normal = normal;
-    public Vector4 Tangent = tangent;
-    public UByte4Normalized Color = color;
-    public Vector2 TexCoord = texCoord;
+    public Vector3 Position;
+    public Vector3 Normal;
+    public Vector4 Tangent;
+    public UByte4Normalized Color;
+    public Vector2 TexCoord;
 
     static VertexPositionNormalTangentColorTexture()
     {
@@ -27,5 +26,14 @@ public record struct VertexPositionNormalTangentColorTexture(
             new VertexElement(VertexElementSemantic.Color, VertexElementFormat.UNormByte4),
             new VertexElement(VertexElementSemantic.TexCoord, VertexElementFormat.Float2)
         ]);
+    }
+
+    public VertexPositionNormalTangentColorTexture(Vector3 position, Vector3 normal, Vector4 tangent, UByte4Normalized color, Vector2 texCoord)
+    {
+        Position = position;
+        Normal = normal;
+        Tangent = tangent;
+        Color = color;
+        TexCoord = texCoord;
     }
 }
