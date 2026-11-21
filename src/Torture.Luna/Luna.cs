@@ -73,8 +73,8 @@ public sealed partial class Luna : Application<Luna>
         _sceneData = new PhongPerFrameData(ResourceFactoryCache.PerFrameCb);
 
         _actors.Add(new Box(GraphicsDevice, ResourceFactoryCache.BoxMaterial));
-        _actors.Add(new Car(GraphicsDevice, ResourceFactoryCache.CarMaterial));
-        _actors.Add(new Backpack(GraphicsDevice));
+        //_actors.Add(new Car(GraphicsDevice, ResourceFactoryCache.CarMaterial));
+        //_actors.Add(new Backpack(GraphicsDevice));
 
         _sceneData.SetDirLight(new DirectionalLight
         {

@@ -813,11 +813,9 @@ public sealed class D3D11GraphicsDevice : CoreGraphicsDevice
 
     #region Disposing
 
-    /// <inheritdoc />
-    public override void Dispose()
+    protected override void FreeResources()
     {
-        if (_disposed)
-            return;
+        base.FreeResources();
 
 #if GRAPHICS_DEBUG
         if (_onFirstChanceException != null)
@@ -860,11 +858,9 @@ public sealed class D3D11GraphicsDevice : CoreGraphicsDevice
         ReportDxgiLiveObjects();
         ReportSharpGenLeaks();
 #endif
-
-        _disposed = true;
     }
 
-#endregion
+    #endregion
 
     #region Private
 

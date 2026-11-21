@@ -18,23 +18,30 @@ namespace Torture.Core;
 public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
     where TApp : Application<TApp>, new()
 {
+    #region Fields
+
     private readonly Stopwatch _timer = new();
     private TimeSpan _lastFrameTime;
+    private WindowMode _windowMode = WindowMode.Windowed;
     private bool _isExiting;
     private bool _isMinimized;
     private string _title = "Torture";
-    private WindowMode _windowMode = WindowMode.Windowed;
+
+    #endregion
+
+    #region Properties (only get)
 
     protected nint Window { get; private set; } = IntPtr.Zero;
     public GraphicsDevice GraphicsDevice { get; private set; } = null!;
 
-    /// <summary>
-    /// Gets or sets the window title.
-    /// </summary>
+    #endregion
+
+    #region Properties (can be modified)
+
     public string Title
     {
         get => _title;
-        set
+        protected set
         {
             _title = value;
             if (Window != IntPtr.Zero)
@@ -51,7 +58,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
     public WindowMode WindowMode
     {
         get => _windowMode;
-        set
+        protected set
         {
             if (_windowMode == value)
             {
@@ -68,13 +75,19 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         }
     }
 
+    #endregion
+
+    #region Properties (init)
+
     public string Version { get; protected init; } = "0.1";
     public string Identifier { get; protected init; } = "semisoft.torture";
     public SizeI PreferredWindowSize { get; protected init; } = new(1280, 720);
     public bool IsResizable { get; protected init; } = true;
     public GraphicsAPI PreferredGraphicsAPI { get; protected init; } = GraphicsAPI.Default;
 
-    #region Game
+    #endregion
+
+    #region Runtime
 
     /// <summary>
     /// Signals the application to exit at the end of the current frame.
@@ -241,8 +254,8 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
             return SDL.AppResult.Failure;
         }
 
+        // Initialize window
         SDL.WindowFlags windowFlags = BuildInitialWindowFlags();
-
         Window = SDL.CreateWindow(Title, PreferredWindowSize.Width, PreferredWindowSize.Height, windowFlags);
         if (Window == IntPtr.Zero)
         {
@@ -267,7 +280,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
 
         // Start timers
         AllocationTracker.Reset();
-        _timer.Start();
+        _timer.Restart();
 
         return SDL.AppResult.Continue;
     }
@@ -355,18 +368,16 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
                 return SDL.AppResult.Success;
             }
 
-            // Game timer
             TimeSpan totalTime = _timer.Elapsed;
             TimeSpan elapsedTime = totalTime - _lastFrameTime;
             _lastFrameTime = totalTime;
             var gameTime = new GameTime(totalTime, elapsedTime);
 
-            // Update systems
+            // Systems
             Keyboard.Update();
             Mouse.Update();
             AllocationTracker.Mark("Input");
 
-            // Update game
             Update(gameTime);
             AllocationTracker.Mark("Update");
 
@@ -399,17 +410,15 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         {
             GraphicsDevice?.WaitIdle();
 
-            // Shutdown game
             EndRun();
             UnloadContent();
             Cleanup();
 
-            // Shutdown systems
+            // Systems
             Mouse.Shutdown();
             Keyboard.Shutdown();
 
             GraphicsDevice?.Dispose();
-            GraphicsDevice = null!;
 
             if (Window != IntPtr.Zero)
             {

@@ -12,10 +12,10 @@ namespace Torture.Luna;
 public static class AssimpModelLoader
 {
     public static GraphicsDevice GraphicsDevice = null!;
-    public static Graphics.Mesh[] Meshes = null!;
-    public static Graphics.Material[] Materials = null!;
+    public static Graphics.Mesh[] Meshes = [];
+    public static Graphics.Material[] Materials = [];
 
-    public static BindingSet[] BindingSets = null!;
+    public static BindingSet[] BindingSets = [];
 
     public static List<Texture> DiffuseTextures = [];
     public static List<Sampler> DiffuseSamplers = [];

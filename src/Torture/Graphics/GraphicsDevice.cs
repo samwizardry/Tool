@@ -8,6 +8,10 @@ public abstract class GraphicsDevice : IDisposable
 {
     public virtual GraphicsAPI API { get; }
 
+    public GraphicsResourceFactory Factory { get; }
+    public ShaderLibrary ShaderLibrary { get; }
+    public TextureLibrary TextureLibrary { get; }
+
     public virtual SizeI ClientSize { get; protected set; }
 
     public virtual Viewport Viewport { get; protected set; }
@@ -17,6 +21,13 @@ public abstract class GraphicsDevice : IDisposable
     public virtual bool VSync { get; set; }
 
     public virtual Color4 ClearColor { get; set; }
+
+    protected GraphicsDevice()
+    {
+        Factory = new(this);
+        ShaderLibrary = new(this);
+        TextureLibrary = new(this);
+    }
 
     #region Window & Display State Notifications
 
@@ -141,7 +152,22 @@ public abstract class GraphicsDevice : IDisposable
 
     protected bool _disposed = false;
 
-    public abstract void Dispose();
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        FreeResources();
+
+        _disposed = true;
+    }
+
+    protected virtual void FreeResources()
+    {
+        Factory.Dispose();
+        ShaderLibrary.Dispose();
+        TextureLibrary.Dispose();
+    }
 
     #endregion
 }

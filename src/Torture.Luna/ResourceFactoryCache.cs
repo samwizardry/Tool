@@ -6,9 +6,6 @@ namespace Torture.Luna;
 
 public static class ResourceFactoryCache
 {
-    public static Shader PhongVs = default!;
-    public static Shader PhongPs = default!;
-
     public static InputLayout PhongInputLayout = default!;
 
     public static RasterState Solid = default!;
@@ -44,17 +41,10 @@ public static class ResourceFactoryCache
     public static void Load(GraphicsDevice device)
     {
         // Shaders
-        var shaderSource = File.ReadAllBytes(Path.Combine("Shaders", "Phong.hlsl"));
+        var vs = device.ShaderLibrary.Load("phong.vs", Path.Combine("Shaders", "Phong.hlsl"), ShaderType.Vertex, true)!;
+        var ps = device.ShaderLibrary.Load("phong.ps", Path.Combine("Shaders", "Phong.hlsl"), ShaderType.Pixel, true)!;
 
-        PhongVs = device.CreateShader(shaderSource, ShaderDescription.Vertex(
-            debug: true,
-            debugName: "Triangle_VS"));
-
-        PhongPs = device.CreateShader(shaderSource, ShaderDescription.Pixel(
-           debug: true,
-           debugName: "Triangle_PS"));
-
-        PhongInputLayout = device.CreateInputLayout(VertexPositionNormalTexture.Layout, PhongVs);
+        PhongInputLayout = device.CreateInputLayout(VertexPositionNormalTexture.Layout, vs);
 
         Solid = device.CreateRasterState(RasterStateDescription.CullBack);
         Wireframe = device.CreateRasterState(RasterStateDescription.Wireframe);
@@ -83,8 +73,8 @@ public static class ResourceFactoryCache
 
         // Pipelines
         PhongPipeline = device.CreateGraphicsPipeline(new GraphicsPipelineDescription(
-            PhongVs,
-            PhongPs,
+            vs,
+            ps,
             PhongInputLayout,
             Solid,
             PrimitiveTopology.TriangleList));
@@ -148,8 +138,6 @@ public static class ResourceFactoryCache
     public static void Unload()
     {
         // Shaders, layouts
-        PhongVs?.Dispose();
-        PhongPs?.Dispose();
         PhongInputLayout?.Dispose();
 
         // Raster, sampler
