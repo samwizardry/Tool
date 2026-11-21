@@ -109,8 +109,7 @@ public static class ResourceFactoryCache
                 Bindings: [
                     new(0, BindingResourceType.TextureSrv, Container),
                     new(1, BindingResourceType.TextureSrv, ContainerSpecular),
-                    new(0, BindingResourceType.Sampler, Anisotropic16),
-                    new(1, BindingResourceType.Sampler, Anisotropic16)]),
+                    new(0, BindingResourceType.Sampler, Anisotropic16)]),
             layout: PhongBindingLayout);
 
         CarMatBindingSet = device.CreateBindingSet(
@@ -118,8 +117,7 @@ public static class ResourceFactoryCache
                 Bindings: [
                     new(0, BindingResourceType.TextureSrv, WhitePixel),
                     new(1, BindingResourceType.TextureSrv, WhitePixel),
-                    new(0, BindingResourceType.Sampler, Anisotropic16),
-                    new(1, BindingResourceType.Sampler, Anisotropic16)]),
+                    new(0, BindingResourceType.Sampler, Anisotropic16)]),
             layout: PhongBindingLayout);
 
         // Per frame binding set

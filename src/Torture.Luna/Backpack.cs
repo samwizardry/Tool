@@ -6,9 +6,17 @@ namespace Torture.Luna;
 
 public sealed class Backpack : Actor
 {
+    private readonly Material[] _materials;
+    private readonly BindingSet[] _bindingSets;
+
     public Backpack(GraphicsDevice device) : base(device)
     {
-        _model = AssimpModelLoader.LoadFromFile("resources/objects/backpack/backpack.obj")!;
+        using var loader = new AssimpModelLoader(device);
+        if (!loader.TryLoad("resources/objects/backpack/backpack.obj", out _model!, out _materials!, out _bindingSets!))
+        {
+            throw new InvalidOperationException();
+        }
+
         _actorData.SetShininess(64.0f);
     }
 

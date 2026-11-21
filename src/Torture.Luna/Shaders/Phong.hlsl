@@ -61,8 +61,7 @@ cbuffer PerObjectBuffer : register(b1)
 
 Texture2D gDiffuseMap : register(t0);
 Texture2D gSpecularMap : register(t1);
-SamplerState gDiffuseSampler : register(s0);
-SamplerState gSpecularSampler : register(s1);
+SamplerState gSampler : register(s0);
 
 struct VSInput
 {
@@ -178,8 +177,8 @@ float3 ComputeSpotLight(SpotLight light, Material mat, float3 viewPos, float3 ve
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-    float4 baseColor = gDiffuseMap.Sample(gDiffuseSampler, input.TexCoord);
-    float4 specColor = gSpecularMap.Sample(gSpecularSampler, input.TexCoord);
+    float4 baseColor = gDiffuseMap.Sample(gSampler, input.TexCoord);
+    float4 specColor = gSpecularMap.Sample(gSampler, input.TexCoord);
 
     float3 normal = normalize(input.Normal);
 
