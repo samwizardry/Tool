@@ -5,7 +5,7 @@
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-namespace Torture.Math;
+namespace Torture.Maths;
 
 /// <summary>
 /// Helper routines for evaluating cubic Bezier curves and bicubic Bezier patches.
@@ -142,7 +142,7 @@ public static class Bezier
         Vector3 normal = Vector3.Cross(tangentU, tangentV);
         float lenSq = normal.LengthSquared();
 
-        if (lenSq > TortureMath.Epsilon)
+        if (lenSq > Math.Epsilon)
         {
             return Vector3.Normalize(normal);
         }
@@ -182,7 +182,7 @@ public static class Bezier
         Vector3 normal = Vector3.Cross(tangentU, tangentV);
         float lenSq = normal.LengthSquared();
 
-        normal = lenSq > TortureMath.Epsilon ? Vector3.Normalize(normal) : Vector3.UnitY;
+        normal = lenSq > Math.Epsilon ? Vector3.Normalize(normal) : Vector3.UnitY;
 
         return (position, normal);
     }

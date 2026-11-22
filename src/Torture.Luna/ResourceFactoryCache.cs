@@ -6,50 +6,55 @@ namespace Torture.Luna;
 
 public static class ResourceFactoryCache
 {
-    public static InputLayout PhongInputLayout = default!;
+    public static ShaderHandle PhongVs;
+    public static ShaderHandle PhongPs;
 
-    public static RasterState Solid = default!;
-    public static RasterState Wireframe = default!;
-    public static Sampler Bilinear = default!;
-    public static Sampler Anisotropic16 = default!;
+    public static InputLayoutHandle PhongInputLayout;
 
-    public static Graphics.Buffer PerFrameCb = default!;
+    public static RasterStateHandle Solid;
+    public static RasterStateHandle Wireframe;
+    public static SamplerHandle Bilinear;
+    public static SamplerHandle Anisotropic16;
 
-    public static Texture WhitePixel = default!;
-    public static Texture Container = default!;
-    public static Texture ContainerSpecular = default!;
+    public static BufferHandle PerFrameCb;
+
+    public static TextureHandle WhitePixel;
+    public static TextureHandle Container;
+    public static TextureHandle ContainerSpecular;
 
     // Pipelines
-    public static GraphicsPipeline PhongPipeline = default!;
+    public static GraphicsPipelineHandle PhongPipeline;
 
     // Binding layouts
-    public static BindingLayout PhongBindingLayout = default!;
-    public static BindingLayout PhongPerFrameBindingLayout = default!;
-    public static BindingLayout PhongPerObjBindingLayout = default!;
+    public static BindingLayoutHandle PhongBindingLayout;
+    public static BindingLayoutHandle PhongPerFrameBindingLayout;
+    public static BindingLayoutHandle PhongPerObjBindingLayout;
 
     // Material binding sets
-    public static BindingSet BoxMatBindingSet = default!;
-    public static BindingSet CarMatBindingSet = default!;
+    public static BindingSetHandle BoxMatBindingSet;
+    public static BindingSetHandle CarMatBindingSet;
 
     // Per frame binding set
-    public static BindingSet PhongPerFrameBindingSet = default!;
+    public static BindingSetHandle PhongPerFrameBindingSet;
 
     // Materials
-    public static Material BoxMaterial = null!;
-    public static Material CarMaterial = null!;
+    public static Material BoxMaterial;
+    public static Material CarMaterial;
+
 
     public static void Load(GraphicsDevice device)
     {
         // Shaders
-        var vs = device.ShaderLibrary.Load("phong.vs", Path.Combine("Shaders", "Phong.hlsl"), ShaderType.Vertex, true)!;
-        var ps = device.ShaderLibrary.Load("phong.ps", Path.Combine("Shaders", "Phong.hlsl"), ShaderType.Pixel, true)!;
+        byte[] phongSource = File.ReadAllBytes(Path.Combine("Shaders", "Phong.hlsl"));
+        PhongVs = device.CreateShader(phongSource, ShaderDescription.Vertex(debug: true, debugName: "phong.vs"));
+        PhongPs = device.CreateShader(phongSource, ShaderDescription.Pixel(debug: true, debugName: "phong.ps"));
 
-        PhongInputLayout = device.CreateInputLayout(VertexPositionNormalTexture.Layout, vs);
+        PhongInputLayout = device.GetOrCreateInputLayout(VertexPositionNormalTexture.Layout, PhongVs);
 
-        Solid = device.CreateRasterState(RasterStateDescription.CullBack);
-        Wireframe = device.CreateRasterState(RasterStateDescription.Wireframe);
-        Bilinear = device.CreateSampler(SamplerDescription.Bilinear);
-        Anisotropic16 = device.CreateSampler(SamplerDescription.AnisotropicWrap(16.0f));
+        Solid = device.GetOrCreateRasterState(RasterStateDescription.CullBack);
+        Wireframe = device.GetOrCreateRasterState(RasterStateDescription.Wireframe);
+        Bilinear = device.GetOrCreateSampler(SamplerDescription.Bilinear);
+        Anisotropic16 = device.GetOrCreateSampler(SamplerDescription.AnisotropicWrap(16.0f));
 
         PerFrameCb = device.CreateBuffer(BufferDescription.Constant<PhongPerFrame>());
 
@@ -72,15 +77,15 @@ public static class ResourceFactoryCache
         }
 
         // Pipelines
-        PhongPipeline = device.CreateGraphicsPipeline(new GraphicsPipelineDescription(
-            vs,
-            ps,
+        PhongPipeline = device.GetOrCreateGraphicsPipeline(new GraphicsPipelineDescription(
+            PhongVs,
+            PhongPs,
             PhongInputLayout,
             Solid,
             PrimitiveTopology.TriangleList));
 
         // Binding layouts
-        PhongBindingLayout = device.CreateBindingLayout(new BindingLayoutDescription(
+        PhongBindingLayout = device.GetOrCreateBindingLayout(new BindingLayoutDescription(
             Visibility: ShaderType.Vertex | ShaderType.Pixel,
             Bindings: [
                 new(0, BindingResourceType.TextureSrv),
@@ -89,14 +94,14 @@ public static class ResourceFactoryCache
                 new(1, BindingResourceType.Sampler)],
             RegisterSpace: 0));
 
-        PhongPerFrameBindingLayout = device.CreateBindingLayout(new BindingLayoutDescription(
+        PhongPerFrameBindingLayout = device.GetOrCreateBindingLayout(new BindingLayoutDescription(
             Visibility: ShaderType.Vertex | ShaderType.Pixel,
             Bindings: [
                 new(0, BindingResourceType.ConstantBuffer),
             ],
             RegisterSpace: 0));
 
-        PhongPerObjBindingLayout = device.CreateBindingLayout(new BindingLayoutDescription(
+        PhongPerObjBindingLayout = device.GetOrCreateBindingLayout(new BindingLayoutDescription(
             Visibility: ShaderType.Vertex | ShaderType.Pixel,
             Bindings: [
                 new(1, BindingResourceType.ConstantBuffer)
@@ -107,67 +112,44 @@ public static class ResourceFactoryCache
         BoxMatBindingSet = device.CreateBindingSet(
             desc: new BindingSetDescription(
                 Bindings: [
-                    new(0, BindingResourceType.TextureSrv, Container),
-                    new(1, BindingResourceType.TextureSrv, ContainerSpecular),
-                    new(0, BindingResourceType.Sampler, Anisotropic16)]),
+                    BindingSetItem.TextureSrv(0, Container),
+                    BindingSetItem.TextureSrv(1, ContainerSpecular),
+                    BindingSetItem.Sampler(0, Anisotropic16)
+                ]),
             layout: PhongBindingLayout);
 
         CarMatBindingSet = device.CreateBindingSet(
             desc: new BindingSetDescription(
                 Bindings: [
-                    new(0, BindingResourceType.TextureSrv, WhitePixel),
-                    new(1, BindingResourceType.TextureSrv, WhitePixel),
-                    new(0, BindingResourceType.Sampler, Anisotropic16)]),
+                    BindingSetItem.TextureSrv(0, WhitePixel),
+                    BindingSetItem.TextureSrv(1, WhitePixel),
+                    BindingSetItem.Sampler(0, Bilinear)
+                ]),
             layout: PhongBindingLayout);
 
         // Per frame binding set
         PhongPerFrameBindingSet = device.CreateBindingSet(
             desc: new BindingSetDescription(
                 Bindings: [
-                    new(0, BindingResourceType.ConstantBuffer, PerFrameCb),
+                    BindingSetItem.ConstantBuffer(0, PerFrameCb)
                 ]),
             layout: PhongPerFrameBindingLayout);
 
         // Materials
-        BoxMaterial = new Material(PhongPipeline, BoxMatBindingSet, null);
-        CarMaterial = new Material(PhongPipeline, CarMatBindingSet, null);
+        BoxMaterial = new Material(PhongPipeline, BoxMatBindingSet);
+        CarMaterial = new Material(PhongPipeline, CarMatBindingSet);
     }
 
-    public static void Unload()
+    public static void Unload(GraphicsDevice device)
     {
-        // Shaders, layouts
-        PhongInputLayout?.Dispose();
-
-        // Raster, sampler
-        Solid?.Dispose();
-        Wireframe?.Dispose();
-        Bilinear?.Dispose();
-        Anisotropic16?.Dispose();
-
-        // Constant buffers
-        PerFrameCb?.Dispose();
-
-        // Textures
-        Container?.Dispose();
-        ContainerSpecular?.Dispose();
-        WhitePixel?.Dispose();
-
-        // Pipelines
-        PhongPipeline?.Dispose();
-
-        // Binding layouts
-        PhongBindingLayout?.Dispose();
-        PhongPerFrameBindingLayout?.Dispose();
-        PhongPerObjBindingLayout?.Dispose();
-
-        // Material binding sets
-        BoxMatBindingSet?.Dispose();
-        CarMatBindingSet?.Dispose();
-        // Per frame binding set
-        PhongPerFrameBindingSet?.Dispose();
-
-        // Materials
-        BoxMaterial?.Dispose();
-        CarMaterial?.Dispose();
+        device.Destroy(BoxMatBindingSet);
+        device.Destroy(CarMatBindingSet);
+        device.Destroy(PhongPerFrameBindingSet);
+        device.Destroy(PerFrameCb);
+        device.Destroy(Container);
+        device.Destroy(ContainerSpecular);
+        device.Destroy(WhitePixel);
+        device.Destroy(PhongVs);
+        device.Destroy(PhongPs);
     }
 }

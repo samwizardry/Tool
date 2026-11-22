@@ -43,16 +43,10 @@ public readonly record struct ShaderDescription
         new(ShaderType.Compute, entryPoint, packAsRowMajor, debug, debugName);
 }
 
-public abstract class Shader : GraphicsResource, IDisposable
+public readonly record struct ShaderHandle(ResourceHandle Raw)
 {
-    private readonly ShaderDescription _desc;
-
-    protected Shader(in ShaderDescription desc)
-    {
-        _desc = desc;
-    }
-
-    public ref readonly ShaderDescription Desc => ref _desc;
-
-    public ShaderType ShaderType => _desc.ShaderType;
+    public static ShaderHandle Invalid => default;
+    public bool IsValid => Raw.IsValid;
+    public uint Index => Raw.Index;
+    public uint Generation => Raw.Generation;
 }

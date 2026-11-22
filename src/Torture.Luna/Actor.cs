@@ -5,8 +5,8 @@ namespace Torture.Luna;
 public abstract class Actor : IDisposable
 {
     protected readonly GraphicsDevice _device;
-    protected readonly Graphics.Buffer _perObjectCb;
-    protected readonly BindingSet _perObjBindingSet;
+    protected readonly BufferHandle _perObjectCb;
+    protected readonly BindingSetHandle _perObjBindingSet;
     protected readonly PhongPerObjectData _actorData;
 
     protected Model _model = null!;
@@ -21,7 +21,7 @@ public abstract class Actor : IDisposable
         _perObjBindingSet = device.CreateBindingSet(
             desc: new BindingSetDescription(
                 Bindings: [
-                    new(1, BindingResourceType.ConstantBuffer, _perObjectCb)
+                    BindingSetItem.ConstantBuffer(1, _perObjectCb)
                 ]),
             layout: ResourceFactoryCache.PhongPerObjBindingLayout);
     }
@@ -38,8 +38,8 @@ public abstract class Actor : IDisposable
 
     public virtual void Dispose()
     {
-        _perObjectCb.Dispose();
-        _perObjBindingSet.Dispose();
-        _model?.Dispose();
+        _device.Destroy(_perObjBindingSet);
+        _device.Destroy(_perObjectCb);
+        _model?.Destroy(_device);
     }
 }

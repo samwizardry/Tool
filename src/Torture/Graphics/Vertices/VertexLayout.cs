@@ -42,19 +42,15 @@ public readonly record struct VertexLayout : IEquatable<VertexLayout>
 
     public ReadOnlySpan<VertexElement> Elements => _elements;
 
-    public bool Equals(VertexLayout other)
-    {
-        return _elements.AsSpan().SequenceEqual(other._elements.AsSpan());
-    }
+    public bool Equals(VertexLayout other) =>
+        _elements.AsSpan().SequenceEqual(other._elements.AsSpan());
 
     public override int GetHashCode()
     {
         var hash = new HashCode();
 
-        for (int i = 0; i < _elements.Length; ++i)
-        {
-            hash.Add(_elements[i]);
-        }
+        foreach (ref readonly var element in _elements.AsSpan())
+            hash.Add(element);
 
         return hash.ToHashCode();
     }

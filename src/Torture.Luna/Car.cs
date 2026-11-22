@@ -8,7 +8,7 @@ public sealed class Car : Actor
 {
     public Car(GraphicsDevice device, Material material) : base(device)
     {
-        _model = ModelLoader.LoadLunaModel(device, material, "resources/objects/car.txt");
+        _model = LunaModelLoader.Import(device, material, "resources/objects/car.txt");
 
         _actorData.SetShininess(128.0f);
     }

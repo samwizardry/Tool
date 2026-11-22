@@ -2,25 +2,32 @@
 
 namespace Torture.Direct3D11;
 
-internal sealed class D3D11Buffer : CoreBuffer
+internal readonly struct D3D11Buffer
 {
-    private D3D11Buffer(ID3D11Buffer buffer, ID3D11ShaderResourceView? srv = null, ID3D11UnorderedAccessView? uav = null)
+    public readonly Graphics.BufferDescription Desc;
+    public readonly ID3D11Buffer Native;
+    public readonly ID3D11ShaderResourceView? Srv;
+    public readonly ID3D11UnorderedAccessView? Uav;
+
+    private D3D11Buffer(in Graphics.BufferDescription desc, ID3D11Buffer buffer, ID3D11ShaderResourceView? srv = null, ID3D11UnorderedAccessView? uav = null)
     {
+        Desc = desc;
         Native = buffer;
         Srv = srv;
         Uav = uav;
     }
 
-    public ID3D11Buffer Native { get; private set; }
+    public void Destroy()
+    {
+        Srv?.Dispose();
+        Uav?.Dispose();
+        Native?.Dispose();
+    }
 
-    public ID3D11ShaderResourceView? Srv { get; private set; }
-
-    public ID3D11UnorderedAccessView? Uav { get; private set; }
-
-    public static unsafe D3D11Buffer Create<T>(ID3D11Device5 device, ReadOnlySpan<T> data, in CoreBufferDesc desc)
+    public static unsafe D3D11Buffer Create<T>(ID3D11Device5 device, ReadOnlySpan<T> data, in Graphics.BufferDescription desc)
         where T : unmanaged
     {
-        BufferDescription nativeDesc = ToNativeBufferDescription(desc, true);
+        BufferDescription nativeDesc = ToNativeBufferDescription(in desc, true);
 
         uint vertexByteSize = (uint)sizeof(T);
 
@@ -43,14 +50,16 @@ internal sealed class D3D11Buffer : CoreBuffer
             buffer = device.CreateBuffer(nativeDesc, initialData);
         }
 
-        return new D3D11Buffer(buffer)
+        Graphics.BufferDescription resolvedDesc = desc with
         {
             ByteSize = byteSize,
             ByteStride = byteStride
         };
+
+        return new D3D11Buffer(in resolvedDesc, buffer);
     }
 
-    public static D3D11Buffer Create(ID3D11Device5 device, in CoreBufferDesc desc)
+    public static D3D11Buffer Create(ID3D11Device5 device, in Graphics.BufferDescription desc)
     {
         BufferDescription nativeDesc = ToNativeBufferDescription(desc, false);
 
@@ -64,29 +73,25 @@ internal sealed class D3D11Buffer : CoreBuffer
 
         ID3D11Buffer buffer = device.CreateBuffer(nativeDesc, initialData: null);
 
-        return new D3D11Buffer(buffer)
-        {
-            ByteSize = desc.ByteSize,
-            ByteStride = desc.ByteStride
-        };
+        return new D3D11Buffer(in desc, buffer);
     }
 
-    private static BufferDescription ToNativeBufferDescription(in CoreBufferDesc desc, bool hasInitialData)
+    private static BufferDescription ToNativeBufferDescription(in Graphics.BufferDescription desc, bool hasInitialData)
     {
         ResourceUsage resourceUsage;
         CpuAccessFlags cpuAccessFlags = CpuAccessFlags.None;
 
         switch (desc.CpuAccess)
         {
-            case CoreCpuAccess.None:
+            case Graphics.CpuAccess.None:
                 // If we have an initial data, we can set Immutable for best performance
                 resourceUsage = hasInitialData ? ResourceUsage.Immutable : ResourceUsage.Default;
                 break;
-            case CoreCpuAccess.Write:
+            case Graphics.CpuAccess.Write:
                 resourceUsage = ResourceUsage.Dynamic;
                 cpuAccessFlags = CpuAccessFlags.Write;
                 break;
-            case CoreCpuAccess.Read:
+            case Graphics.CpuAccess.Read:
                 resourceUsage = ResourceUsage.Staging;
                 cpuAccessFlags = CpuAccessFlags.Read;
                 break;
@@ -96,29 +101,29 @@ internal sealed class D3D11Buffer : CoreBuffer
 
         // If cpu access is read, then d3d11 resource usage is staging, for staging buffers BindFlags should be None
         BindFlags bindFlags = BindFlags.None;
-        if (desc.CpuAccess != CoreCpuAccess.Read)
+        if (desc.CpuAccess != Graphics.CpuAccess.Read)
         {
-            if ((desc.Usage & CoreBufferUsage.VertexBuffer) == CoreBufferUsage.VertexBuffer) bindFlags |= BindFlags.VertexBuffer;
-            if ((desc.Usage & CoreBufferUsage.IndexBuffer) == CoreBufferUsage.IndexBuffer) bindFlags |= BindFlags.IndexBuffer;
-            if ((desc.Usage & CoreBufferUsage.ConstantBuffer) == CoreBufferUsage.ConstantBuffer) bindFlags |= BindFlags.ConstantBuffer;
-            if ((desc.Usage & CoreBufferUsage.ShaderResource) == CoreBufferUsage.ShaderResource ||
-                (desc.Usage & CoreBufferUsage.StructuredBuffer) == CoreBufferUsage.StructuredBuffer) bindFlags |= BindFlags.ShaderResource;
-            if ((desc.Usage & CoreBufferUsage.UnorderedAccess) == CoreBufferUsage.UnorderedAccess) bindFlags |= BindFlags.UnorderedAccess;
+            if ((desc.Usage & Graphics.BufferUsage.VertexBuffer) == Graphics.BufferUsage.VertexBuffer) bindFlags |= BindFlags.VertexBuffer;
+            if ((desc.Usage & Graphics.BufferUsage.IndexBuffer) == Graphics.BufferUsage.IndexBuffer) bindFlags |= BindFlags.IndexBuffer;
+            if ((desc.Usage & Graphics.BufferUsage.ConstantBuffer) == Graphics.BufferUsage.ConstantBuffer) bindFlags |= BindFlags.ConstantBuffer;
+            if ((desc.Usage & Graphics.BufferUsage.ShaderResource) == Graphics.BufferUsage.ShaderResource ||
+                (desc.Usage & Graphics.BufferUsage.StructuredBuffer) == Graphics.BufferUsage.StructuredBuffer) bindFlags |= BindFlags.ShaderResource;
+            if ((desc.Usage & Graphics.BufferUsage.UnorderedAccess) == Graphics.BufferUsage.UnorderedAccess) bindFlags |= BindFlags.UnorderedAccess;
         }
 
         ResourceOptionFlags miscFlags = ResourceOptionFlags.None;
-        if ((desc.Usage & CoreBufferUsage.IndirectArguments) == CoreBufferUsage.IndirectArguments)
+        if ((desc.Usage & Graphics.BufferUsage.IndirectArguments) == Graphics.BufferUsage.IndirectArguments)
         {
             miscFlags |= ResourceOptionFlags.DrawIndirectArguments;
         }
 
-        bool isStructured = (desc.Usage & CoreBufferUsage.StructuredBuffer) == CoreBufferUsage.StructuredBuffer;
+        bool isStructured = (desc.Usage & Graphics.BufferUsage.StructuredBuffer) == Graphics.BufferUsage.StructuredBuffer;
         if (isStructured)
         {
             miscFlags |= ResourceOptionFlags.BufferStructured;
         }
 
-        if ((desc.Usage & CoreBufferUsage.RawBuffer) == CoreBufferUsage.RawBuffer)
+        if ((desc.Usage & Graphics.BufferUsage.RawBuffer) == Graphics.BufferUsage.RawBuffer)
         {
             miscFlags |= ResourceOptionFlags.BufferAllowRawViews;
         }
@@ -132,12 +137,5 @@ internal sealed class D3D11Buffer : CoreBuffer
             MiscFlags = miscFlags,
             StructureByteStride = 0
         };
-    }
-
-    protected override void FreeUnmanagedResources()
-    {
-        Srv?.Dispose();
-        Uav?.Dispose();
-        Native?.Dispose();
     }
 }

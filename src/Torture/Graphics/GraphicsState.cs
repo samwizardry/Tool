@@ -4,7 +4,7 @@
 /// Represents a vertex buffer binding to input assembler slot.
 /// </summary>
 public readonly record struct VertexBufferBinding(
-    Buffer Buffer,
+    BufferHandle Buffer,
     uint Slot = 0,
     uint ByteOffset = 0);
 
@@ -12,7 +12,7 @@ public readonly record struct VertexBufferBinding(
 /// Represents an index buffer binding to input assembler slot.
 /// </summary>
 public readonly record struct IndexBufferBinding(
-    Buffer Buffer,
+    BufferHandle Buffer,
     uint ByteOffset = 0);
 
 /// <summary>
@@ -25,21 +25,21 @@ public struct BindingSetVector
     /// <summary>
     /// PerFrame
     /// </summary>
-    public BindingSet? Set0;
+    public BindingSetHandle Set0;
     /// <summary>
     /// PerPass
     /// </summary>
-    public BindingSet? Set1;
+    public BindingSetHandle Set1;
     /// <summary>
     /// PerMaterial
     /// </summary>
-    public BindingSet? Set2;
+    public BindingSetHandle Set2;
     /// <summary>
     /// PerObject
     /// </summary>
-    public BindingSet? Set3;
+    public BindingSetHandle Set3;
 
-    public BindingSet? this[int index]
+    public BindingSetHandle this[int index]
     {
         readonly get
         {
@@ -66,12 +66,8 @@ public struct BindingSetVector
     }
 }
 
-/// <summary>
-/// Aggregates pipeline state, resource binding sets, and geometry buffers for draw calls.
-/// </summary>
 public readonly record struct GraphicsState(
-    GraphicsPipeline Pipeline,
-    BindingSetVector Bindings,
-    VertexBufferBinding? VertexBuffer = null,
-    IndexBufferBinding? IndexBuffer = null,
-    Buffer? IndirectParams = null);
+    GraphicsPipelineHandle Pipeline,
+    BindingSetVector Bindings = default,
+    VertexBufferBinding VertexBuffer = default,
+    IndexBufferBinding IndexBuffer = default);

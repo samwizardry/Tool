@@ -1,79 +1,91 @@
-﻿using SharpGen.Runtime;
+﻿using Torture.Collections;
+using Torture.Graphics;
 
 using Vortice.Direct3D11;
 
 namespace Torture.Direct3D11;
 
-internal sealed class D3D11BindingSet : CoreBindingSet
+internal readonly struct D3D11BindingSet
 {
     internal readonly record struct BufferSlot(uint Slot, ID3D11Buffer Buffer);
     internal readonly record struct SrvSlot(uint Slot, ID3D11ShaderResourceView? Srv);
     internal readonly record struct UavSlot(uint Slot, ID3D11UnorderedAccessView? Uav);
     internal readonly record struct SamplerSlot(uint Slot, ID3D11SamplerState Sampler);
 
-    private readonly CoreShaderType _visibility;
+    private readonly ShaderType _visibility;
     private readonly BufferSlot[] _constantBuffers;
     private readonly SrvSlot[] _srvSlots;
     private readonly UavSlot[] _uavSlots;
     private readonly SamplerSlot[] _samplerSlots;
 
-    public D3D11BindingSet(in CoreBindingSetDesc desc, D3D11BindingLayout layout)
-        : base(desc)
+    public D3D11BindingSet(ShaderType visibility,
+        BufferSlot[] constantBuffers,
+        SrvSlot[] srvSlots,
+        UavSlot[] uavSlots,
+        SamplerSlot[] samplerSlots)
     {
-        _visibility = layout.Visibility;
+        _visibility = visibility;
+        _constantBuffers = constantBuffers;
+        _srvSlots = srvSlots;
+        _uavSlots = uavSlots;
+        _samplerSlots = samplerSlots;
+    }
 
+    public void Destroy()
+    {
+    }
+
+    public static D3D11BindingSet Create(
+        in BindingSetDescription desc,
+        in D3D11BindingLayout layout,
+        SlotMap<D3D11Buffer> buffers,
+        SlotMap<D3D11Texture> textures,
+        SlotMap<D3D11Sampler> samplers)
+    {
         List<BufferSlot> constantBuffers = [];
         List<SrvSlot> srvSlots = [];
         List<UavSlot> uavSlots = [];
         List<SamplerSlot> samplerSlots = [];
 
-        foreach (ref readonly CoreBindingSetItem item in desc.Bindings.AsSpan())
+        foreach (ref readonly BindingSetItem item in desc.Bindings.AsSpan())
         {
             switch (item.Type)
             {
-                case CoreBindingResourceType.ConstantBuffer:
-                    constantBuffers.Add(new(item.Slot, ((D3D11Buffer)item.Resource).Native));
+                case BindingResourceType.ConstantBuffer:
+                    constantBuffers.Add(new(item.Slot, buffers.Get(item.Resource).Native));
                     break;
-
-                case CoreBindingResourceType.TextureSrv:
-                    srvSlots.Add(new(item.Slot, ((D3D11Texture)item.Resource).Srv));
+                case BindingResourceType.TextureSrv:
+                    srvSlots.Add(new(item.Slot, textures.Get(item.Resource).Srv));
                     break;
-
-                //case CoreBindingResourceType.TextureUav:
-                //    uavSlots.Add(new(item.Slot, ((D3D11Texture)item.Resource).Uav));
-                //    break;
-
-                case CoreBindingResourceType.BufferSrv:
-                    srvSlots.Add(new(item.Slot, ((D3D11Buffer)item.Resource).Srv));
+                case BindingResourceType.BufferSrv:
+                    srvSlots.Add(new(item.Slot, buffers.Get(item.Resource).Srv));
                     break;
-
-                case CoreBindingResourceType.BufferUav:
-                    uavSlots.Add(new(item.Slot, ((D3D11Buffer)item.Resource).Uav));
+                case BindingResourceType.BufferUav:
+                    uavSlots.Add(new(item.Slot, buffers.Get(item.Resource).Uav));
                     break;
-
-                case CoreBindingResourceType.Sampler:
-                    samplerSlots.Add(new(item.Slot, ((D3D11Sampler)item.Resource).Native));
+                case BindingResourceType.Sampler:
+                    samplerSlots.Add(new(item.Slot, samplers.Get(item.Resource).Native));
                     break;
-
                 default:
                     throw new NotSupportedException();
             }
         }
-
-        _constantBuffers = [.. constantBuffers];
-        _srvSlots = [.. srvSlots];
-        _uavSlots = [.. uavSlots];
-        _samplerSlots = [.. samplerSlots];
+        return new D3D11BindingSet(
+            layout.Visibility,
+            [.. constantBuffers],
+            [.. srvSlots],
+            [.. uavSlots],
+            [.. samplerSlots]);
     }
 
     public void Apply(ID3D11DeviceContext4 imContext)
     {
-        bool vs = (_visibility & CoreShaderType.Vertex) == CoreShaderType.Vertex;
-        bool hs = (_visibility & CoreShaderType.Hull) == CoreShaderType.Hull;
-        bool ds = (_visibility & CoreShaderType.Domain) == CoreShaderType.Domain;
-        bool gs = (_visibility & CoreShaderType.Geometry) == CoreShaderType.Geometry;
-        bool ps = (_visibility & CoreShaderType.Pixel) == CoreShaderType.Pixel;
-        bool cs = (_visibility & CoreShaderType.Compute) == CoreShaderType.Compute;
+        bool vs = (_visibility & ShaderType.Vertex) == ShaderType.Vertex;
+        bool hs = (_visibility & ShaderType.Hull) == ShaderType.Hull;
+        bool ds = (_visibility & ShaderType.Domain) == ShaderType.Domain;
+        bool gs = (_visibility & ShaderType.Geometry) == ShaderType.Geometry;
+        bool ps = (_visibility & ShaderType.Pixel) == ShaderType.Pixel;
+        bool cs = (_visibility & ShaderType.Compute) == ShaderType.Compute;
 
         foreach (ref readonly BufferSlot cb in _constantBuffers.AsSpan())
         {

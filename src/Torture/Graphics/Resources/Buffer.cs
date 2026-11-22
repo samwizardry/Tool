@@ -27,6 +27,7 @@ public readonly record struct BufferDescription
 
     public readonly uint ByteSize { get; init; }
     public readonly uint ByteStride { get; init; }
+    public uint Count => ByteStride > 0 ? ByteSize / ByteStride : 0;
     public readonly BufferUsage Usage { get; init; }
     public readonly CpuAccess CpuAccess { get; init; }
 
@@ -65,20 +66,10 @@ public readonly record struct BufferDescription
     private static uint Align16(uint size) => (size + 15u) & ~15u;
 }
 
-public abstract class Buffer : GraphicsResource, IBindableResource
+public readonly record struct BufferHandle(ResourceHandle Raw)
 {
-    /// <summary>
-    /// Buffer size in bytes.
-    /// </summary>
-    public uint ByteSize { get; protected set; }
-
-    /// <summary>
-    /// Buffer stride in bytes.
-    /// </summary>
-    public uint ByteStride { get; protected set; }
-
-    /// <summary>
-    /// Buffer element count.
-    /// </summary>
-    public uint Count => ByteSize / ByteStride;
+    public static BufferHandle Invalid => default;
+    public bool IsValid => Raw.IsValid;
+    public uint Index => Raw.Index;
+    public uint Generation => Raw.Generation;
 }

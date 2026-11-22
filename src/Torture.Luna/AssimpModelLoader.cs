@@ -15,22 +15,21 @@ namespace Torture.Luna;
 /// </summary>
 public class AssimpModelLoader : IDisposable
 {
-    private readonly GraphicsDevice _graphicsDevice;
-    private readonly AssimpContext _assimpContext;
+    private readonly GraphicsDevice _device;
+    private readonly AssimpContext _context;
 
     private bool _disposed;
 
     private Scene _scene = null!;
     private Graphics.Mesh[] _meshes = null!;
     private Graphics.Material[] _materials = null!;
-    private BindingSet[] _bindingSets = null!;
-    private List<Texture> _textures = [];
-    private List<Sampler> _samplers = [];
+    private BindingSetHandle[] _bindingSets = null!;
+    private List<TextureHandle> _textures = [];
 
-    public AssimpModelLoader(GraphicsDevice graphicsDevice)
+    public AssimpModelLoader(GraphicsDevice device)
     {
-        _graphicsDevice = graphicsDevice;
-        _assimpContext = new AssimpContext();
+        _device = device;
+        _context = new AssimpContext();
     }
 
     public void Dispose()
@@ -38,13 +37,12 @@ public class AssimpModelLoader : IDisposable
         if (_disposed)
             return;
 
-        _assimpContext.Dispose();
+        _context.Dispose();
         _scene = null!;
         _meshes = null!;
         _materials = null!;
         _bindingSets = null!;
         _textures = null!;
-        _samplers = null!;
 
         _disposed = true;
     }
@@ -52,7 +50,7 @@ public class AssimpModelLoader : IDisposable
     public bool TryLoad(string path,
         [NotNullWhen(true)] out Model? model,
         [NotNullWhen(true)] out Graphics.Material[]? materials,
-        [NotNullWhen(true)] out BindingSet[]? bindingSets)
+        [NotNullWhen(true)] out BindingSetHandle[]? bindingSets)
     {
         model = null;
         materials = null;
@@ -60,7 +58,7 @@ public class AssimpModelLoader : IDisposable
 
         try
         {
-            _scene = _assimpContext.ImportFile(path, PostProcessSteps.Triangulate);
+            _scene = _context.ImportFile(path, PostProcessSteps.Triangulate);
 
             if (_scene == null || (_scene.SceneFlags & SceneFlags.Incomplete) != 0 || _scene.RootNode == null)
             {
@@ -70,7 +68,7 @@ public class AssimpModelLoader : IDisposable
 
             _meshes = new Graphics.Mesh[_scene.MeshCount];
             _materials = new Graphics.Material[_scene.MaterialCount];
-            _bindingSets = new BindingSet[_scene.MaterialCount];
+            _bindingSets = new BindingSetHandle[_scene.MaterialCount];
 
             ProcessNode(_scene.RootNode);
             if (!ProcessMaterials())
@@ -96,7 +94,6 @@ public class AssimpModelLoader : IDisposable
             _materials = null!;
             _bindingSets = null!;
             _textures = [];
-            _samplers = [];
         }
 
         return true;
@@ -142,15 +139,15 @@ public class AssimpModelLoader : IDisposable
                 : Vector2.Zero;
         }
 
-        var vb = _graphicsDevice.CreateBuffer(vertices, BufferDescription.Vertex(0, 0));
-        var ib = _graphicsDevice.CreateBuffer(indices, BufferDescription.Index(0));
+        var vb = _device.CreateBuffer(vertices, BufferDescription.Vertex(0, 0));
+        var ib = _device.CreateBuffer(indices, BufferDescription.Index(0));
 
         if (mesh.MaterialIndex < 0)
         {
             Log.Warning(Luna.LogCat, $"Negative mesh material index ({mesh.MaterialIndex}).");
         }
 
-        _meshes[meshIndex] = new Graphics.Mesh(vb, ib, [MeshPart.Indexed(ib.Count, materialIndex: mesh.MaterialIndex)]);
+        _meshes[meshIndex] = new Graphics.Mesh(vb, ib, [MeshPart.Indexed(_device.GetBufferDescription(ib).Count, materialIndex: mesh.MaterialIndex)]);
     }
 
     private bool ProcessMaterials()
@@ -181,16 +178,16 @@ public class AssimpModelLoader : IDisposable
                 return false;
             }
 
-            var bindingSet = _graphicsDevice.CreateBindingSet(
+            var bindingSet = _device.CreateBindingSet(
                 new BindingSetDescription([
-                    new(0, BindingResourceType.TextureSrv, diffuseTextures[0]),
-                    new(1, BindingResourceType.TextureSrv, specularTextures[0]),
-                    new(0, BindingResourceType.Sampler, diffuseSamplers[0])]
+                    BindingSetItem.TextureSrv(0, diffuseTextures[0]),
+                    BindingSetItem.TextureSrv(1, specularTextures[0]),
+                    BindingSetItem.Sampler(0, diffuseSamplers[0])]
                 ),
                 ResourceFactoryCache.PhongBindingLayout);
 
             _bindingSets[material.Index] = bindingSet;
-            _materials[material.Index] = new Graphics.Material(ResourceFactoryCache.PhongPipeline, bindingSet, null);
+            _materials[material.Index] = new Graphics.Material(ResourceFactoryCache.PhongPipeline, bindingSet);
         }
 
         return true;
@@ -198,31 +195,26 @@ public class AssimpModelLoader : IDisposable
 
     private bool TryLoadTexturesAndSamplers(Assimp.Material material,
         TextureType type,
-        [NotNullWhen(true)] out Texture[]? textures,
-        [NotNullWhen(true)] out Sampler[]? samplers)
+        [NotNullWhen(true)] out TextureHandle[]? textures,
+        [NotNullWhen(true)] out SamplerHandle[]? samplers)
     {
-        textures = new Texture[material.GetMaterialTextureCount(type)];
-        samplers = new Sampler[textures.Length];
+        textures = new TextureHandle[material.GetMaterialTextureCount(type)];
+        samplers = new SamplerHandle[textures.Length];
 
         foreach (var slot in material.GetMaterialTextures(type).Index())
         {
-            if (_graphicsDevice.TextureLibrary.Load(Path.Combine("resources/objects/backpack", slot.Item.FilePath))
-                is not Texture texture)
+            using (var fs = File.OpenRead(Path.Combine("resources/objects/backpack", slot.Item.FilePath)))
             {
-                return false;
+                var image = ImageResult.FromStream(fs, ColorComponents.RedGreenBlueAlpha);
+                var texture = _device.CreateTexture(image.Data, TextureDescription.Texture2D((uint)image.Width, (uint)image.Height));
+                textures[slot.Index] = texture;
             }
 
-            _textures.Add(texture);
-            textures[slot.Index] = texture;
-
-            var sampler = _graphicsDevice.Factory.GetOrCreateSampler(SamplerDescription.AnisotropicWrap(16.0f) with
+            samplers[slot.Index] = _device.GetOrCreateSampler(SamplerDescription.AnisotropicWrap(16.0f) with
             {
                 AddressU = ToSamplerAddressMode(slot.Item.WrapModeU),
                 AddressV = ToSamplerAddressMode(slot.Item.WrapModeV)
             });
-
-            _samplers.Add(sampler);
-            samplers[slot.Index] = sampler;
         }
 
         return true;
@@ -232,27 +224,17 @@ public class AssimpModelLoader : IDisposable
     {
         foreach (var mesh in _meshes)
         {
-            mesh?.Dispose();
-        }
-
-        foreach (var material in _materials)
-        {
-            material?.Dispose();
+            mesh?.Destroy(_device);
         }
 
         foreach (var bindingSet in _bindingSets)
         {
-            bindingSet?.Dispose();
+            _device.Destroy(bindingSet);
         }
 
-        foreach (var texture in _textures ?? Enumerable.Empty<Texture>())
+        foreach (var texture in _textures ?? Enumerable.Empty<TextureHandle>())
         {
-            // TBD: call texture library to free that texture
-        }
-
-        foreach (var texture in _samplers ?? Enumerable.Empty<Sampler>())
-        {
-            // TBD: call texture library to free that texture
+            _device.Destroy(texture);
         }
     }
 

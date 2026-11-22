@@ -71,17 +71,10 @@ public readonly record struct SamplerDescription
         new(true, true, true, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, maxAnisotropy);
 }
 
-/// <summary>
-/// Represents a GPU texture sampler state.
-/// </summary>
-public abstract class Sampler : GraphicsResource, IBindableResource
+public readonly record struct SamplerHandle(ResourceHandle Raw)
 {
-    protected readonly SamplerDescription _desc;
-
-    protected Sampler(in SamplerDescription desc)
-    {
-        _desc = desc;
-    }
-
-    public ref readonly SamplerDescription Desc => ref _desc;
+    public static SamplerHandle Invalid => default;
+    public bool IsValid => Raw.IsValid;
+    public uint Index => Raw.Index;
+    public uint Generation => Raw.Generation;
 }

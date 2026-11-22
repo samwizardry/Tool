@@ -58,23 +58,21 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void Initialize()
     {
-        GraphicsDevice.VSync = true;
-        GraphicsDevice.ClearColor = new Color4(0.3f, 0.3f, 0.3f, 1.0f);
+        Device.VSync = true;
+        Device.ClearColor = new Color4(0.3f, 0.3f, 0.3f, 1.0f);
 
         base.Initialize();
     }
 
     protected override void LoadContent()
     {
-        ResourceFactoryCache.Load(GraphicsDevice);
-        
-
+        ResourceFactoryCache.Load(Device);
 
         _sceneData = new PhongPerFrameData(ResourceFactoryCache.PerFrameCb);
 
-        _actors.Add(new Box(GraphicsDevice, ResourceFactoryCache.BoxMaterial));
-        //_actors.Add(new Car(GraphicsDevice, ResourceFactoryCache.CarMaterial));
-        _actors.Add(new Backpack(GraphicsDevice));
+        _actors.Add(new Box(Device, ResourceFactoryCache.BoxMaterial));
+        _actors.Add(new Car(Device, ResourceFactoryCache.CarMaterial));
+        _actors.Add(new Backpack(Device));
 
         _sceneData.SetDirLight(new DirectionalLight
         {
@@ -151,7 +149,7 @@ public sealed partial class Luna : Application<Luna>
         _sceneData.SetSpotLightPosition(_camera.Position);
         _sceneData.SetSpotLightDirection(_camera.Direction);
 
-        _sceneData.Update(GraphicsDevice);
+        _sceneData.Update(Device);
 
         foreach (var actor in _actors)
         {
@@ -179,7 +177,7 @@ public sealed partial class Luna : Application<Luna>
             actor?.Dispose();
         }
 
-        ResourceFactoryCache.Unload();
+        ResourceFactoryCache.Unload(Device);
     }
 
     protected override void Cleanup()

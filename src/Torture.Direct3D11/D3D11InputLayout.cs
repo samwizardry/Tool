@@ -1,12 +1,26 @@
-﻿using Vortice.Direct3D11;
+﻿using Torture.Graphics;
+
+using Vortice.Direct3D11;
 
 namespace Torture.Direct3D11;
 
-internal sealed class D3D11InputLayout : CoreInputLayout
+internal readonly struct D3D11InputLayout
 {
-    public D3D11InputLayout(ID3D11Device5 device, in CoreVertexLayout layout, D3D11Shader shader)
+    public readonly ID3D11InputLayout Native;
+
+    private D3D11InputLayout(ID3D11InputLayout inputLayout)
     {
-        if (shader.ShaderType != CoreShaderType.Vertex)
+        Native = inputLayout;
+    }
+
+    public void Destroy()
+    {
+        Native?.Dispose();
+    }
+
+    public static D3D11InputLayout Create(ID3D11Device5 device, in VertexLayout layout, in D3D11Shader shader)
+    {
+        if (shader.ShaderType != ShaderType.Vertex)
         {
             throw new InvalidOperationException();
         }
@@ -15,7 +29,7 @@ internal sealed class D3D11InputLayout : CoreInputLayout
 
         for (int i = 0; i < layout.Elements.Length; ++i)
         {
-            CoreVertexElement element = layout.Elements[i];
+            VertexElement element = layout.Elements[i];
 
             nativeDescription[i].SemanticName = element.SemanticName.ToD3D11SemanticName();
             nativeDescription[i].SemanticIndex = element.SemanticIndex;
@@ -26,13 +40,6 @@ internal sealed class D3D11InputLayout : CoreInputLayout
             nativeDescription[i].InstanceDataStepRate = 0;
         }
 
-        Native = device.CreateInputLayout(nativeDescription, shader.Bytecode!);
-    }
-
-    public ID3D11InputLayout Native { get; private set; }
-
-    protected override void FreeUnmanagedResources()
-    {
-        Native?.Dispose();
+        return new D3D11InputLayout(device.CreateInputLayout(nativeDescription, shader.Bytecode!));
     }
 }

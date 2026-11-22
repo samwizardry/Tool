@@ -6,24 +6,35 @@ using Vortice.Direct3D11;
 
 namespace Torture.Direct3D11;
 
-internal sealed class D3D11RasterState : CoreRasterState
+internal readonly struct D3D11RasterState
 {
-    public D3D11RasterState(ID3D11Device5 device, in CoreRasterStateDesc desc)
-        : base(in desc)
+    public readonly ID3D11RasterizerState Native;
+
+    private D3D11RasterState(ID3D11RasterizerState rasterState)
     {
-        Native = device.CreateRasterizerState2(new()
+        Native = rasterState;
+    }
+
+    public void Destroy()
+    {
+        Native?.Dispose();
+    }
+
+    public static D3D11RasterState Create(ID3D11Device5 device, in Graphics.RasterStateDescription desc)
+    {
+        var rasterState = device.CreateRasterizerState2(new()
         {
             FillMode = desc.FillMode switch
             {
-                CoreRasterFillMode.Solid => FillMode.Solid,
-                CoreRasterFillMode.Wireframe => FillMode.Wireframe,
+                Graphics.RasterFillMode.Solid => FillMode.Solid,
+                Graphics.RasterFillMode.Wireframe => FillMode.Wireframe,
                 _ => throw new NotSupportedException()
             },
             CullMode = desc.CullMode switch
             {
-                CoreRasterCullMode.Back => CullMode.Back,
-                CoreRasterCullMode.Front => CullMode.Front,
-                CoreRasterCullMode.None => CullMode.None,
+                Graphics.RasterCullMode.Back => CullMode.Back,
+                Graphics.RasterCullMode.Front => CullMode.Front,
+                Graphics.RasterCullMode.None => CullMode.None,
                 _ => throw new NotSupportedException()
             },
             FrontCounterClockwise = desc.FrontCounterClockwise,
@@ -37,12 +48,7 @@ internal sealed class D3D11RasterState : CoreRasterState
             ForcedSampleCount = desc.ForcedSampleCount,
             ConservativeRaster = desc.ConservativeRasterEnable ? ConservativeRasterizationMode.On : ConservativeRasterizationMode.Off
         });
-    }
 
-    public ID3D11RasterizerState Native { get; }
-
-    protected override void FreeUnmanagedResources()
-    {
-        Native?.Dispose();
+        return new D3D11RasterState(rasterState);
     }
 }

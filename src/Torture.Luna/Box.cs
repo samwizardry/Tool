@@ -12,10 +12,12 @@ public class Box : Actor
     {
         var data = Geometry.ComputeBox(Vector3.One * 2.0f);
 
-        _model = new Model(new Mesh(
+        var mesh = Mesh.Create(device,
             device.CreateBuffer(data.Vertices.AsSpan(), BufferDescription.Vertex(0, 0)),
-            device.CreateBuffer(data.Indices.AsSpan(), BufferDescription.Index(0))),
-            material);
+            device.CreateBuffer(data.Indices.AsSpan(), BufferDescription.Index(0))
+        );
+
+        _model = new Model(mesh, material);
 
         _actorData.SetShininess(16.0f);
     }

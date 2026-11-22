@@ -1,6 +1,6 @@
-﻿namespace Torture.Math;
+﻿namespace Torture.Maths;
 
-public static class TortureMath
+public static class Math
 {
     public const float HalfPI = MathF.PI / 2.0f;
 

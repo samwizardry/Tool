@@ -6,29 +6,40 @@ using Vortice.Direct3D11;
 
 namespace Torture.Direct3D11;
 
-internal sealed class D3D11Sampler : CoreSampler
+internal readonly struct D3D11Sampler
 {
-    public D3D11Sampler(ID3D11Device5 device, in CoreSamplerDesc desc)
-        : base(in desc)
+    public readonly ID3D11SamplerState Native;
+
+    private D3D11Sampler(ID3D11SamplerState sampler)
     {
-        Native = device.CreateSamplerState(new SamplerDescription(
+        Native = sampler;
+    }
+
+    public void Destroy()
+    {
+        Native?.Dispose();
+    }
+
+    public static D3D11Sampler Create(ID3D11Device5 device, in Graphics.SamplerDescription desc)
+    {
+        var sampler = device.CreateSamplerState(new SamplerDescription(
             filter: ConvertFilter(in desc),
             addressU: ConvertAddressMode(desc.AddressU),
             addressV: ConvertAddressMode(desc.AddressV),
             addressW: ConvertAddressMode(desc.AddressW),
             mipLODBias: desc.MipBias,
             maxAnisotropy: System.Math.Max(1u, (uint)desc.MaxAnisotropy),
-            comparisonFunc: desc.ReductionType == CoreSamplerReductionType.Comparison
+            comparisonFunc: desc.ReductionType == Graphics.SamplerReductionType.Comparison
                 ? ComparisonFunction.Less
                 : ComparisonFunction.Never,
             borderColor: desc.BorderColor,
             minLOD: 0.0f,
             maxLOD: float.MaxValue));
+
+        return new D3D11Sampler(sampler);
     }
 
-    public ID3D11SamplerState Native { get; }
-
-    private static Filter ConvertFilter(in CoreSamplerDesc desc)
+    private static Filter ConvertFilter(in Graphics.SamplerDescription desc)
     {
         // Matches D3D11_ENCODE_BASIC_FILTER and D3D11_ENCODE_ANISOTROPIC_FILTER macros from d3d11.h
         uint reduction = (uint)desc.ReductionType & 0x3u;
@@ -42,19 +53,14 @@ internal sealed class D3D11Sampler : CoreSampler
         return (Filter)((min << 4) | (mag << 2) | mip | (reduction << 7));
     }
 
-    private static TextureAddressMode ConvertAddressMode(CoreSamplerAddressMode mode) =>
+    private static TextureAddressMode ConvertAddressMode(Graphics.SamplerAddressMode mode) =>
         mode switch
         {
-            CoreSamplerAddressMode.Clamp => TextureAddressMode.Clamp,
-            CoreSamplerAddressMode.Wrap => TextureAddressMode.Wrap,
-            CoreSamplerAddressMode.Border => TextureAddressMode.Border,
-            CoreSamplerAddressMode.Mirror => TextureAddressMode.Mirror,
-            CoreSamplerAddressMode.MirrorOnce => TextureAddressMode.MirrorOnce,
+            Graphics.SamplerAddressMode.Clamp => TextureAddressMode.Clamp,
+            Graphics.SamplerAddressMode.Wrap => TextureAddressMode.Wrap,
+            Graphics.SamplerAddressMode.Border => TextureAddressMode.Border,
+            Graphics.SamplerAddressMode.Mirror => TextureAddressMode.Mirror,
+            Graphics.SamplerAddressMode.MirrorOnce => TextureAddressMode.MirrorOnce,
             _ => TextureAddressMode.Clamp
         };
-
-    protected override void FreeUnmanagedResources()
-    {
-        Native?.Dispose();
-    }
 }

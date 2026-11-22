@@ -6,9 +6,6 @@ using System.Numerics;
 
 namespace Torture.Graphics;
 
-/// <summary>
-/// Describes a texture resource to be created on the graphics device.
-/// </summary>
 public readonly record struct TextureDescription
 {
     public TextureDescription(
@@ -114,33 +111,10 @@ public readonly record struct TextureDescription
         (uint)BitOperations.Log2(System.Math.Max(System.Math.Max(width, height), depth)) + 1u;
 }
 
-/// <summary>
-/// Represents a GPU texture resource (1D, 2D, 3D, Cube, or Array).
-/// </summary>
-public abstract class Texture : GraphicsResource, IBindableResource
+public readonly record struct TextureHandle(ResourceHandle Raw)
 {
-    protected readonly TextureDescription _desc;
-
-    protected Texture(in TextureDescription desc)
-    {
-        _desc = desc;
-    }
-
-    public ref readonly TextureDescription Desc => ref _desc;
-
-    public uint Width => _desc.Width;
-
-    public uint Height => _desc.Height;
-
-    public uint Depth => _desc.Depth;
-
-    public uint ArraySize => _desc.ArraySize;
-
-    public uint MipLevels => _desc.MipLevels;
-
-    public Format Format => _desc.Format;
-
-    public TextureDimension Dimension => _desc.Dimension;
-
-    public TextureUsage Usage => _desc.Usage;
+    public static TextureHandle Invalid => default;
+    public bool IsValid => Raw.IsValid;
+    public uint Index => Raw.Index;
+    public uint Generation => Raw.Generation;
 }

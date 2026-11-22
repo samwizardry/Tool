@@ -6,11 +6,10 @@ namespace Torture.Graphics;
 
 public abstract class GraphicsDevice : IDisposable
 {
-    public virtual GraphicsAPI API { get; }
+    protected ulong _currentFrameIndex;
+    protected virtual ulong FramesInFlight => 2;
 
-    public GraphicsResourceFactory Factory { get; }
-    public ShaderLibrary ShaderLibrary { get; }
-    public TextureLibrary TextureLibrary { get; }
+    public virtual GraphicsAPI API { get; }
 
     public virtual SizeI ClientSize { get; protected set; }
 
@@ -21,13 +20,6 @@ public abstract class GraphicsDevice : IDisposable
     public virtual bool VSync { get; set; }
 
     public virtual Color4 ClearColor { get; set; }
-
-    protected GraphicsDevice()
-    {
-        Factory = new(this);
-        ShaderLibrary = new(this);
-        TextureLibrary = new(this);
-    }
 
     #region Window & Display State Notifications
 
@@ -45,8 +37,6 @@ public abstract class GraphicsDevice : IDisposable
 
     #region Frame Lifecycle & Render Target Control
 
-    public abstract void Clear();
-
     public abstract bool BeginFrame();
 
     public abstract bool EndFrame();
@@ -57,60 +47,47 @@ public abstract class GraphicsDevice : IDisposable
 
     #region Resource Creation & Binding
 
-    public abstract RasterState CreateRasterState(in RasterStateDescription desc);
+    // Immutable States: cached & owned by GraphicsDevice until shutdown
+    public abstract RasterStateHandle GetOrCreateRasterState(in RasterStateDescription desc);
+    public abstract SamplerHandle GetOrCreateSampler(in SamplerDescription desc);
+    public abstract InputLayoutHandle GetOrCreateInputLayout(in VertexLayout layout, ShaderHandle vs);
+    public abstract BindingLayoutHandle GetOrCreateBindingLayout(in BindingLayoutDescription desc);
+    public abstract GraphicsPipelineHandle GetOrCreateGraphicsPipeline(in GraphicsPipelineDescription desc);
 
-    public abstract Buffer CreateBuffer<T>(ReadOnlySpan<T> data, in BufferDescription desc)
-        where T : unmanaged;
+    // Data Resources: owned by caller, destroyed via DeferredDeletionQueue
+    public abstract BufferHandle CreateBuffer<T>(ReadOnlySpan<T> data, in BufferDescription desc) where T : unmanaged;
+    public abstract BufferHandle CreateBuffer(in BufferDescription desc);
+    public abstract TextureHandle CreateTexture<T>(ReadOnlySpan<T> data, in TextureDescription desc) where T : unmanaged;
+    public abstract TextureHandle CreateTexture(in TextureDescription desc);
+    public abstract ShaderHandle CreateShader(ReadOnlySpan<byte> bytecode, in ShaderDescription desc);
+    public abstract BindingSetHandle CreateBindingSet(in BindingSetDescription desc, BindingLayoutHandle layout);
 
-    public abstract Buffer CreateBuffer(in BufferDescription desc);
+    public abstract ref readonly BufferDescription GetBufferDescription(BufferHandle handle);
+    public abstract ref readonly TextureDescription GetTextureDescription(TextureHandle handle);
 
-    public abstract Shader CreateShader(ReadOnlySpan<byte> source, in ShaderDescription desc);
+    public abstract void UpdateBuffer<T>(BufferHandle buffer, ReadOnlySpan<T> data, uint byteOffset = 0) where T : unmanaged;
+    /// <summary>
+    /// This method never modifies <paramref name="data"/>.
+    /// </summary>
+    public abstract void UpdateBuffer<T>(BufferHandle buffer, ref T data, uint byteOffset = 0) where T : unmanaged;
+    public abstract void UpdateTexture<T>(TextureHandle texture, ReadOnlySpan<T> data, uint mipLevel = 0, uint arraySlice = 0) where T : unmanaged;
 
-    public abstract InputLayout CreateInputLayout(in VertexLayout layout, Shader shader);
+    // Never frees immediately while GPU may use it; schedules into DeferredDeletionQueue
+    public abstract void Destroy(BufferHandle handle);
+    public abstract void Destroy(TextureHandle handle);
+    public abstract void Destroy(ShaderHandle handle);
+    public abstract void Destroy(BindingSetHandle handle);
 
-    public abstract Texture CreateTexture<T>(ReadOnlySpan<T> data, in TextureDescription desc)
-        where T : unmanaged;
-
-    public abstract Texture CreateTexture(in TextureDescription desc);
-
-    public abstract Sampler CreateSampler(in SamplerDescription desc);
-
-    public abstract GraphicsPipeline CreateGraphicsPipeline(in GraphicsPipelineDescription desc);
-
-    public abstract BindingLayout CreateBindingLayout(in BindingLayoutDescription desc);
-
-    public abstract BindingSet CreateBindingSet(in BindingSetDescription desc, BindingLayout layout);
-
-    public abstract void UpdateBuffer<T>(Buffer buffer, ReadOnlySpan<T> data, uint byteOffset = 0)
-        where T : unmanaged;
-
-    /// <summary>This method never modifies <paramref name="data"/>.</summary>
-    public abstract void UpdateBuffer<T>(Buffer buffer, ref T data, uint byteOffset = 0)
-        where T : unmanaged;
-
-    public abstract void UpdateTexture<T>(Texture texture, ReadOnlySpan<T> data, uint mipLevel = 0, uint arraySlice = 0)
-        where T : unmanaged;
-
-    public abstract void SetRasterState(RasterState state);
-
-    public abstract void SetPrimitiveTopology(PrimitiveTopology primitiveTopology);
-
-    public abstract void SetVertexBuffer(Buffer buffer, uint slot = 0, uint byteOffset = 0);
-
-    public abstract void SetIndexBuffer(Buffer buffer, uint byteOffset = 0);
-
-    public abstract void SetConstantBuffer(Buffer buffer, ShaderType stage, uint slot);
-
-    public abstract void SetVertexShader(Shader shader);
-
-    public abstract void SetPixelShader(Shader shader);
-
-    public abstract void SetInputLayout(InputLayout inputLayout);
-
-    public abstract void SetTexture(Texture texture, ShaderType stage, uint slot);
-
-    public abstract void SetSampler(Sampler sampler, ShaderType stage, uint slot);
-
+    //public abstract void SetVertexBuffer(BufferHandle buffer, uint slot = 0, uint byteOffset = 0);
+    //public abstract void SetIndexBuffer(BufferHandle buffer, uint byteOffset = 0);
+    //public abstract void SetConstantBuffer(BufferHandle buffer, ShaderType stage, uint slot);
+    //public abstract void SetTexture(TextureHandle texture, ShaderType stage, uint slot);
+    //public abstract void SetSampler(SamplerHandle sampler, ShaderType stage, uint slot);
+    //public abstract void SetVertexShader(ShaderHandle shader);
+    //public abstract void SetPixelShader(ShaderHandle shader);
+    //public abstract void SetInputLayout(InputLayoutHandle inputLayout);
+    //public abstract void SetRasterState(RasterStateHandle rasterState);
+    //public abstract void SetPrimitiveTopology(PrimitiveTopology primitiveTopology);
     public abstract void SetGraphicsState(in GraphicsState state);
 
     #endregion
@@ -134,9 +111,9 @@ public abstract class GraphicsDevice : IDisposable
         int baseVertexLocation = 0,
         uint startInstanceLocation = 0);
 
-    public abstract void DrawIndirect(Buffer buffer, uint alignedByteOffset = 0);
+    public abstract void DrawIndirect(BufferHandle buffer, uint alignedByteOffset = 0);
 
-    public abstract void DrawIndexedIndirect(Buffer buffer, uint alignedByteOffset = 0);
+    public abstract void DrawIndexedIndirect(BufferHandle buffer, uint alignedByteOffset = 0);
 
     #endregion
 
@@ -144,7 +121,7 @@ public abstract class GraphicsDevice : IDisposable
 
     public abstract void Dispatch(uint threadGroupCountX, uint threadGroupCountY = 1, uint threadGroupCountZ = 1);
 
-    public abstract void DispatchIndirect(Buffer buffer, uint alignedByteOffset = 0);
+    public abstract void DispatchIndirect(BufferHandle buffer, uint alignedByteOffset = 0);
 
     #endregion
 
@@ -162,12 +139,7 @@ public abstract class GraphicsDevice : IDisposable
         _disposed = true;
     }
 
-    protected virtual void FreeResources()
-    {
-        Factory.Dispose();
-        ShaderLibrary.Dispose();
-        TextureLibrary.Dispose();
-    }
+    protected virtual void FreeResources() { }
 
     #endregion
 }

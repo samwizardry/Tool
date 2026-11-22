@@ -1,27 +1,42 @@
 ﻿namespace Torture.Graphics;
 
-/// <summary>
-/// Describes a graphics pipeline state configuration.
-/// </summary>
 public readonly record struct GraphicsPipelineDescription(
-    Shader? VertexShader = null,
-    Shader? PixelShader = null,
-    InputLayout? InputLayout = null,
-    RasterState? RasterState = null,
+    ShaderHandle VertexShader = default,
+    ShaderHandle PixelShader = default,
+    InputLayoutHandle InputLayout = default,
+    RasterStateHandle RasterState = default,
     PrimitiveTopology Topology = PrimitiveTopology.TriangleList,
-    BindingLayout[]? BindingLayouts = null);
-
-/// <summary>
-/// Represents an immutable graphics pipeline state object (PSO).
-/// </summary>
-public abstract class GraphicsPipeline : GraphicsResource
+    BindingLayoutHandle[]? BindingLayouts = null) : IEquatable<GraphicsPipelineDescription>
 {
-    protected readonly GraphicsPipelineDescription _desc;
+    public bool Equals(GraphicsPipelineDescription other) =>
+        VertexShader == other.VertexShader &&
+        PixelShader == other.PixelShader &&
+        InputLayout == other.InputLayout &&
+        RasterState == other.RasterState &&
+        Topology == other.Topology &&
+        BindingLayouts.AsSpan().SequenceEqual(other.BindingLayouts.AsSpan());
 
-    protected GraphicsPipeline(in GraphicsPipelineDescription desc)
+    public override int GetHashCode()
     {
-        _desc = desc;
-    }
+        HashCode hash = new();
 
-    public ref readonly GraphicsPipelineDescription Desc => ref _desc;
+        hash.Add(VertexShader);
+        hash.Add(PixelShader);
+        hash.Add(InputLayout);
+        hash.Add(RasterState);
+        hash.Add(Topology);
+
+        foreach (var layout in BindingLayouts.AsSpan())
+            hash.Add(layout);
+
+        return hash.ToHashCode();
+    }
+}
+
+public readonly record struct GraphicsPipelineHandle(ResourceHandle Raw)
+{
+    public static GraphicsPipelineHandle Invalid => default;
+    public bool IsValid => Raw.IsValid;
+    public uint Index => Raw.Index;
+    public uint Generation => Raw.Generation;
 }

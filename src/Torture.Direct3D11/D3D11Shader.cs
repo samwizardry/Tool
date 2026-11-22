@@ -1,15 +1,30 @@
-﻿using SharpGen.Runtime;
-
-using Vortice.D3DCompiler;
+﻿using Vortice.D3DCompiler;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
 
 namespace Torture.Direct3D11;
 
-internal sealed unsafe class D3D11Shader : CoreShader
+internal readonly unsafe struct D3D11Shader
 {
-    public D3D11Shader(ID3D11Device5 device, ReadOnlySpan<byte> source, in CoreShaderDesc desc)
-        : base(in desc)
+    public readonly Graphics.ShaderDescription Desc;
+    public readonly ID3D11DeviceChild Native;
+    public readonly byte[]? Bytecode;
+
+    private D3D11Shader(in Graphics.ShaderDescription desc, ID3D11DeviceChild shader, byte[]? bytecode)
+    {
+        Desc = desc;
+        Native = shader;
+        Bytecode = bytecode;
+    }
+
+    public void Destroy()
+    {
+        Native?.Dispose();
+    }
+
+    public Graphics.ShaderType ShaderType => Desc.ShaderType;
+
+    public static D3D11Shader Create(ID3D11Device5 device, ReadOnlySpan<byte> source, in Graphics.ShaderDescription desc)
     {
         Blob code = default!;
         Blob errorMsgs = default!;
@@ -18,8 +33,8 @@ internal sealed unsafe class D3D11Shader : CoreShader
         {
             string profile = desc.ShaderType switch
             {
-                CoreShaderType.Vertex => "vs_5_0",
-                CoreShaderType.Pixel => "ps_5_0",
+                Graphics.ShaderType.Vertex => "vs_5_0",
+                Graphics.ShaderType.Pixel => "ps_5_0",
                 _ => throw new NotSupportedException()
             };
 
@@ -39,7 +54,7 @@ internal sealed unsafe class D3D11Shader : CoreShader
                 flags |= ShaderFlags.OptimizationLevel3;
             }
 
-            Result result;
+            SharpGen.Runtime.Result result;
 
             fixed (byte* srcData = source)
             {
@@ -63,32 +78,26 @@ internal sealed unsafe class D3D11Shader : CoreShader
                 throw new InvalidOperationException($"Shader compilation failed. {desc.DebugName}: {error}");
             }
 
-            Native = desc.ShaderType switch
+            
+            ID3D11DeviceChild shader = desc.ShaderType switch
             {
-                CoreShaderType.Vertex => device.CreateVertexShader(code),
-                CoreShaderType.Pixel => device.CreatePixelShader(code),
+                Graphics.ShaderType.Vertex => device.CreateVertexShader(code),
+                Graphics.ShaderType.Pixel => device.CreatePixelShader(code),
                 _ => throw new NotSupportedException(),
             };
 
-            if (desc.ShaderType == CoreShaderType.Vertex)
+            byte[]? bytecode = null;
+            if (desc.ShaderType == Graphics.ShaderType.Vertex)
             {
-                Bytecode = code.AsBytes();
+                bytecode = code.AsBytes();
             }
+
+            return new D3D11Shader(in desc, shader, bytecode);
         }
         finally
         {
             code?.Dispose();
             errorMsgs?.Dispose();
         }
-    }
-
-    public ID3D11DeviceChild Native { get; private set; }
-
-    public byte[]? Bytecode { get; private set; }
-
-    protected override void FreeUnmanagedResources()
-    {
-        Native?.Dispose();
-        Bytecode = null;
     }
 }

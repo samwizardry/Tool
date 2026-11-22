@@ -5,7 +5,7 @@
 using System.Numerics;
 
 using Torture.Collections;
-using Torture.Math;
+using Torture.Maths;
 
 namespace Torture.Graphics;
 
@@ -135,7 +135,7 @@ public static class Geometry
         for (int i = 0; i <= verticalSegments; ++i)
         {
             float v = 1.0f - (i / (float)verticalSegments);
-            float latitude = (i * MathF.PI / verticalSegments) - TortureMath.HalfPI;
+            float latitude = (i * MathF.PI / verticalSegments) - Maths.Math.HalfPI;
 
             (float dy, float dxz) = MathF.SinCos(latitude);
 
@@ -329,8 +329,8 @@ public static class Geometry
             var vertex = vertices[i];
 
             bool isOnPrimeMeridian =
-                MathF.Abs(vertex.Position.X) <= TortureMath.Epsilon &&
-                MathF.Abs(vertex.TexCoord.X) <= TortureMath.Epsilon;
+                MathF.Abs(vertex.Position.X) <= Maths.Math.Epsilon &&
+                MathF.Abs(vertex.TexCoord.X) <= Maths.Math.Epsilon;
 
             if (isOnPrimeMeridian)
             {
@@ -682,7 +682,7 @@ public static class Geometry
         {
             float u = (float)i / tessellation;
 
-            float outerAngle = (i * MathF.Tau / tessellation) - TortureMath.HalfPI;
+            float outerAngle = (i * MathF.Tau / tessellation) - Maths.Math.HalfPI;
 
             // Create a transform matrix that will align geometry to slice of the torus.
             Matrix4x4 transform = Matrix4x4.CreateTranslation(diameter * 0.5f, 0, 0) * Matrix4x4.CreateRotationY(outerAngle);
@@ -930,11 +930,11 @@ public static class Geometry
         // Planar UV layout for a regular pentagon
         ReadOnlySpan<Vector2> pentagonUVs = stackalloc Vector2[]
         {
-            new(0.5f + (0.5f * MathF.Cos(0 * MathF.Tau / 5.0f - TortureMath.HalfPI)), 0.5f + (0.5f * MathF.Sin(0 * MathF.Tau / 5.0f - TortureMath.HalfPI))),
-            new(0.5f + (0.5f * MathF.Cos(1 * MathF.Tau / 5.0f - TortureMath.HalfPI)), 0.5f + (0.5f * MathF.Sin(1 * MathF.Tau / 5.0f - TortureMath.HalfPI))),
-            new(0.5f + (0.5f * MathF.Cos(2 * MathF.Tau / 5.0f - TortureMath.HalfPI)), 0.5f + (0.5f * MathF.Sin(2 * MathF.Tau / 5.0f - TortureMath.HalfPI))),
-            new(0.5f + (0.5f * MathF.Cos(3 * MathF.Tau / 5.0f - TortureMath.HalfPI)), 0.5f + (0.5f * MathF.Sin(3 * MathF.Tau / 5.0f - TortureMath.HalfPI))),
-            new(0.5f + (0.5f * MathF.Cos(4 * MathF.Tau / 5.0f - TortureMath.HalfPI)), 0.5f + (0.5f * MathF.Sin(4 * MathF.Tau / 5.0f - TortureMath.HalfPI)))
+            new(0.5f + (0.5f * MathF.Cos(0 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(0 * MathF.Tau / 5.0f - Maths.Math.HalfPI))),
+            new(0.5f + (0.5f * MathF.Cos(1 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(1 * MathF.Tau / 5.0f - Maths.Math.HalfPI))),
+            new(0.5f + (0.5f * MathF.Cos(2 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(2 * MathF.Tau / 5.0f - Maths.Math.HalfPI))),
+            new(0.5f + (0.5f * MathF.Cos(3 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(3 * MathF.Tau / 5.0f - Maths.Math.HalfPI))),
+            new(0.5f + (0.5f * MathF.Cos(4 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(4 * MathF.Tau / 5.0f - Maths.Math.HalfPI)))
         };
 
         for (int i = 0; i < faceCount; ++i)

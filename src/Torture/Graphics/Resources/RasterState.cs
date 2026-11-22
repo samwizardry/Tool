@@ -24,14 +24,10 @@ public readonly record struct RasterStateDescription(
     public static RasterStateDescription Wireframe => new(FillMode: RasterFillMode.Wireframe, CullMode: RasterCullMode.None);
 }
 
-public abstract class RasterState : GraphicsResource
+public readonly record struct RasterStateHandle(ResourceHandle Raw)
 {
-    protected readonly RasterStateDescription _desc;
-
-    protected RasterState(in RasterStateDescription desc)
-    {
-        _desc = desc;
-    }
-
-    public ref readonly RasterStateDescription Desc => ref _desc;
+    public static RasterStateHandle Invalid => default;
+    public bool IsValid => Raw.IsValid;
+    public uint Index => Raw.Index;
+    public uint Generation => Raw.Generation;
 }

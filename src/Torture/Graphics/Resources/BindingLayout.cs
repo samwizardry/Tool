@@ -1,11 +1,8 @@
 ﻿namespace Torture.Graphics;
 
-/// <summary>
-/// Describes a single resource slot in a <see cref="BindingLayoutDescription"/>.
-/// </summary>
 public readonly record struct BindingLayoutItem(
     uint Slot,
-    BindingResourceType Type)
+    BindingResourceType Type) : IEquatable<BindingLayoutItem>
 {
     public static BindingLayoutItem ConstantBuffer(uint slot) => new(slot, BindingResourceType.ConstantBuffer);
     public static BindingLayoutItem TextureSrv(uint slot) => new(slot, BindingResourceType.TextureSrv);
@@ -15,31 +12,34 @@ public readonly record struct BindingLayoutItem(
     public static BindingLayoutItem Sampler(uint slot) => new(slot, BindingResourceType.Sampler);
 }
 
-/// <summary>
-/// Describes the layout contract of shader resource bindings for a specific binding space/set.
-/// </summary>
 public readonly record struct BindingLayoutDescription(
     ShaderType Visibility,
     BindingLayoutItem[] Bindings,
-    uint RegisterSpace = 0);
-
-/// <summary>
-/// Represents a compiled resource binding layout schema.
-/// </summary>
-public abstract class BindingLayout : GraphicsResource
+    uint RegisterSpace = 0) : IEquatable<BindingLayoutDescription>
 {
-    protected readonly BindingLayoutDescription _desc;
+    public bool Equals(BindingLayoutDescription other) =>
+        Visibility == other.Visibility &&
+        RegisterSpace == other.RegisterSpace &&
+        Bindings.AsSpan().SequenceEqual(other.Bindings.AsSpan());
 
-    protected BindingLayout(in BindingLayoutDescription desc)
+    public override int GetHashCode()
     {
-        _desc = desc;
+        HashCode hash = new();
+
+        hash.Add(Visibility);
+        hash.Add(RegisterSpace);
+
+        foreach (ref readonly var item in Bindings.AsSpan())
+            hash.Add(item);
+
+        return hash.ToHashCode();
     }
+}
 
-    public ref readonly BindingLayoutDescription Desc => ref _desc;
-
-    public ShaderType Visibility => _desc.Visibility;
-
-    public ReadOnlySpan<BindingLayoutItem> Bindings => _desc.Bindings;
-
-    public uint RegisterSpace => _desc.RegisterSpace;
+public readonly record struct BindingLayoutHandle(ResourceHandle Raw)
+{
+    public static BindingLayoutHandle Invalid => default;
+    public bool IsValid => Raw.IsValid;
+    public uint Index => Raw.Index;
+    public uint Generation => Raw.Generation;
 }

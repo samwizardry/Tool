@@ -1,45 +1,66 @@
-﻿using Vortice.Direct3D;
+﻿using Torture.Collections;
+
+using Vortice.Direct3D;
 using Vortice.Direct3D11;
 
 namespace Torture.Direct3D11;
 
-internal sealed class D3D11GraphicsPipeline : CoreGraphicsPipeline
+internal readonly struct D3D11GraphicsPipeline
 {
-    private readonly ID3D11VertexShader? _vertexShader;
-    private readonly ID3D11PixelShader? _pixelShader;
-    private readonly ID3D11InputLayout? _inputLayout;
-    private readonly ID3D11RasterizerState? _rasterState;
-    private readonly PrimitiveTopology _topology;
+    public readonly PrimitiveTopology Topology;
+    public readonly ID3D11InputLayout? InputLayout;
+    public readonly ID3D11VertexShader? VertexShader;
+    public readonly ID3D11PixelShader? PixelShader;
+    public readonly ID3D11RasterizerState? RasterState;
 
-    public D3D11GraphicsPipeline(in CoreGraphicsPipelineDesc desc)
-        : base(desc)
+    private D3D11GraphicsPipeline(
+        PrimitiveTopology topology,
+        ID3D11InputLayout? il,
+        ID3D11VertexShader? vs,
+        ID3D11PixelShader? ps,
+        ID3D11RasterizerState? rs)
     {
-        if (desc.VertexShader is D3D11Shader vs)
-        {
-            _vertexShader = (ID3D11VertexShader)vs.Native;
-        }
-        if (desc.PixelShader is D3D11Shader ps)
-        {
-            _pixelShader = (ID3D11PixelShader)ps.Native;
-        }
-        if (desc.InputLayout is D3D11InputLayout inputLayout)
-        {
-            _inputLayout = inputLayout.Native;
-        }
-        if (desc.RasterState is D3D11RasterState rasterState)
-        {
-            _rasterState = rasterState.Native;
-        }
+        Topology = topology;
+        InputLayout = il;
+        VertexShader = vs;
+        PixelShader = ps;
+        RasterState = rs;
+    }
 
-        _topology = desc.Topology.ToD3D11PrimitiveTopology();
+    public void Destroy()
+    {
+    }
+
+    public static D3D11GraphicsPipeline Create(in Graphics.GraphicsPipelineDescription desc,
+        SlotMap<D3D11InputLayout> inputLayouts,
+        SlotMap<D3D11Shader> shaders,
+        SlotMap<D3D11RasterState> rasterStates)
+    {
+        var il = desc.InputLayout.IsValid
+            ? inputLayouts.Get(desc.InputLayout.Raw).Native
+            : null;
+
+        var vs = desc.VertexShader.IsValid
+            ? (ID3D11VertexShader)shaders.Get(desc.VertexShader.Raw).Native
+            : null;
+
+        var ps = desc.PixelShader.IsValid
+            ? (ID3D11PixelShader)shaders.Get(desc.PixelShader.Raw).Native
+            : null;
+
+        var rs = desc.RasterState.IsValid
+            ? rasterStates.Get(desc.RasterState.Raw).Native
+            : null;
+
+        return new D3D11GraphicsPipeline(desc.Topology.ToD3D11PrimitiveTopology(), il, vs, ps, rs);
     }
 
     public void Apply(ID3D11DeviceContext4 imContext)
     {
-        imContext.IASetPrimitiveTopology(_topology);
-        imContext.IASetInputLayout(_inputLayout);
-        imContext.VSSetShader(_vertexShader);
-        imContext.PSSetShader(_pixelShader);
-        imContext.RSSetState(_rasterState);
+        imContext.IASetPrimitiveTopology(Topology);
+        imContext.IASetInputLayout(InputLayout);
+        imContext.VSSetShader(VertexShader);
+        imContext.PSSetShader(PixelShader);
+        imContext.RSSetState(RasterState);
     }
 }

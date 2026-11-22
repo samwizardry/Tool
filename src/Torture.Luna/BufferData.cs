@@ -80,9 +80,9 @@ public abstract class BufferData<T>
     protected T _data;
     protected bool _isDirty = true;
 
-    private readonly Graphics.Buffer _buffer;
+    private readonly BufferHandle _buffer;
 
-    protected BufferData(Graphics.Buffer buffer)
+    protected BufferData(BufferHandle buffer)
     {
         _buffer = buffer;
     }
@@ -99,7 +99,7 @@ public abstract class BufferData<T>
 
 public sealed class PhongPerFrameData : BufferData<PhongPerFrame>
 {
-    public PhongPerFrameData(Graphics.Buffer buffer)
+    public PhongPerFrameData(BufferHandle buffer)
         : base(buffer)
     {
         _data = default!;
@@ -157,7 +157,7 @@ public sealed class PhongPerFrameData : BufferData<PhongPerFrame>
 
 public sealed class PhongPerObjectData : BufferData<PhongObject>
 {
-    public PhongPerObjectData(Graphics.Buffer buffer)
+    public PhongPerObjectData(BufferHandle buffer)
         : base(buffer)
     {
         _data = default!;
