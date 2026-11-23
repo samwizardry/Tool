@@ -614,8 +614,8 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
 
     public override void Destroy(Graphics.TextureHandle handle)
     {
-        if(!_textures.TryRemove(handle.Raw, out var texture))
-    {
+        if (!_textures.TryRemove(handle.Raw, out var texture))
+        {
 #if GRAPHICS_DEBUG
             Log.Warning(D3D11LogCategories.D3D11, $"Attempted to destroy invalid TextureHandle ({handle.Index}:{handle.Generation}).");
 #endif
