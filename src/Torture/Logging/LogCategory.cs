@@ -19,6 +19,7 @@ public sealed class LogCategory
 public static class LogCategories
 {
     public static readonly LogCategory Core = new("Core");
-    public static readonly LogCategory Graphics = new("Graphics");
     public static readonly LogCategory Memory = new("Memory");
+    public static readonly LogCategory Graphics = new("Graphics");
+    public static readonly LogCategory Assets = new("Assets");
 }

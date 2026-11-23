@@ -1,6 +1,8 @@
-﻿namespace Torture.Graphics;
+﻿using Torture.Collections;
 
-public readonly record struct InputLayoutHandle(ResourceHandle Raw)
+namespace Torture.Graphics;
+
+public readonly record struct InputLayoutHandle(SlotHandle Raw)
 {
     public static InputLayoutHandle Invalid => default;
     public bool IsValid => Raw.IsValid;

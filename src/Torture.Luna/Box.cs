@@ -1,24 +1,14 @@
 ﻿using System.Numerics;
 
-using Torture.Collections;
+using Torture.Assets;
 using Torture.Graphics;
 
 namespace Torture.Luna;
 
 public class Box : Actor
 {
-    public Box(GraphicsDevice device, Material material)
-        : base(device)
+    public Box(GraphicsDevice device, AssetHandle<ModelAsset> model) : base(device, model)
     {
-        var data = Geometry.ComputeBox(Vector3.One * 2.0f);
-
-        var mesh = Mesh.Create(device,
-            device.CreateBuffer(data.Vertices.AsSpan(), BufferDescription.Vertex(0, 0)),
-            device.CreateBuffer(data.Indices.AsSpan(), BufferDescription.Index(0))
-        );
-
-        _model = new Model(mesh, material);
-
         _actorData.SetShininess(16.0f);
     }
 
@@ -42,8 +32,8 @@ public class Box : Actor
         base.Update(dt);
     }
 
-    public override void Draw()
+    public override void Draw(AssetManager assets)
     {
-        base.Draw();
+        base.Draw(assets);
     }
 }

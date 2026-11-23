@@ -1,4 +1,6 @@
-﻿namespace Torture.Graphics;
+﻿using Torture.Collections;
+
+namespace Torture.Graphics;
 
 public readonly record struct ShaderDescription
 {
@@ -43,7 +45,7 @@ public readonly record struct ShaderDescription
         new(ShaderType.Compute, entryPoint, packAsRowMajor, debug, debugName);
 }
 
-public readonly record struct ShaderHandle(ResourceHandle Raw)
+public readonly record struct ShaderHandle(SlotHandle Raw)
 {
     public static ShaderHandle Invalid => default;
     public bool IsValid => Raw.IsValid;

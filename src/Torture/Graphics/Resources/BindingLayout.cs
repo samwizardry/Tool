@@ -1,4 +1,6 @@
-﻿namespace Torture.Graphics;
+﻿using Torture.Collections;
+
+namespace Torture.Graphics;
 
 public readonly record struct BindingLayoutItem(
     uint Slot,
@@ -36,7 +38,7 @@ public readonly record struct BindingLayoutDescription(
     }
 }
 
-public readonly record struct BindingLayoutHandle(ResourceHandle Raw)
+public readonly record struct BindingLayoutHandle(SlotHandle Raw)
 {
     public static BindingLayoutHandle Invalid => default;
     public bool IsValid => Raw.IsValid;

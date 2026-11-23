@@ -4,6 +4,8 @@
 
 using System.Numerics;
 
+using Torture.Collections;
+
 namespace Torture.Graphics;
 
 public readonly record struct TextureDescription
@@ -108,10 +110,10 @@ public readonly record struct TextureDescription
     /// Calculates the full mipmap chain count down to 1x1x1 for the given dimensions.
     /// </summary>
     public static uint CalculateMipLevels(uint width, uint height, uint depth = 1) =>
-        (uint)BitOperations.Log2(System.Math.Max(System.Math.Max(width, height), depth)) + 1u;
+        (uint)BitOperations.Log2(Math.Max(Math.Max(width, height), depth)) + 1u;
 }
 
-public readonly record struct TextureHandle(ResourceHandle Raw)
+public readonly record struct TextureHandle(SlotHandle Raw)
 {
     public static TextureHandle Invalid => default;
     public bool IsValid => Raw.IsValid;

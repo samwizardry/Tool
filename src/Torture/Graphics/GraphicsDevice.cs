@@ -78,16 +78,6 @@ public abstract class GraphicsDevice : IDisposable
     public abstract void Destroy(ShaderHandle handle);
     public abstract void Destroy(BindingSetHandle handle);
 
-    //public abstract void SetVertexBuffer(BufferHandle buffer, uint slot = 0, uint byteOffset = 0);
-    //public abstract void SetIndexBuffer(BufferHandle buffer, uint byteOffset = 0);
-    //public abstract void SetConstantBuffer(BufferHandle buffer, ShaderType stage, uint slot);
-    //public abstract void SetTexture(TextureHandle texture, ShaderType stage, uint slot);
-    //public abstract void SetSampler(SamplerHandle sampler, ShaderType stage, uint slot);
-    //public abstract void SetVertexShader(ShaderHandle shader);
-    //public abstract void SetPixelShader(ShaderHandle shader);
-    //public abstract void SetInputLayout(InputLayoutHandle inputLayout);
-    //public abstract void SetRasterState(RasterStateHandle rasterState);
-    //public abstract void SetPrimitiveTopology(PrimitiveTopology primitiveTopology);
     public abstract void SetGraphicsState(in GraphicsState state);
 
     #endregion

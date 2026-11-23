@@ -1,5 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 
+using Torture.Collections;
+
 namespace Torture.Graphics;
 
 public readonly record struct BufferDescription
@@ -66,7 +68,7 @@ public readonly record struct BufferDescription
     private static uint Align16(uint size) => (size + 15u) & ~15u;
 }
 
-public readonly record struct BufferHandle(ResourceHandle Raw)
+public readonly record struct BufferHandle(SlotHandle Raw)
 {
     public static BufferHandle Invalid => default;
     public bool IsValid => Raw.IsValid;

@@ -70,6 +70,7 @@ internal readonly struct D3D11BindingSet
                     throw new NotSupportedException();
             }
         }
+
         return new D3D11BindingSet(
             layout.Visibility,
             [.. constantBuffers],

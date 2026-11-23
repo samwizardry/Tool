@@ -1,15 +1,14 @@
 ﻿using System.Numerics;
 
+using Torture.Assets;
 using Torture.Graphics;
 
 namespace Torture.Luna;
 
 public sealed class Car : Actor
 {
-    public Car(GraphicsDevice device, Material material) : base(device)
+    public Car(GraphicsDevice device, AssetHandle<ModelAsset> model) : base(device, model)
     {
-        _model = LunaModelLoader.Import(device, material, "resources/objects/car.txt");
-
         _actorData.SetShininess(128.0f);
     }
 
@@ -35,8 +34,8 @@ public sealed class Car : Actor
         base.Update(dt);
     }
 
-    public override void Draw()
+    public override void Draw(AssetManager assets)
     {
-        base.Draw();
+        base.Draw(assets);
     }
 }

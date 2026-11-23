@@ -1,12 +1,13 @@
 ﻿using System.Globalization;
 
+using Torture.Assets;
 using Torture.Graphics;
 
 namespace Torture.Luna;
 
-public static class LunaModelLoader
+public sealed class LunaModelLoader : IModelLoader
 {
-    public static Model Import(GraphicsDevice device, Material material, string path)
+    private Mesh Import(GraphicsDevice device, string path)
     {
         using var fs = File.OpenRead(path);
 
@@ -130,6 +131,27 @@ public static class LunaModelLoader
             device.CreateBuffer(vertices, BufferDescription.Vertex(0, 8 * sizeof(float))),
             device.CreateBuffer(indices, BufferDescription.Index(0)));
 
-        return new Model(mesh, material);
+        return mesh;
+    }
+
+    public ModelAsset Load(GraphicsDevice device, AssetManager assets, string virtualPath)
+    {
+        string fullPath = assets.ResolvePath(virtualPath);
+        Mesh? mesh = null;
+        try
+        {
+            mesh = Import(device, fullPath);
+            assets.AddRef(ResourceFactoryCache.CarMaterial);
+            return new ModelAsset
+            {
+                Meshes = [mesh],
+                Materials = [ResourceFactoryCache.CarMaterial]
+            };
+        }
+        catch
+        {
+            mesh?.Destroy(device);
+            throw;
+        }
     }
 }

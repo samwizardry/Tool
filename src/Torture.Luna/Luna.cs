@@ -1,5 +1,7 @@
 ﻿using System.Numerics;
 
+using Torture.Assets;
+using Torture.Collections;
 using Torture.Core;
 using Torture.Graphics;
 using Torture.Input;
@@ -14,12 +16,16 @@ public sealed partial class Luna : Application<Luna>
 {
     public static readonly LogCategory LogCat = new("Luna");
 
-    private readonly Camera _camera;
+    private Camera _camera = null!;
 
     // Stats
     private readonly bool _showFpsInTitle = true;
     private float _elapsedSeconds;
     private int _frameCount;
+
+    // Scene
+    AssetScope _globalScope = null!;
+    AssetScope _sceneScope = null!;
 
     private readonly List<Actor> _actors = [];
     private PhongPerFrameData _sceneData = default!;
@@ -28,7 +34,6 @@ public sealed partial class Luna : Application<Luna>
     {
         Title = "Luna";
         Identifier = "semisoft.torture.luna";
-        _camera = new Camera(60.0f, PreferredWindowSize.Width, PreferredWindowSize.Height);
     }
 
     protected override GraphicsDevice CreateGraphicsDevice(GraphicsAPI api, NativeWindowInfo window)
@@ -58,21 +63,42 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void Initialize()
     {
-        Device.VSync = true;
-        Device.ClearColor = new Color4(0.3f, 0.3f, 0.3f, 1.0f);
+        GraphicsDevice.VSync = true;
+        GraphicsDevice.ClearColor = new Color4(0.3f, 0.3f, 0.3f, 1.0f);
+
+        AssetManager.RegisterShaderLoader(new FileShaderLoader());
+        AssetManager.RegisterTextureLoader(new StbTextureLoader());
 
         base.Initialize();
     }
 
     protected override void LoadContent()
     {
-        ResourceFactoryCache.Load(Device);
+        _globalScope = new AssetScope(AssetManager);
+        _sceneScope = new AssetScope(AssetManager);
+
+        _camera = new Camera(60.0f, PreferredWindowSize.Width, PreferredWindowSize.Height);
+
+        ResourceFactoryCache.Load(GraphicsDevice, _globalScope);
 
         _sceneData = new PhongPerFrameData(ResourceFactoryCache.PerFrameCb);
 
-        _actors.Add(new Box(Device, ResourceFactoryCache.BoxMaterial));
-        _actors.Add(new Car(Device, ResourceFactoryCache.CarMaterial));
-        _actors.Add(new Backpack(Device));
+        // Create box
+        var data = Geometry.ComputeBox(Vector3.One * 2.0f);
+        var mesh = Mesh.Create(GraphicsDevice,
+            GraphicsDevice.CreateBuffer(data.Vertices.AsSpan(), BufferDescription.Vertex(0, 0)),
+            GraphicsDevice.CreateBuffer(data.Indices.AsSpan(), BufferDescription.Index(0))
+        );
+
+        _actors.Add(new Box(GraphicsDevice, _sceneScope.CreateModel(mesh, ResourceFactoryCache.BoxMaterial)));
+
+        // Create car
+        AssetManager.RegisterModelLoader(new LunaModelLoader());
+        _actors.Add(new Car(GraphicsDevice, _sceneScope.LoadModel("resources/objects/car.txt")));
+
+        // Create backpack
+        AssetManager.RegisterModelLoader(new AssimpModelLoader());
+        _actors.Add(new Backpack(GraphicsDevice, _sceneScope.LoadModel("resources/objects/backpack/backpack.obj")));
 
         _sceneData.SetDirLight(new DirectionalLight
         {
@@ -127,29 +153,12 @@ public sealed partial class Luna : Application<Luna>
 
         _camera.Update(gameTime.DeltaSeconds);
 
-        if (Keyboard.IsKeyPressed(KeyboardKey.F1))
-        {
-            //_pipelineState.UseSolid();
-        }
-        if (Keyboard.IsKeyPressed(KeyboardKey.F2))
-        {
-            //_pipelineState.UseWireframe();
-        }
-        if (Keyboard.IsKeyPressed(KeyboardKey.F3))
-        {
-            //_pipelineState.UseBilinear();
-        }
-        if (Keyboard.IsKeyPressed(KeyboardKey.F4))
-        {
-            //_pipelineState.UseAnisotropic();
-        }
-
         _sceneData.SetViewProj(_camera.ViewProj);
         _sceneData.SetViewPos(_camera.Position);
         _sceneData.SetSpotLightPosition(_camera.Position);
         _sceneData.SetSpotLightDirection(_camera.Direction);
 
-        _sceneData.Update(Device);
+        _sceneData.Update(GraphicsDevice);
 
         foreach (var actor in _actors)
         {
@@ -161,7 +170,7 @@ public sealed partial class Luna : Application<Luna>
     {
         foreach (var actor in _actors)
         {
-            actor.Draw();
+            actor.Draw(AssetManager);
         }
     }
 
@@ -177,7 +186,9 @@ public sealed partial class Luna : Application<Luna>
             actor?.Dispose();
         }
 
-        ResourceFactoryCache.Unload(Device);
+        _sceneScope.Dispose();
+        _globalScope.Dispose();
+        ResourceFactoryCache.Unload(GraphicsDevice);
     }
 
     protected override void Cleanup()

@@ -1,23 +1,14 @@
 ﻿using System.Numerics;
 
+using Torture.Assets;
 using Torture.Graphics;
 
 namespace Torture.Luna;
 
 public sealed class Backpack : Actor
 {
-    private readonly Material[] _materials;
-    private readonly BindingSetHandle[] _bindingSets;
-
-    public Backpack(GraphicsDevice device) : base(device)
+    public Backpack(GraphicsDevice device, AssetHandle<ModelAsset> model) : base(device, model)
     {
-        using var loader = new AssimpModelLoader(device);
-
-        if (!loader.TryLoad("resources/objects/backpack/backpack.obj", out _model!, out _materials!, out _bindingSets!))
-        {
-            throw new InvalidOperationException();
-        }
-
         _actorData.SetShininess(64.0f);
     }
 
@@ -43,8 +34,8 @@ public sealed class Backpack : Actor
         base.Update(dt);
     }
 
-    public override void Draw()
+    public override void Draw(AssetManager assets)
     {
-        base.Draw();
+        base.Draw(assets);
     }
 }

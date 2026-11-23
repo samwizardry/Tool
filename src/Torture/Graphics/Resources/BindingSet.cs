@@ -1,12 +1,14 @@
-﻿namespace Torture.Graphics;
+﻿using Torture.Collections;
+
+namespace Torture.Graphics;
 
 public readonly record struct BindingSetItem
 {
     public uint Slot { get; }
     public BindingResourceType Type { get; }
-    public ResourceHandle Resource { get; }
+    public SlotHandle Resource { get; }
 
-    private BindingSetItem(uint slot, BindingResourceType type, ResourceHandle resource)
+    private BindingSetItem(uint slot, BindingResourceType type, SlotHandle resource)
     {
         Slot = slot;
         Type = type;
@@ -37,7 +39,7 @@ public readonly record struct BindingSetDescription(BindingSetItem[] Bindings) :
     }
 }
 
-public readonly record struct BindingSetHandle(ResourceHandle Raw)
+public readonly record struct BindingSetHandle(SlotHandle Raw)
 {
     public static BindingSetHandle Invalid => default;
     public bool IsValid => Raw.IsValid;

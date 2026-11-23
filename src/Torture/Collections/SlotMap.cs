@@ -1,6 +1,10 @@
-﻿using Torture.Graphics;
+﻿namespace Torture.Collections;
 
-namespace Torture.Collections;
+public readonly record struct SlotHandle(uint Index, uint Generation)
+{
+    public static SlotHandle Invalid => default;
+    public bool IsValid => Generation != 0;
+}
 
 /// <summary>
 /// Contiguous generational resource pool with O(1) lookup, allocation, and free.
@@ -25,7 +29,7 @@ public sealed class SlotMap<T> where T : struct
         _slots = new Slot[initialCapacity];
     }
 
-    public ResourceHandle Add(in T value)
+    public SlotHandle Add(in T value)
     {
         uint index;
         if (_freeIndices.Count > 0)
@@ -51,10 +55,10 @@ public sealed class SlotMap<T> where T : struct
         slot.IsAlive = true;
         LiveCount++;
 
-        return new ResourceHandle(index, slot.Generation);
+        return new SlotHandle(index, slot.Generation);
     }
 
-    public bool IsValid(ResourceHandle handle)
+    public bool IsValid(SlotHandle handle)
     {
         if (!handle.IsValid || handle.Index >= _highWaterMark)
             return false;
@@ -63,16 +67,16 @@ public sealed class SlotMap<T> where T : struct
         return slot.IsAlive && slot.Generation == handle.Generation;
     }
 
-    public ref T Get(ResourceHandle handle)
+    public ref T Get(SlotHandle handle)
     {
-#if GRAPHICS_DEBUG
+#if TORTURE_DEBUG
         if (!IsValid(handle))
             throw new InvalidOperationException($"Attempted to access invalid or destroyed handle ({handle.Index}:{handle.Generation}).");
 #endif
         return ref _slots[handle.Index].Value;
     }
 
-    public bool TryRemove(ResourceHandle handle, out T value)
+    public bool TryRemove(SlotHandle handle, out T value)
     {
         if (!IsValid(handle))
         {
@@ -86,9 +90,7 @@ public sealed class SlotMap<T> where T : struct
         slot.IsAlive = false;
         slot.Generation++;
         if (slot.Generation == 0)
-        {
             slot.Generation = 1; // Skip 0 on wrap-around
-        }
 
         _freeIndices.Push(handle.Index);
         LiveCount--;
@@ -98,7 +100,7 @@ public sealed class SlotMap<T> where T : struct
     /// <summary>
     /// Drains all remaining live entries (used during shutdown cleanup and leak reporting).
     /// </summary>
-    public void DrainAll(Action<ResourceHandle, T> onItem)
+    public void DrainAll(Action<SlotHandle, T> onItem)
     {
         for (uint i = 0; i < _highWaterMark; i++)
         {
@@ -106,13 +108,15 @@ public sealed class SlotMap<T> where T : struct
             if (!slot.IsAlive)
                 continue;
 
-            var handle = new ResourceHandle(i, slot.Generation);
+            var handle = new SlotHandle(i, slot.Generation);
             T value = slot.Value;
             slot.Value = default;
             slot.IsAlive = false;
             slot.Generation++;
-            LiveCount--;
+            if (slot.Generation == 0)
+                slot.Generation = 1; // Skip 0 on wrap-around
 
+            LiveCount--;
             onItem(handle, value);
         }
 

@@ -28,6 +28,9 @@
     <TrackAllocations Condition="'$(TrackAllocations)' == '' and '$(_TortureDebugConfig)' == 'true'">true</TrackAllocations>
     <TrackAllocations Condition="'$(TrackAllocations)' == ''">false</TrackAllocations>
 
+    <TortureDebug Condition="'$(TortureDebug)' == '' and '$(_TortureDebugConfig)' == 'true'">true</TortureDebug>
+    <TortureDebug Condition="'$(TortureDebug)' == ''">false</TortureDebug>
+
     <GraphicsDebug Condition="'$(GraphicsDebug)' == '' and '$(_TortureDebugConfig)' == 'true'">true</GraphicsDebug>
     <GraphicsDebug Condition="'$(GraphicsDebug)' == ''">false</GraphicsDebug>
 
@@ -38,6 +41,10 @@
 
   <PropertyGroup Condition="'$(TrackAllocations)' == 'true'">
     <DefineConstants>$(DefineConstants);TRACK_ALLOCATIONS</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TortureDebug)' == 'true'">
+    <DefineConstants>$(DefineConstants);TORTURE_DEBUG</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(GraphicsDebug)' == 'true'">

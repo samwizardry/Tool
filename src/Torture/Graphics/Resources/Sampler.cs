@@ -2,6 +2,8 @@
 // Copyright (c) 2014-2026 NVIDIA Corporation. All rights reserved.
 // Licensed under the MIT License. See THIRD-PARTY-NOTICES.md in the project root for license information.
 
+using Torture.Collections;
+
 using Vortice.Mathematics;
 
 namespace Torture.Graphics;
@@ -71,7 +73,7 @@ public readonly record struct SamplerDescription
         new(true, true, true, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, maxAnisotropy);
 }
 
-public readonly record struct SamplerHandle(ResourceHandle Raw)
+public readonly record struct SamplerHandle(SlotHandle Raw)
 {
     public static SamplerHandle Invalid => default;
     public bool IsValid => Raw.IsValid;

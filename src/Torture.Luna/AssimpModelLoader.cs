@@ -1,118 +1,78 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Numerics;
+﻿using System.Numerics;
 
 using Assimp;
 
-using StbImageSharp;
-
+using Torture.Assets;
 using Torture.Graphics;
 using Torture.Logging;
 
 namespace Torture.Luna;
 
-/// <summary>
-/// Not thread safe.
-/// </summary>
-public class AssimpModelLoader : IDisposable
+public sealed class AssimpModelLoader : IModelLoader
 {
-    private readonly GraphicsDevice _device;
-    private readonly AssimpContext _context;
-
-    private bool _disposed;
-
-    private Scene _scene = null!;
-    private Graphics.Mesh[] _meshes = null!;
-    private Graphics.Material[] _materials = null!;
-    private BindingSetHandle[] _bindingSets = null!;
-    private List<TextureHandle> _textures = [];
-
-    public AssimpModelLoader(GraphicsDevice device)
+    public ModelAsset Load(GraphicsDevice device, AssetManager assets, string virtualPath)
     {
-        _device = device;
-        _context = new AssimpContext();
-    }
+        string fullPath = assets.ResolvePath(virtualPath);
+        string virtualDir = Path.GetDirectoryName(virtualPath) ?? string.Empty;
 
-    public void Dispose()
-    {
-        if (_disposed)
-            return;
+        using var context = new AssimpContext();
+        // Temporary scope holds loader's local texture refs and releases them automatically
+        // on exit (both on success and on exception), leaving only MaterialAsset's retained refs alive.
+        using var tempTextures = new AssetScope(assets);
 
-        _context.Dispose();
-        _scene = null!;
-        _meshes = null!;
-        _materials = null!;
-        _bindingSets = null!;
-        _textures = null!;
+        Scene? scene = context.ImportFile(fullPath, PostProcessSteps.Triangulate);
+        if (scene == null || (scene.SceneFlags & SceneFlags.Incomplete) != 0 || scene.RootNode == null)
+        {
+            throw new InvalidDataException($"Failed to import model '{virtualPath}' with Assimp.");
+        }
 
-        _disposed = true;
-    }
-
-    public bool TryLoad(string path,
-        [NotNullWhen(true)] out Model? model,
-        [NotNullWhen(true)] out Graphics.Material[]? materials,
-        [NotNullWhen(true)] out BindingSetHandle[]? bindingSets)
-    {
-        model = null;
-        materials = null;
-        bindingSets = null;
+        var meshes = new Graphics.Mesh[scene.MeshCount];
+        var materials = new AssetHandle<MaterialAsset>[scene.MaterialCount];
 
         try
         {
-            _scene = _context.ImportFile(path, PostProcessSteps.Triangulate);
+            ProcessNode(device, scene, scene.RootNode, meshes);
+            ProcessMaterials(device, assets, tempTextures, scene, virtualDir, materials);
 
-            if (_scene == null || (_scene.SceneFlags & SceneFlags.Incomplete) != 0 || _scene.RootNode == null)
+            return new ModelAsset
             {
-                Log.Error(Luna.LogCat, "Failed to load assimp model.");
-                return false;
+                Meshes = meshes,
+                Materials = materials
+            };
+        }
+        catch
+        {
+            foreach (Graphics.Mesh? mesh in meshes)
+            {
+                mesh?.Destroy(device);
             }
 
-            _meshes = new Graphics.Mesh[_scene.MeshCount];
-            _materials = new Graphics.Material[_scene.MaterialCount];
-            _bindingSets = new BindingSetHandle[_scene.MaterialCount];
-
-            ProcessNode(_scene.RootNode);
-            if (!ProcessMaterials())
+            foreach (var mat in materials)
             {
-                FreeResources();
-                return false;
+                if (mat.IsValid)
+                {
+                    assets.Release(mat);
+                }
             }
 
-            model = new Model(_meshes, _materials);
-            materials = _materials;
-            bindingSets = _bindingSets;
+            throw;
         }
-        catch (Exception ex)
-        {
-            Log.Error(Luna.LogCat, "Failed to load assimp model.", ex);
-            FreeResources();
-            return false;
-        }
-        finally
-        {
-            _scene = null!;
-            _meshes = null!;
-            _materials = null!;
-            _bindingSets = null!;
-            _textures = [];
-        }
-
-        return true;
     }
 
-    private void ProcessNode(Node node)
+    private static void ProcessNode(GraphicsDevice device, Scene scene, Node node, Graphics.Mesh[] meshes)
     {
-        foreach (var meshIndex in node.MeshIndices)
+        foreach (int meshIndex in node.MeshIndices)
         {
-            ProcessMesh(_scene.Meshes[meshIndex], meshIndex);
+            meshes[meshIndex] = ProcessMesh(device, scene.Meshes[meshIndex]);
         }
 
-        foreach (var child in node.Children)
+        foreach (Node child in node.Children)
         {
-            ProcessNode(child);
+            ProcessNode(device, scene, child, meshes);
         }
     }
 
-    private void ProcessMesh(Assimp.Mesh mesh, int meshIndex)
+    private static Graphics.Mesh ProcessMesh(GraphicsDevice device, Assimp.Mesh mesh)
     {
         var vertices = new VertexPositionNormalTexture[mesh.VertexCount];
         uint[] indices = [.. mesh.GetUnsignedIndices()];
@@ -123,11 +83,11 @@ public class AssimpModelLoader : IDisposable
         }
         if (mesh.HasTangentBasis)
         {
-            Log.Warning(Luna.LogCat, $"Model has tangent basis.");
+            Log.Warning(Luna.LogCat, "Model has tangent basis.");
         }
         if (mesh.VertexColorChannelCount > 0)
         {
-            Log.Warning(Luna.LogCat, $"Model has color channels.");
+            Log.Warning(Luna.LogCat, "Model has color channels.");
         }
 
         for (int v = 0; v < mesh.VertexCount; v++)
@@ -139,102 +99,80 @@ public class AssimpModelLoader : IDisposable
                 : Vector2.Zero;
         }
 
-        var vb = _device.CreateBuffer(vertices, BufferDescription.Vertex(0, 0));
-        var ib = _device.CreateBuffer(indices, BufferDescription.Index(0));
+        BufferHandle vb = device.CreateBuffer(vertices.AsSpan(), BufferDescription.Vertex(0, 0));
+        BufferHandle ib = device.CreateBuffer(indices.AsSpan(), BufferDescription.Index(0));
 
         if (mesh.MaterialIndex < 0)
         {
             Log.Warning(Luna.LogCat, $"Negative mesh material index ({mesh.MaterialIndex}).");
         }
 
-        _meshes[meshIndex] = new Graphics.Mesh(vb, ib, [MeshPart.Indexed(_device.GetBufferDescription(ib).Count, materialIndex: mesh.MaterialIndex)]);
+        return new Graphics.Mesh(
+            vb,
+            ib,
+            [MeshPart.Indexed(device.GetBufferDescription(ib).Count, materialIndex: mesh.MaterialIndex)]);
     }
 
-    private bool ProcessMaterials()
+    private static void ProcessMaterials(
+        GraphicsDevice device,
+        AssetManager assets,
+        AssetScope tempTextures,
+        Scene scene,
+        string virtualDir,
+        AssetHandle<MaterialAsset>[] materials)
     {
-        if (!_scene.HasMaterials)
+        if (!scene.HasMaterials)
         {
-            Log.Error(Luna.LogCat, "Scene doesn't have materials.");
-            return false;
+            throw new InvalidDataException("Model scene does not contain any materials.");
         }
 
-        foreach (var material in _scene.Materials.Index())
+        foreach (var (index, assimpMaterial) in scene.Materials.Index())
         {
-            if (material.Item.Name == "DefaultMaterial")
+            if (assimpMaterial.Name == "DefaultMaterial")
             {
                 Log.Warning(Luna.LogCat, "Model has the DefaultMaterial.");
                 continue;
             }
 
-            if (!TryLoadTexturesAndSamplers(material.Item, TextureType.Diffuse, out var diffuseTextures, out var diffuseSamplers))
+            LoadTexturesAndSamplers(device, tempTextures, assimpMaterial, TextureType.Diffuse, virtualDir, out var diffuseTextures, out var diffuseSamplers);
+            LoadTexturesAndSamplers(device, tempTextures, assimpMaterial, TextureType.Specular, virtualDir, out var specularTextures, out var specularSamplers);
+
+            if (diffuseTextures.Length == 0 || specularTextures.Length == 0)
             {
-                Log.Error(Luna.LogCat, "Failed to load diffuse textures.");
-                return false;
+                throw new InvalidDataException($"Material '{assimpMaterial.Name}' is missing diffuse or specular texture.");
             }
 
-            if (!TryLoadTexturesAndSamplers(material.Item, TextureType.Specular, out var specularTextures, out var specularSamplers))
-            {
-                Log.Error(Luna.LogCat, "Failed to load specular textures.");
-                return false;
-            }
-
-            var bindingSet = _device.CreateBindingSet(
-                new BindingSetDescription([
-                    BindingSetItem.TextureSrv(0, diffuseTextures[0]),
-                    BindingSetItem.TextureSrv(1, specularTextures[0]),
-                    BindingSetItem.Sampler(0, diffuseSamplers[0])]
-                ),
-                ResourceFactoryCache.PhongBindingLayout);
-
-            _bindingSets[material.Index] = bindingSet;
-            _materials[material.Index] = new Graphics.Material(ResourceFactoryCache.PhongPipeline, bindingSet);
+            materials[index] = assets.CreateMaterial(new MaterialDescription(
+                Pipeline: ResourceFactoryCache.PhongPipeline,
+                BindingLayout: ResourceFactoryCache.PhongBindingLayout,
+                Textures: [new(0, diffuseTextures[0]), new(1, specularTextures[0])],
+                Samplers: [new(0, diffuseSamplers[0])]));
         }
-
-        return true;
     }
 
-    private bool TryLoadTexturesAndSamplers(Assimp.Material material,
+    private static void LoadTexturesAndSamplers(
+        GraphicsDevice device,
+        AssetScope tempTextures,
+        Material material,
         TextureType type,
-        [NotNullWhen(true)] out TextureHandle[]? textures,
-        [NotNullWhen(true)] out SamplerHandle[]? samplers)
+        string virtualDir,
+        out AssetHandle<TextureAsset>[] textures,
+        out SamplerHandle[] samplers)
     {
-        textures = new TextureHandle[material.GetMaterialTextureCount(type)];
-        samplers = new SamplerHandle[textures.Length];
+        int count = material.GetMaterialTextureCount(type);
+        textures = new AssetHandle<TextureAsset>[count];
+        samplers = new SamplerHandle[count];
 
-        foreach (var slot in material.GetMaterialTextures(type).Index())
+        foreach (var (slotIndex, slot) in material.GetMaterialTextures(type).Index())
         {
-            using (var fs = File.OpenRead(Path.Combine("resources/objects/backpack", slot.Item.FilePath)))
-            {
-                var image = ImageResult.FromStream(fs, ColorComponents.RedGreenBlueAlpha);
-                var texture = _device.CreateTexture(image.Data, TextureDescription.Texture2D((uint)image.Width, (uint)image.Height));
-                textures[slot.Index] = texture;
-            }
+            string texVirtualPath = Path.Combine(virtualDir, slot.FilePath);
+            textures[slotIndex] = tempTextures.LoadTexture(texVirtualPath, generateMips: true);
 
-            samplers[slot.Index] = _device.GetOrCreateSampler(SamplerDescription.AnisotropicWrap(16.0f) with
+            samplers[slotIndex] = device.GetOrCreateSampler(SamplerDescription.AnisotropicWrap(16.0f) with
             {
-                AddressU = ToSamplerAddressMode(slot.Item.WrapModeU),
-                AddressV = ToSamplerAddressMode(slot.Item.WrapModeV)
+                AddressU = ToSamplerAddressMode(slot.WrapModeU),
+                AddressV = ToSamplerAddressMode(slot.WrapModeV)
             });
-        }
-
-        return true;
-    }
-
-    private void FreeResources()
-    {
-        foreach (var mesh in _meshes)
-        {
-            mesh?.Destroy(_device);
-        }
-
-        foreach (var bindingSet in _bindingSets)
-        {
-            _device.Destroy(bindingSet);
-        }
-
-        foreach (var texture in _textures ?? Enumerable.Empty<TextureHandle>())
-        {
-            _device.Destroy(texture);
         }
     }
 
@@ -243,6 +181,6 @@ public class AssimpModelLoader : IDisposable
         {
             TextureWrapMode.Wrap => SamplerAddressMode.Wrap,
             TextureWrapMode.Clamp => SamplerAddressMode.Clamp,
-            _ => throw new NotSupportedException()
+            _ => throw new NotSupportedException($"Unsupported texture wrap mode: {wrapMode}.")
         };
 }

@@ -1,4 +1,5 @@
-﻿using Torture.Graphics;
+﻿using Torture.Assets;
+using Torture.Graphics;
 
 namespace Torture.Luna;
 
@@ -9,11 +10,12 @@ public abstract class Actor : IDisposable
     protected readonly BindingSetHandle _perObjBindingSet;
     protected readonly PhongPerObjectData _actorData;
 
-    protected Model _model = null!;
+    private readonly AssetHandle<ModelAsset> _model;
 
-    protected Actor(GraphicsDevice device)
+    protected Actor(GraphicsDevice device, AssetHandle<ModelAsset> model)
     {
         _device = device;
+        _model = model;
 
         _perObjectCb = device.CreateBuffer(BufferDescription.Constant<PhongObject>());
         _actorData = new PhongPerObjectData(_perObjectCb);
@@ -31,15 +33,14 @@ public abstract class Actor : IDisposable
         _actorData.Update(_device);
     }
 
-    public virtual void Draw()
+    public virtual void Draw(AssetManager assets)
     {
-        _model.Draw(_device, ResourceFactoryCache.PhongPerFrameBindingSet, _perObjBindingSet);
+        assets.DrawModel(_model, ResourceFactoryCache.PhongPerFrameBindingSet, _perObjBindingSet);
     }
 
     public virtual void Dispose()
     {
         _device.Destroy(_perObjBindingSet);
         _device.Destroy(_perObjectCb);
-        _model?.Destroy(_device);
     }
 }

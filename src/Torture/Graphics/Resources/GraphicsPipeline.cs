@@ -1,4 +1,6 @@
-﻿namespace Torture.Graphics;
+﻿using Torture.Collections;
+
+namespace Torture.Graphics;
 
 public readonly record struct GraphicsPipelineDescription(
     ShaderHandle VertexShader = default,
@@ -33,7 +35,7 @@ public readonly record struct GraphicsPipelineDescription(
     }
 }
 
-public readonly record struct GraphicsPipelineHandle(ResourceHandle Raw)
+public readonly record struct GraphicsPipelineHandle(SlotHandle Raw)
 {
     public static GraphicsPipelineHandle Invalid => default;
     public bool IsValid => Raw.IsValid;

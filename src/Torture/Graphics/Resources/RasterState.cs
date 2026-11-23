@@ -2,6 +2,8 @@
 // Copyright (c) 2014-2026 NVIDIA Corporation. All rights reserved.
 // Licensed under the MIT License. See THIRD-PARTY-NOTICES.md in the project root for license information.
 
+using Torture.Collections;
+
 namespace Torture.Graphics;
 
 public readonly record struct RasterStateDescription(
@@ -24,7 +26,7 @@ public readonly record struct RasterStateDescription(
     public static RasterStateDescription Wireframe => new(FillMode: RasterFillMode.Wireframe, CullMode: RasterCullMode.None);
 }
 
-public readonly record struct RasterStateHandle(ResourceHandle Raw)
+public readonly record struct RasterStateHandle(SlotHandle Raw)
 {
     public static RasterStateHandle Invalid => default;
     public bool IsValid => Raw.IsValid;

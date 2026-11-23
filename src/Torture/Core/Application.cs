@@ -2,6 +2,7 @@
 
 using SDL3;
 
+using Torture.Assets;
 using Torture.Diagnostics;
 using Torture.Graphics;
 using Torture.Input;
@@ -32,7 +33,8 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
     #region Properties (only get)
 
     protected nint Window { get; private set; } = IntPtr.Zero;
-    public GraphicsDevice Device { get; private set; } = null!;
+    public GraphicsDevice GraphicsDevice { get; private set; } = null!;
+    public AssetManager AssetManager { get; private set; } = null!;
 
     #endregion
 
@@ -69,7 +71,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
             if (Window != IntPtr.Zero)
             {
                 ApplyWindowMode(_windowMode);
-                Device?.OnWindowModeChanged(_windowMode);
+                GraphicsDevice?.OnWindowModeChanged(_windowMode);
                 OnWindowModeChanged(_windowMode);
             }
         }
@@ -84,6 +86,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
     public SizeI PreferredWindowSize { get; protected init; } = new(1280, 720);
     public bool IsResizable { get; protected init; } = true;
     public GraphicsAPI PreferredGraphicsAPI { get; protected init; } = GraphicsAPI.Default;
+    public string ContentRoot { get; protected init; } = "";
 
     #endregion
 
@@ -127,7 +130,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
             return false;
         }
 
-        return Device.BeginFrame();
+        return GraphicsDevice.BeginFrame();
     }
 
     /// <summary>
@@ -140,7 +143,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
     /// </summary>
     protected virtual bool EndDraw()
     {
-        return Device.EndFrame();
+        return GraphicsDevice.EndFrame();
     }
 
     /// <summary>
@@ -264,7 +267,8 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         }
 
         // Initialize graphics device
-        Device = CreateGraphicsDevice(PreferredGraphicsAPI, GetNativeWindowInfo(Window));
+        GraphicsDevice = CreateGraphicsDevice(PreferredGraphicsAPI, GetNativeWindowInfo(Window));
+        AssetManager = new AssetManager(GraphicsDevice, ContentRoot);
 
         // Initialize systems
         Keyboard.Initialize();
@@ -296,13 +300,13 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
 
                 case SDL.EventType.WindowMinimized:
                     _isMinimized = true;
-                    Device?.OnMinimized();
+                    GraphicsDevice?.OnMinimized();
                     OnMinimized();
                     break;
 
                 case SDL.EventType.WindowRestored:
                     _isMinimized = false;
-                    Device?.OnRestored();
+                    GraphicsDevice?.OnRestored();
                     OnRestored();
                     break;
 
@@ -311,7 +315,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
                     int h = e.Window.Data2;
                     if (w > 0 && h > 0)
                     {
-                        Device?.OnResize(w, h);
+                        GraphicsDevice?.OnResize(w, h);
                         OnResize(w, h);
                     }
                     break;
@@ -319,9 +323,9 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
                 case SDL.EventType.WindowMoved:
                     int x = e.Window.Data1;
                     int y = e.Window.Data2;
-                    SizeI currentSize = Device?.ClientSize ?? PreferredWindowSize;
+                    SizeI currentSize = GraphicsDevice?.ClientSize ?? PreferredWindowSize;
                     var bounds = new RectI(x, y, currentSize.Width, currentSize.Height);
-                    Device?.OnWindowMoved(bounds);
+                    GraphicsDevice?.OnWindowMoved(bounds);
                     OnWindowMoved(bounds);
                     break;
 
@@ -329,7 +333,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
                     if (_windowMode == WindowMode.Windowed)
                     {
                         _windowMode = WindowMode.BorderlessFullscreen;
-                        Device?.OnWindowModeChanged(_windowMode);
+                        GraphicsDevice?.OnWindowModeChanged(_windowMode);
                         OnWindowModeChanged(_windowMode);
                     }
                     break;
@@ -338,7 +342,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
                     if (_windowMode != WindowMode.Windowed)
                     {
                         _windowMode = WindowMode.Windowed;
-                        Device?.OnWindowModeChanged(_windowMode);
+                        GraphicsDevice?.OnWindowModeChanged(_windowMode);
                         OnWindowModeChanged(_windowMode);
                     }
                     break;
@@ -408,7 +412,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
     {
         try
         {
-            Device?.WaitIdle();
+            GraphicsDevice?.WaitIdle();
 
             EndRun();
             UnloadContent();
@@ -418,7 +422,8 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
             Mouse.Shutdown();
             Keyboard.Shutdown();
 
-            Device?.Dispose();
+            AssetManager?.Dispose();
+            GraphicsDevice?.Dispose();
 
             if (Window != IntPtr.Zero)
             {

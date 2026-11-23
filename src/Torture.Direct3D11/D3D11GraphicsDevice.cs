@@ -20,7 +20,7 @@ namespace Torture.Direct3D11;
 
 public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
 {
-    private const int BufferCount = 2;
+    private const int SwapChainBufferCount = 2;
 
     private static readonly FeatureLevel[] FeatureLevels = [
         FeatureLevel.Level_11_1,
@@ -31,7 +31,7 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     private readonly Format _colorFormat;
     private readonly Format _depthStencilFormat;
 
-    // Immutable state pools + deduplication caches (device-owned until shutdown)
+    // Immutable States: cached & owned by GraphicsDevice until shutdown
     private readonly SlotMap<D3D11RasterState> _rasterStates = new();
     private readonly Dictionary<Graphics.RasterStateDescription, Graphics.RasterStateHandle> _rasterStateCache = [];
     private readonly SlotMap<D3D11Sampler> _samplers = new();
@@ -43,7 +43,7 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     private readonly SlotMap<D3D11BindingLayout> _bindingLayouts = new();
     private readonly Dictionary<Graphics.BindingLayoutDescription, Graphics.BindingLayoutHandle> _bindingLayoutCache = [];
 
-    // Data resource pools (caller-owned, freed via Destroy -> deferred queues)
+    // Data Resources: owned by caller, destroyed via DeferredDeletionQueue
     private readonly SlotMap<D3D11Buffer> _buffers = new();
     private readonly SlotMap<D3D11Texture> _textures = new();
     private readonly SlotMap<D3D11Shader> _shaders = new();
@@ -263,7 +263,7 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
                 Stereo = false,
                 SampleDescription = SampleDescription.Default,
                 BufferUsage = Usage.RenderTargetOutput,
-                BufferCount = BufferCount,
+                BufferCount = SwapChainBufferCount,
                 Scaling = Scaling.Stretch,
                 SwapEffect = SwapEffect.FlipDiscard,
                 AlphaMode = AlphaMode.Ignore,
@@ -324,7 +324,7 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
         _depthStencilBuffer?.Dispose();
 
         // Resize the swap chain and recreate the render target view.
-        _swapChain.ResizeBuffers(BufferCount, (uint)width, (uint)height, _colorFormat, _swapChainFlags).CheckError();
+        _swapChain.ResizeBuffers(SwapChainBufferCount, (uint)width, (uint)height, _colorFormat, _swapChainFlags).CheckError();
 
         _rtvBackBuffer = _swapChain.GetBuffer<ID3D11Texture2D>(0);
         _renderTargetView = _device.CreateRenderTargetView(_rtvBackBuffer);
@@ -412,7 +412,6 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     #region Resource Creation & Binding
 
     // Immutable States: cached & owned by GraphicsDevice until shutdown
-
     public override Graphics.RasterStateHandle GetOrCreateRasterState(in Graphics.RasterStateDescription desc)
     {
         if (!_rasterStateCache.TryGetValue(desc, out var handle))
