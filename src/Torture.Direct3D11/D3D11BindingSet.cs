@@ -18,7 +18,7 @@ internal readonly struct D3D11BindingSet
     private readonly UavSlot[] _uavSlots;
     private readonly SamplerSlot[] _samplerSlots;
 
-    public D3D11BindingSet(ShaderType visibility,
+    private D3D11BindingSet(ShaderType visibility,
         BufferSlot[] constantBuffers,
         SrvSlot[] srvSlots,
         UavSlot[] uavSlots,

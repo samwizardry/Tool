@@ -7,7 +7,7 @@ public readonly record struct SlotHandle(uint Index, uint Generation)
 }
 
 /// <summary>
-/// Contiguous generational resource pool with O(1) lookup, allocation, and free.
+/// Contiguous generational resource pool with O(1) lookup.
 /// </summary>
 public sealed class SlotMap<T> where T : struct
 {

@@ -28,7 +28,7 @@ internal readonly struct D3D11Sampler
             addressV: ConvertAddressMode(desc.AddressV),
             addressW: ConvertAddressMode(desc.AddressW),
             mipLODBias: desc.MipBias,
-            maxAnisotropy: System.Math.Max(1u, (uint)desc.MaxAnisotropy),
+            maxAnisotropy: Math.Max(1u, (uint)desc.MaxAnisotropy),
             comparisonFunc: desc.ReductionType == Graphics.SamplerReductionType.Comparison
                 ? ComparisonFunction.Less
                 : ComparisonFunction.Never,
@@ -61,6 +61,6 @@ internal readonly struct D3D11Sampler
             Graphics.SamplerAddressMode.Border => TextureAddressMode.Border,
             Graphics.SamplerAddressMode.Mirror => TextureAddressMode.Mirror,
             Graphics.SamplerAddressMode.MirrorOnce => TextureAddressMode.MirrorOnce,
-            _ => TextureAddressMode.Clamp
+            _ => throw new NotSupportedException()
         };
 }

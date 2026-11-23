@@ -59,11 +59,11 @@ public abstract class GraphicsDevice : IDisposable
     public abstract BufferHandle CreateBuffer(in BufferDescription desc);
     public abstract TextureHandle CreateTexture<T>(ReadOnlySpan<T> data, in TextureDescription desc) where T : unmanaged;
     public abstract TextureHandle CreateTexture(in TextureDescription desc);
-    public abstract ShaderHandle CreateShader(ReadOnlySpan<byte> bytecode, in ShaderDescription desc);
+    public abstract ShaderHandle CreateShader(ReadOnlySpan<byte> source, in ShaderDescription desc);
     public abstract BindingSetHandle CreateBindingSet(in BindingSetDescription desc, BindingLayoutHandle layout);
 
-    public abstract ref readonly BufferDescription GetBufferDescription(BufferHandle handle);
-    public abstract ref readonly TextureDescription GetTextureDescription(TextureHandle handle);
+    public abstract ref readonly BufferDescription GetBufferDescription(BufferHandle buffer);
+    public abstract ref readonly TextureDescription GetTextureDescription(TextureHandle texture);
 
     public abstract void UpdateBuffer<T>(BufferHandle buffer, ReadOnlySpan<T> data, uint byteOffset = 0) where T : unmanaged;
     /// <summary>
@@ -73,10 +73,10 @@ public abstract class GraphicsDevice : IDisposable
     public abstract void UpdateTexture<T>(TextureHandle texture, ReadOnlySpan<T> data, uint mipLevel = 0, uint arraySlice = 0) where T : unmanaged;
 
     // Never frees immediately while GPU may use it; schedules into DeferredDeletionQueue
-    public abstract void Destroy(BufferHandle handle);
-    public abstract void Destroy(TextureHandle handle);
-    public abstract void Destroy(ShaderHandle handle);
-    public abstract void Destroy(BindingSetHandle handle);
+    public abstract void Destroy(BufferHandle buffer);
+    public abstract void Destroy(TextureHandle texture);
+    public abstract void Destroy(ShaderHandle shader);
+    public abstract void Destroy(BindingSetHandle bindingSet);
 
     public abstract void SetGraphicsState(in GraphicsState state);
 
@@ -129,7 +129,7 @@ public abstract class GraphicsDevice : IDisposable
         _disposed = true;
     }
 
-    protected virtual void FreeResources() { }
+    protected abstract void FreeResources();
 
     #endregion
 }

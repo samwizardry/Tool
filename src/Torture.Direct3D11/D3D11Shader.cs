@@ -78,13 +78,14 @@ internal readonly unsafe struct D3D11Shader
                 throw new InvalidOperationException($"Shader compilation failed. {desc.DebugName}: {error}");
             }
 
-            
             ID3D11DeviceChild shader = desc.ShaderType switch
             {
                 Graphics.ShaderType.Vertex => device.CreateVertexShader(code),
                 Graphics.ShaderType.Pixel => device.CreatePixelShader(code),
                 _ => throw new NotSupportedException(),
             };
+
+            shader.DebugName = desc.DebugName;
 
             byte[]? bytecode = null;
             if (desc.ShaderType == Graphics.ShaderType.Vertex)

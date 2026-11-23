@@ -20,38 +20,40 @@ public readonly record struct IndexBufferBinding(
 /// </summary>
 public struct BindingSetVector
 {
-    public const int MaxBindingSets = 4;
+    public const int MaxBindingSets = 5;
 
     /// <summary>
-    /// PerFrame
+    /// Rare
     /// </summary>
     public BindingSetHandle Set0;
     /// <summary>
-    /// PerPass
+    /// PerFrame
     /// </summary>
     public BindingSetHandle Set1;
     /// <summary>
-    /// PerMaterial
+    /// PerPass
     /// </summary>
     public BindingSetHandle Set2;
     /// <summary>
-    /// PerObject
+    /// PerMaterial
     /// </summary>
     public BindingSetHandle Set3;
+    /// <summary>
+    /// PerObject
+    /// </summary>
+    public BindingSetHandle Set4;
 
     public BindingSetHandle this[int index]
     {
-        readonly get
+        readonly get => index switch
         {
-            return index switch
-            {
-                0 => Set0,
-                1 => Set1,
-                2 => Set2,
-                3 => Set3,
-                _ => throw new IndexOutOfRangeException()
-            };
-        }
+            0 => Set0,
+            1 => Set1,
+            2 => Set2,
+            3 => Set3,
+            4 => Set4,
+            _ => throw new IndexOutOfRangeException(),
+        };
         set
         {
             switch (index)
@@ -60,6 +62,7 @@ public struct BindingSetVector
                 case 1: Set1 = value; break;
                 case 2: Set2 = value; break;
                 case 3: Set3 = value; break;
+                case 4: Set4 = value; break;
                 default: throw new IndexOutOfRangeException();
             }
         }

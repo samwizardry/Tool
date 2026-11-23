@@ -55,14 +55,12 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     private readonly Queue<(ulong Frame, D3D11Shader Resource)> _deferredShaders = new();
 
 #if GRAPHICS_DEBUG
-
     private readonly int _renderThreadId;
     private readonly EventHandler<System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs>? _onFirstChanceException;
     private readonly ID3D11InfoQueue? _infoQueue;
-
 #endif
 
-    // Direct3D 11 interface
+    // Direct3D 11 interfaces
     private readonly IDXGIFactory7 _factory;
     private readonly ID3D11Device5 _device;
     private readonly ID3D11DeviceContext4 _imContext;
@@ -73,7 +71,7 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     private ID3D11DepthStencilView _depthStencilView = null!;
 
 
-    // Cached state for SetGraphicsState diffing (all unmanaged value types)
+    // Cached state for SetGraphicsState diffing
     private Graphics.GraphicsPipelineHandle _currentPipeline;
     private Graphics.BindingSetVector _currentBindings;
     private Graphics.VertexBufferBinding _currentVertexBuffer;
@@ -486,8 +484,8 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     public override Graphics.TextureHandle CreateTexture(in Graphics.TextureDescription desc) =>
         new(_textures.Add(D3D11Texture.Create(_device, in desc)));
 
-    public override Graphics.ShaderHandle CreateShader(ReadOnlySpan<byte> bytecode, in Graphics.ShaderDescription desc) =>
-        new(_shaders.Add(D3D11Shader.Create(_device, bytecode, in desc)));
+    public override Graphics.ShaderHandle CreateShader(ReadOnlySpan<byte> source, in Graphics.ShaderDescription desc) =>
+        new(_shaders.Add(D3D11Shader.Create(_device, source, in desc)));
 
     public override Graphics.BindingSetHandle CreateBindingSet(in Graphics.BindingSetDescription desc, Graphics.BindingLayoutHandle layout)
     {
@@ -495,88 +493,83 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
         return new(_bindingSets.Add(D3D11BindingSet.Create(in desc, in layoutData, _buffers, _textures, _samplers)));
     }
 
-    public override ref readonly Graphics.BufferDescription GetBufferDescription(Graphics.BufferHandle handle) =>
-        ref _buffers.Get(handle.Raw).Desc;
+    public override ref readonly Graphics.BufferDescription GetBufferDescription(Graphics.BufferHandle buffer) =>
+        ref _buffers.Get(buffer.Raw).Desc;
 
-    public override ref readonly Graphics.TextureDescription GetTextureDescription(Graphics.TextureHandle handle) =>
-        ref _textures.Get(handle.Raw).Desc;
+    public override ref readonly Graphics.TextureDescription GetTextureDescription(Graphics.TextureHandle texture) =>
+        ref _textures.Get(texture.Raw).Desc;
 
-    public override unsafe void UpdateBuffer<T>(Graphics.BufferHandle handle, ReadOnlySpan<T> data, uint byteOffset = 0)
+    public override unsafe void UpdateBuffer<T>(Graphics.BufferHandle buffer, ReadOnlySpan<T> data, uint byteOffset = 0)
     {
 #if GRAPHICS_DEBUG
         if (data.IsEmpty)
         {
-            Log.Warning(D3D11LogCategories.D3D11, "Empty data received.");
-            return;
+            throw new InvalidOperationException("Empty data received.");
         }
 #endif
 
-        ref readonly var buffer = ref _buffers.Get(handle.Raw);
+        ref readonly var bufferData = ref _buffers.Get(buffer.Raw);
         uint dataByteSize = (uint)(sizeof(T) * data.Length);
 
 #if GRAPHICS_DEBUG
-        if (byteOffset + dataByteSize > buffer.Desc.ByteSize)
+        if (byteOffset + dataByteSize > bufferData.Desc.ByteSize)
         {
-            Log.Error(D3D11LogCategories.D3D11, "Data size exceeds buffer capacity.");
-            return;
+            throw new InvalidOperationException("Data size exceeds buffer capacity.");
         }
 #endif
 
         fixed (T* srcPtr = data)
         {
             MapMode mode = byteOffset == 0 ? MapMode.WriteDiscard : MapMode.WriteNoOverwrite;
-            var map = _imContext.Map(buffer.Native, 0, mode, Vortice.Direct3D11.MapFlags.None);
+            var map = _imContext.Map(bufferData.Native, 0, mode, Vortice.Direct3D11.MapFlags.None);
 
             byte* dstPtr = (byte*)map.DataPointer + byteOffset;
-            System.Buffer.MemoryCopy(srcPtr, dstPtr, buffer.Desc.ByteSize - byteOffset, dataByteSize);
+            Buffer.MemoryCopy(srcPtr, dstPtr, bufferData.Desc.ByteSize - byteOffset, dataByteSize);
 
-            _imContext.Unmap(buffer.Native, 0);
+            _imContext.Unmap(bufferData.Native, 0);
         }
     }
 
-    public override unsafe void UpdateBuffer<T>(Graphics.BufferHandle handle, ref T data, uint byteOffset = 0)
+    public override unsafe void UpdateBuffer<T>(Graphics.BufferHandle buffer, ref T data, uint byteOffset = 0)
     {
-        ref readonly var buffer = ref _buffers.Get(handle.Raw);
+        ref readonly var bufferData = ref _buffers.Get(buffer.Raw);
 
 #if GRAPHICS_DEBUG
-        if (byteOffset + (uint)sizeof(T) > buffer.Desc.ByteSize)
+        if (byteOffset + (uint)sizeof(T) > bufferData.Desc.ByteSize)
         {
-            Log.Error(D3D11LogCategories.D3D11, "Data size exceeds buffer capacity.");
-            return;
+            throw new InvalidOperationException("Data size exceeds buffer capacity.");
         }
 #endif
 
         MapMode mode = byteOffset == 0 ? MapMode.WriteDiscard : MapMode.WriteNoOverwrite;
-        var map = _imContext.Map(buffer.Native, 0, mode, Vortice.Direct3D11.MapFlags.None);
+        var map = _imContext.Map(bufferData.Native, 0, mode, Vortice.Direct3D11.MapFlags.None);
 
         *(T*)((byte*)map.DataPointer + byteOffset) = data;
 
-        _imContext.Unmap(buffer.Native, 0);
+        _imContext.Unmap(bufferData.Native, 0);
     }
 
-    public override unsafe void UpdateTexture<T>(Graphics.TextureHandle handle, ReadOnlySpan<T> data, uint mipLevel = 0, uint arraySlice = 0)
+    public override unsafe void UpdateTexture<T>(Graphics.TextureHandle buffer, ReadOnlySpan<T> data, uint mipLevel = 0, uint arraySlice = 0)
     {
-        ref readonly var texture = ref _textures.Get(handle.Raw);
+        ref readonly var textureData = ref _textures.Get(buffer.Raw);
 
 #if GRAPHICS_DEBUG
-        if (mipLevel >= texture.Desc.MipLevels)
+        if (mipLevel >= textureData.Desc.MipLevels)
         {
-            Log.Error(D3D11LogCategories.D3D11, "Mip level exceeds texture mip count.");
-            return;
+            throw new InvalidOperationException("Mip level exceeds texture mip count.");
         }
 
-        if (arraySlice >= texture.Desc.ArraySize)
+        if (arraySlice >= textureData.Desc.ArraySize)
         {
-            Log.Error(D3D11LogCategories.D3D11, "Array slice exceeds texture array size.");
-            return;
+            throw new InvalidOperationException("Array slice exceeds texture array size.");
         }
 #endif
 
-        uint mipWidth = System.Math.Max(1u, texture.Desc.Width >> (int)mipLevel);
-        uint mipHeight = System.Math.Max(1u, texture.Desc.Height >> (int)mipLevel);
-        uint mipDepth = System.Math.Max(1u, texture.Desc.Depth >> (int)mipLevel);
-        uint subresource = mipLevel + (arraySlice * texture.Desc.MipLevels);
-        Graphics.FormatInfo.GetSurfaceInfo(texture.Desc.Format, mipWidth, mipHeight, out uint rowPitch, out uint slicePitch);
+        uint mipWidth = Math.Max(1u, textureData.Desc.Width >> (int)mipLevel);
+        uint mipHeight = Math.Max(1u, textureData.Desc.Height >> (int)mipLevel);
+        uint mipDepth = Math.Max(1u, textureData.Desc.Depth >> (int)mipLevel);
+        uint subresource = mipLevel + (arraySlice * textureData.Desc.MipLevels);
+        Graphics.FormatInfo.GetSurfaceInfo(textureData.Desc.Format, mipWidth, mipHeight, out uint rowPitch, out uint slicePitch);
 
 #if GRAPHICS_DEBUG
         uint expectedBytes = slicePitch * mipDepth;
@@ -584,70 +577,64 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
 
         if (actualBytes < expectedBytes)
         {
-            Log.Error(D3D11LogCategories.D3D11, $"Provided data size ({actualBytes} bytes) is smaller than the target mip level size ({expectedBytes} bytes).");
-            return;
+            throw new InvalidOperationException($"Provided data size ({actualBytes} bytes) is smaller than the target mip level size ({expectedBytes} bytes).");
         }
 #endif
 
         fixed (T* srcPtr = data)
         {
-            _imContext.UpdateSubresource(texture.Native, subresource, null, (nint)srcPtr, rowPitch, slicePitch);
+            _imContext.UpdateSubresource(textureData.Native, subresource, null, (nint)srcPtr, rowPitch, slicePitch);
         }
     }
 
     // Never frees immediately while GPU may use it; schedules into DeferredDeletionQueue
-    public override void Destroy(Graphics.BufferHandle handle)
+    public override void Destroy(Graphics.BufferHandle buffer)
     {
-        if (!_buffers.TryRemove(handle.Raw, out var buffer))
+        if (!_buffers.TryRemove(buffer.Raw, out var bufferData))
         {
-#if GRAPHICS_DEBUG
-            Log.Warning(D3D11LogCategories.D3D11, $"Attempted to destroy invalid BufferHandle ({handle.Index}:{handle.Generation}).");
-#endif
+            Log.Warning(D3D11LogCategories.D3D11, $"Attempted to destroy invalid BufferHandle ({buffer.Index}:{buffer.Generation}).");
             return;
         }
 
-        if (_currentVertexBuffer.Buffer == handle) _currentVertexBuffer = default;
-        if (_currentIndexBuffer.Buffer == handle) _currentIndexBuffer = default;
+        if (_currentVertexBuffer.Buffer == buffer) _currentVertexBuffer = default;
+        if (_currentIndexBuffer.Buffer == buffer) _currentIndexBuffer = default;
 
-        _deferredBuffers.Enqueue((_currentFrameIndex, buffer));
+        _deferredBuffers.Enqueue((_currentFrameIndex, bufferData));
     }
 
-    public override void Destroy(Graphics.TextureHandle handle)
+    public override void Destroy(Graphics.TextureHandle texture)
     {
-        if (!_textures.TryRemove(handle.Raw, out var texture))
+        if (!_textures.TryRemove(texture.Raw, out var textureData))
         {
-#if GRAPHICS_DEBUG
-            Log.Warning(D3D11LogCategories.D3D11, $"Attempted to destroy invalid TextureHandle ({handle.Index}:{handle.Generation}).");
-#endif
+            Log.Warning(D3D11LogCategories.D3D11, $"Attempted to destroy invalid TextureHandle ({texture.Index}:{texture.Generation}).");
             return;
         }
-        _deferredTextures.Enqueue((_currentFrameIndex, texture));
+
+        _deferredTextures.Enqueue((_currentFrameIndex, textureData));
     }
 
-    public override void Destroy(Graphics.ShaderHandle handle)
+    public override void Destroy(Graphics.ShaderHandle shader)
     {
-        if (!_shaders.TryRemove(handle.Raw, out var shader))
+        if (!_shaders.TryRemove(shader.Raw, out var shaderData))
         {
-#if GRAPHICS_DEBUG
-            Log.Warning(D3D11LogCategories.D3D11, $"Attempted to destroy invalid ShaderHandle ({handle.Index}:{handle.Generation}).");
-#endif
+            Log.Warning(D3D11LogCategories.D3D11, $"Attempted to destroy invalid ShaderHandle ({shader.Index}:{shader.Generation}).");
             return;
         }
-        _deferredShaders.Enqueue((_currentFrameIndex, shader));
+
+        _deferredShaders.Enqueue((_currentFrameIndex, shaderData));
     }
 
-    public override void Destroy(Graphics.BindingSetHandle handle)
+    public override void Destroy(Graphics.BindingSetHandle bindingSet)
     {
-        if (!_bindingSets.TryRemove(handle.Raw, out _))
+        if (!_bindingSets.TryRemove(bindingSet.Raw, out _))
         {
-#if GRAPHICS_DEBUG
-            Log.Warning(D3D11LogCategories.D3D11, $"Attempted to destroy invalid BindingSetHandle ({handle.Index}:{handle.Generation}).");
-#endif
+            Log.Warning(D3D11LogCategories.D3D11, $"Attempted to destroy invalid BindingSetHandle ({bindingSet.Index}:{bindingSet.Generation}).");
             return;
         }
+
         for (int i = 0; i < Graphics.BindingSetVector.MaxBindingSets; ++i)
         {
-            if (_currentBindings[i] == handle)
+            if (_currentBindings[i] == bindingSet)
                 _currentBindings[i] = default;
         }
     }
@@ -730,16 +717,16 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
         _imContext.DrawIndexedInstanced(indexCountPerInstance, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
     }
 
-    public override void DrawIndirect(Graphics.BufferHandle handle, uint alignedByteOffset = 0)
+    public override void DrawIndirect(Graphics.BufferHandle buffer, uint alignedByteOffset = 0)
     {
-        ref readonly var buffer = ref _buffers.Get(handle.Raw);
-        _imContext.DrawInstancedIndirect(buffer.Native, alignedByteOffset);
+        ref readonly var bufferData = ref _buffers.Get(buffer.Raw);
+        _imContext.DrawInstancedIndirect(bufferData.Native, alignedByteOffset);
     }
 
-    public override void DrawIndexedIndirect(Graphics.BufferHandle handle, uint alignedByteOffset = 0)
+    public override void DrawIndexedIndirect(Graphics.BufferHandle buffer, uint alignedByteOffset = 0)
     {
-        ref readonly var buffer = ref _buffers.Get(handle.Raw);
-        _imContext.DrawIndexedInstancedIndirect(buffer.Native, alignedByteOffset);
+        ref readonly var bufferData = ref _buffers.Get(buffer.Raw);
+        _imContext.DrawIndexedInstancedIndirect(bufferData.Native, alignedByteOffset);
     }
 
     #endregion
@@ -762,8 +749,6 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
 
     protected override void FreeResources()
     {
-        base.FreeResources();
-
 #if GRAPHICS_DEBUG
         if (_onFirstChanceException != null)
         {
@@ -777,42 +762,34 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
             _imContext.Flush();
         }
 
-        // 1. Flush all pending deferred deletions
+        // Flush all pending deferred deletions
         FlushDeferredDeletions();
 
-        // 2. Drain any leaked caller-owned resources (log warnings in Debug)
+        // Drain any leaked caller-owned resources
         _bindingSets.DrainAll((handle, _) =>
         {
-#if GRAPHICS_DEBUG
             Log.Warning(D3D11LogCategories.D3D11, $"Leaked BindingSetHandle ({handle.Index}:{handle.Generation}) was not destroyed before device shutdown.");
-#endif
         });
 
         _buffers.DrainAll((handle, res) =>
         {
-#if GRAPHICS_DEBUG
             Log.Warning(D3D11LogCategories.D3D11, $"Leaked BufferHandle ({handle.Index}:{handle.Generation}) was not destroyed before device shutdown.");
-#endif
             res.Destroy();
         });
 
         _textures.DrainAll((handle, res) =>
         {
-#if GRAPHICS_DEBUG
             Log.Warning(D3D11LogCategories.D3D11, $"Leaked TextureHandle ({handle.Index}:{handle.Generation}) was not destroyed before device shutdown.");
-#endif
             res.Destroy();
         });
 
         _shaders.DrainAll((handle, res) =>
         {
-#if GRAPHICS_DEBUG
             Log.Warning(D3D11LogCategories.D3D11, $"Leaked ShaderHandle ({handle.Index}:{handle.Generation}) was not destroyed before device shutdown.");
-#endif
             res.Destroy();
         });
 
-        // 3. Free device-owned immutable state caches
+        // Free device-owned immutable state caches
         _pipelines.DrainAll((_, _) => { });
         _pipelineCache.Clear();
 
@@ -828,7 +805,7 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
         _samplers.DrainAll((_, res) => res.Destroy());
         _samplerCache.Clear();
 
-        // 4. Release swap chain views, context, swap chain, then debug leak reports
+        // Release main interfaces and debug leak reports
         _depthStencilView?.Dispose();
         _depthStencilBuffer?.Dispose();
         _renderTargetView?.Dispose();
@@ -918,6 +895,7 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
             _deferredShaders.Dequeue().Resource.Destroy();
         }
     }
+
     private void FlushDeferredDeletions()
     {
         while (_deferredBuffers.TryDequeue(out var entry)) entry.Resource.Destroy();
