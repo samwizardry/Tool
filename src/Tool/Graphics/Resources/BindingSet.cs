@@ -2,19 +2,11 @@
 
 namespace Tool.Graphics;
 
-public readonly record struct BindingSetItem
+public readonly record struct BindingSetItem(
+    uint Slot,
+    BindingResourceType Type,
+    SlotHandle Resource)
 {
-    public uint Slot { get; }
-    public BindingResourceType Type { get; }
-    public SlotHandle Resource { get; }
-
-    private BindingSetItem(uint slot, BindingResourceType type, SlotHandle resource)
-    {
-        Slot = slot;
-        Type = type;
-        Resource = resource;
-    }
-
     public static BindingSetItem ConstantBuffer(uint slot, BufferHandle buffer) => new(slot, BindingResourceType.ConstantBuffer, buffer.Raw);
     public static BindingSetItem TextureSrv(uint slot, TextureHandle texture) => new(slot, BindingResourceType.TextureSrv, texture.Raw);
     public static BindingSetItem TextureUav(uint slot, TextureHandle texture) => new(slot, BindingResourceType.TextureUav, texture.Raw);

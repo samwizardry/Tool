@@ -2,16 +2,37 @@
 
 namespace Tool.Graphics;
 
-public readonly record struct BindingLayoutVector(
-    BindingLayoutHandle Layout0 = default,
-    BindingLayoutHandle Layout1 = default,
-    BindingLayoutHandle Layout2 = default,
-    BindingLayoutHandle Layout3 = default)
-    //BindingLayoutHandle Layout4 = default,
-    //BindingLayoutHandle Layout5 = default,
-    //BindingLayoutHandle Layout6 = default,
-    //BindingLayoutHandle Layout7 = default)
+public readonly record struct BindingLayoutVector
 {
+    public readonly BindingLayoutHandle Layout0;
+    public readonly BindingLayoutHandle Layout1;
+    public readonly BindingLayoutHandle Layout2;
+    public readonly BindingLayoutHandle Layout3;
+    //public readonly BindingLayoutHandle Layout4;
+    //public readonly BindingLayoutHandle Layout5;
+    //public readonly BindingLayoutHandle Layout6;
+    //public readonly BindingLayoutHandle Layout7;
+
+    public BindingLayoutVector(
+        BindingLayoutHandle layout0 = default,
+        BindingLayoutHandle layout1 = default,
+        BindingLayoutHandle layout2 = default,
+        BindingLayoutHandle layout3 = default)
+        //BindingLayoutHandle layout4 = default,
+        //BindingLayoutHandle layout5 = default,
+        //BindingLayoutHandle layout6 = default,
+        //BindingLayoutHandle layout7 = default)
+    {
+        Layout0 = layout0;
+        Layout1 = layout1;
+        Layout2 = layout2;
+        Layout3 = layout3;
+        //Layout4 = layout4;
+        //Layout5 = layout5;
+        //Layout6 = layout6;
+        //Layout7 = layout7;
+    }
+
     public BindingLayoutHandle this[int index] =>
         index switch
         {

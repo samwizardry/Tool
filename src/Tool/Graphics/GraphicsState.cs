@@ -13,16 +13,37 @@ public readonly record struct IndexBufferBinding(
     BufferHandle Buffer,
     uint ByteOffset = 0);
 
-public record struct BindingSetVector(
-    BindingSetHandle Set0 = default,
-    BindingSetHandle Set1 = default,
-    BindingSetHandle Set2 = default,
-    BindingSetHandle Set3 = default)
-    //BindingSetHandle Set4 = default,
-    //BindingSetHandle Set5 = default,
-    //BindingSetHandle Set6 = default,
-    //BindingSetHandle Set7 = default)
+public record struct BindingSetVector
 {
+    public BindingSetHandle Set0;
+    public BindingSetHandle Set1;
+    public BindingSetHandle Set2;
+    public BindingSetHandle Set3;
+    //public BindingSetHandle Set4;
+    //public BindingSetHandle Set5;
+    //public BindingSetHandle Set6;
+    //public BindingSetHandle Set7;
+
+    public BindingSetVector(
+        BindingSetHandle set0 = default,
+        BindingSetHandle set1 = default,
+        BindingSetHandle set2 = default,
+        BindingSetHandle set3 = default)
+        //BindingSetHandle set4 = default,
+        //BindingSetHandle set5 = default,
+        //BindingSetHandle set6 = default,
+        //BindingSetHandle set7 = default)
+    {
+        Set0 = set0;
+        Set1 = set1;
+        Set2 = set2;
+        Set3 = set3;
+        //Set4 = set4;
+        //Set5 = set5;
+        //Set6 = set6;
+        //Set7 = set7;
+    }
+
     public BindingSetHandle this[int index]
     {
         readonly get => index switch

@@ -70,12 +70,11 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     private ID3D11Texture2D _depthStencilBuffer = null!;
     private ID3D11DepthStencilView _depthStencilView = null!;
 
-
     // Cached state for SetGraphicsState diffing
-    private Graphics.GraphicsPipelineHandle _currentPipeline;
-    private Graphics.BindingSetVector _currentBindings;
-    private Graphics.VertexBufferBinding _currentVertexBuffer;
-    private Graphics.IndexBufferBinding _currentIndexBuffer;
+    private Graphics.GraphicsPipelineHandle _currentPipeline = default;
+    private Graphics.BindingSetVector _currentBindings = default;
+    private Graphics.VertexBufferBinding _currentVertexBuffer = default;
+    private Graphics.IndexBufferBinding _currentIndexBuffer = default;
 
     public D3D11GraphicsDevice(
         nint hwnd,

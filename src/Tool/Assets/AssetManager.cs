@@ -281,13 +281,11 @@ public sealed class AssetManager : IDisposable
 
                 GraphicsState state = new(
                     Pipeline: material.Pipeline,
-                    Bindings: new BindingSetVector
-                    {
-                        Set0 = perFrame,
-                        Set1 = default,
-                        Set2 = material.BindingSet,
-                        Set3 = perObject
-                    },
+                    Bindings: new BindingSetVector(
+                        set0: perFrame,
+                        set1: default,
+                        set2: material.BindingSet,
+                        set3: perObject),
                     VertexBuffer: vbBinding,
                     IndexBuffer: ibBinding);
 
