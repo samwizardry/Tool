@@ -66,10 +66,7 @@ public abstract class GraphicsDevice : IDisposable
     public abstract ref readonly TextureDescription GetTextureDescription(TextureHandle texture);
 
     public abstract void UpdateBuffer<T>(BufferHandle buffer, ReadOnlySpan<T> data, uint byteOffset = 0) where T : unmanaged;
-    /// <summary>
-    /// This method never modifies <paramref name="data"/>.
-    /// </summary>
-    public abstract void UpdateBuffer<T>(BufferHandle buffer, ref T data, uint byteOffset = 0) where T : unmanaged;
+    public abstract void UpdateBuffer<T>(BufferHandle buffer, in T data, uint byteOffset = 0) where T : unmanaged;
     public abstract void UpdateTexture<T>(TextureHandle texture, ReadOnlySpan<T> data, uint mipLevel = 0, uint arraySlice = 0) where T : unmanaged;
 
     // Never frees immediately while GPU may use it; schedules into DeferredDeletionQueue

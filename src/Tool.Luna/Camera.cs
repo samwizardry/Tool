@@ -8,7 +8,8 @@ public class Camera
 {
     private Matrix4x4 _view;
     private Matrix4x4 _proj;
-    private Vector3 _position = new Vector3(0.0f, 0.0f, 5.0f);
+    private Matrix4x4 _viewProj;
+    private Vector3 _position = new(0.0f, 0.0f, 5.0f);
     private float _yaw = 0.0f;
     private float _pitch = 0.0f;
     private Vector3 _right = Vector3.UnitX;
@@ -33,7 +34,7 @@ public class Camera
 
     public ref readonly Matrix4x4 Proj => ref _proj;
     public ref readonly Matrix4x4 View => ref _view;
-    public Matrix4x4 ViewProj => _view * _proj;
+    public ref readonly Matrix4x4 ViewProj => ref _viewProj;
     public Vector3 Position => _position;
     public Vector3 Direction => _front;
 
@@ -124,6 +125,7 @@ public class Camera
         _up = Vector3.Normalize(Vector3.Cross(_right, _front));
 
         _view = Matrix4x4.CreateLookAt(_position, _position + _front, _up);
+        _viewProj = _view * _proj;
     }
 
     public void OnResize(int width, int height)
@@ -136,5 +138,6 @@ public class Camera
     private void CalculateProjectionMatrix()
     {
         _proj = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(_fov), (float)_width / (float)_height, _nearPlane, _farPlane);
+        _viewProj = _view * _proj;
     }
 }

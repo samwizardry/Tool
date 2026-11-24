@@ -533,7 +533,7 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
         }
     }
 
-    public override unsafe void UpdateBuffer<T>(Graphics.BufferHandle buffer, ref T data, uint byteOffset = 0)
+    public override unsafe void UpdateBuffer<T>(Graphics.BufferHandle buffer, in T data, uint byteOffset = 0)
     {
         ref readonly var bufferData = ref _buffers.Get(buffer.Raw);
 

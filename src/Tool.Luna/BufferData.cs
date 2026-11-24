@@ -91,7 +91,7 @@ public abstract class BufferData<T>
     {
         if (_isDirty)
         {
-            device.UpdateBuffer(_buffer, ref _data, 0);
+            device.UpdateBuffer(_buffer, in _data, 0);
             _isDirty = false;
         }
     }
