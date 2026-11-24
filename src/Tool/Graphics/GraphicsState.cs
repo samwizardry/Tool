@@ -1,4 +1,8 @@
-﻿namespace Tool.Graphics;
+﻿// Portions of this file are derived from NVRHI (https://github.com/NVIDIA-RTX/NVRHI)
+// Copyright (c) 2014-2026 NVIDIA Corporation. All rights reserved.
+// Licensed under the MIT License. See THIRD-PARTY-NOTICES.md in the project root for license information.
+
+namespace Tool.Graphics;
 
 /// <summary>
 /// Represents a vertex buffer binding to input assembler slot.
@@ -20,28 +24,14 @@ public readonly record struct IndexBufferBinding(
 /// </summary>
 public struct BindingSetVector
 {
-    public const int MaxBindingSets = 5;
-
-    /// <summary>
-    /// Rare
-    /// </summary>
     public BindingSetHandle Set0;
-    /// <summary>
-    /// PerFrame
-    /// </summary>
     public BindingSetHandle Set1;
-    /// <summary>
-    /// PerPass
-    /// </summary>
     public BindingSetHandle Set2;
-    /// <summary>
-    /// PerMaterial
-    /// </summary>
     public BindingSetHandle Set3;
-    /// <summary>
-    /// PerObject
-    /// </summary>
-    public BindingSetHandle Set4;
+    //public BindingSetHandle Set4;
+    //public BindingSetHandle Set5;
+    //public BindingSetHandle Set6;
+    //public BindingSetHandle Set7;
 
     public BindingSetHandle this[int index]
     {
@@ -51,7 +41,10 @@ public struct BindingSetVector
             1 => Set1,
             2 => Set2,
             3 => Set3,
-            4 => Set4,
+            //4 => Set4,
+            //5 => Set5,
+            //6 => Set6,
+            //7 => Set7,
             _ => throw new IndexOutOfRangeException(),
         };
         set
@@ -62,7 +55,10 @@ public struct BindingSetVector
                 case 1: Set1 = value; break;
                 case 2: Set2 = value; break;
                 case 3: Set3 = value; break;
-                case 4: Set4 = value; break;
+                //case 4: Set4 = value; break;
+                //case 5: Set5 = value; break;
+                //case 6: Set6 = value; break;
+                //case 7: Set7 = value; break;
                 default: throw new IndexOutOfRangeException();
             }
         }

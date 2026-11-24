@@ -283,11 +283,10 @@ public sealed class AssetManager : IDisposable
                     Pipeline: material.Pipeline,
                     Bindings: new BindingSetVector
                     {
-                        Set0 = default,
-                        Set1 = perFrame,
-                        Set2 = default,
-                        Set3 = material.BindingSet,
-                        Set4 = perObject
+                        Set0 = perFrame,
+                        Set1 = default,
+                        Set2 = material.BindingSet,
+                        Set3 = perObject
                     },
                     VertexBuffer: vbBinding,
                     IndexBuffer: ibBinding);

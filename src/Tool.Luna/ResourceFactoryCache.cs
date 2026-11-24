@@ -21,13 +21,13 @@ public static class ResourceFactoryCache
     public static AssetHandle<TextureAsset> Container;
     public static AssetHandle<TextureAsset> ContainerSpecular;
 
-    // Pipelines
-    public static GraphicsPipelineHandle PhongPipeline;
-
     // Binding layouts
     public static BindingLayoutHandle PhongBindingLayout;
     public static BindingLayoutHandle PhongPerFrameBindingLayout;
     public static BindingLayoutHandle PhongPerObjBindingLayout;
+
+    // Pipelines
+    public static GraphicsPipelineHandle PhongPipeline;
 
     // Per frame binding set
     public static BindingSetHandle PhongPerFrameBindingSet;
@@ -62,14 +62,6 @@ public static class ResourceFactoryCache
         Container = scope.LoadTexture("resources/textures/container2.png");
         ContainerSpecular = scope.LoadTexture("resources/textures/container2_specular.png");
 
-        // Pipelines
-        PhongPipeline = device.GetOrCreateGraphicsPipeline(new GraphicsPipelineDescription(
-            phongVs,
-            phongPs,
-            PhongInputLayout,
-            Solid,
-            PrimitiveTopology.TriangleList));
-
         // Binding layouts
         PhongBindingLayout = device.GetOrCreateBindingLayout(new BindingLayoutDescription(
             Visibility: ShaderType.Vertex | ShaderType.Pixel,
@@ -93,6 +85,15 @@ public static class ResourceFactoryCache
                 new(1, BindingResourceType.ConstantBuffer)
             ],
             RegisterSpace: 0));
+
+        // Pipelines
+        PhongPipeline = device.GetOrCreateGraphicsPipeline(new GraphicsPipelineDescription(
+            VertexShader: phongVs,
+            PixelShader: phongPs,
+            InputLayout: PhongInputLayout,
+            BindingLayouts: new(PhongPerFrameBindingLayout, default, PhongBindingLayout, PhongPerObjBindingLayout),
+            RasterState: Solid,
+            Topology: PrimitiveTopology.TriangleList));
 
         // Per frame binding set
         PhongPerFrameBindingSet = device.CreateBindingSet(

@@ -38,10 +38,10 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     private readonly Dictionary<Graphics.SamplerDescription, Graphics.SamplerHandle> _samplerCache = [];
     private readonly SlotMap<D3D11InputLayout> _inputLayouts = new();
     private readonly Dictionary<Graphics.VertexLayout, Graphics.InputLayoutHandle> _inputLayoutCache = [];
-    private readonly SlotMap<D3D11GraphicsPipeline> _pipelines = new();
-    private readonly Dictionary<Graphics.GraphicsPipelineDescription, Graphics.GraphicsPipelineHandle> _pipelineCache = [];
     private readonly SlotMap<D3D11BindingLayout> _bindingLayouts = new();
     private readonly Dictionary<Graphics.BindingLayoutDescription, Graphics.BindingLayoutHandle> _bindingLayoutCache = [];
+    private readonly SlotMap<D3D11GraphicsPipeline> _pipelines = new();
+    private readonly Dictionary<Graphics.GraphicsPipelineDescription, Graphics.GraphicsPipelineHandle> _pipelineCache = [];
 
     // Data Resources: owned by caller, destroyed via DeferredDeletionQueue
     private readonly SlotMap<D3D11Buffer> _buffers = new();
@@ -463,7 +463,7 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     {
         if (!_pipelineCache.TryGetValue(desc, out var handle))
         {
-            var raw = _pipelines.Add(D3D11GraphicsPipeline.Create(in desc, _inputLayouts, _shaders, _rasterStates));
+            var raw = _pipelines.Add(D3D11GraphicsPipeline.Create(in desc, _shaders, _inputLayouts, _rasterStates));
             handle = new Graphics.GraphicsPipelineHandle(raw);
             _pipelineCache[desc] = handle;
         }
@@ -632,7 +632,7 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
             return;
         }
 
-        for (int i = 0; i < Graphics.BindingSetVector.MaxBindingSets; ++i)
+        for (int i = 0; i < Graphics.Constants.MaxBindingLayouts; i++)
         {
             if (_currentBindings[i] == bindingSet)
                 _currentBindings[i] = default;
@@ -650,7 +650,7 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
             _currentPipeline = state.Pipeline;
         }
 
-        for (int i = 0; i < Graphics.BindingSetVector.MaxBindingSets; ++i)
+        for (int i = 0; i < Graphics.Constants.MaxBindingLayouts; i++)
         {
             var set = state.Bindings[i];
             if (_currentBindings[i] != set)
