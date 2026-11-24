@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/root/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="Directory.Packages.props" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Tool/Tool.csproj" />
+    <Project Path="src/Tool.Direct3D11/Tool.Direct3D11.csproj" />
+    <Project Path="src/Tool.Vulkan/Tool.Vulkan.csproj" />
+    <Project Path="src/Tool.ImGui/Tool.ImGui.csproj" />
+    <Project Path="src/Tool.Luna/Tool.Luna.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <File Path="tests/Directory.Build.props" />
+    <File Path="tests/Directory.Build.targets" />
+    <File Path="tests/Directory.Packages.props" />
+    <Project Path="tests/Tool.Direct3D11.UnitTests/Tool.Direct3D11.UnitTests.csproj" />
+    <Project Path="tests/Tool.UnitTests/Tool.UnitTests.csproj" />
+  </Folder>
+</Solution>

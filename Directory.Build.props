@@ -8,43 +8,43 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <TortureTargetOS Condition="'$(RuntimeIdentifier)' != '' and $(RuntimeIdentifier.StartsWith('win'))">Windows</TortureTargetOS>
-    <TortureTargetOS Condition="'$(RuntimeIdentifier)' != '' and $(RuntimeIdentifier.StartsWith('linux'))">Linux</TortureTargetOS>
-    <TortureTargetOS Condition="'$(TortureTargetOS)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">Windows</TortureTargetOS>
-    <TortureTargetOS Condition="'$(TortureTargetOS)' == '' and $([MSBuild]::IsOSPlatform('Linux'))">Linux</TortureTargetOS>
+    <ToolTargetOS Condition="'$(RuntimeIdentifier)' != '' and $(RuntimeIdentifier.StartsWith('win'))">Windows</ToolTargetOS>
+    <ToolTargetOS Condition="'$(RuntimeIdentifier)' != '' and $(RuntimeIdentifier.StartsWith('linux'))">Linux</ToolTargetOS>
+    <ToolTargetOS Condition="'$(ToolTargetOS)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">Windows</ToolTargetOS>
+    <ToolTargetOS Condition="'$(ToolTargetOS)' == '' and $([MSBuild]::IsOSPlatform('Linux'))">Linux</ToolTargetOS>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TortureTargetOS)' == 'Windows'">
+  <PropertyGroup Condition="'$(ToolTargetOS)' == 'Windows'">
     <DefineConstants>$(DefineConstants);PLATFORM_WINDOWS;SUPPORT_DIRECTX;SUPPORT_VULKAN</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TortureTargetOS)' == 'Linux'">
+  <PropertyGroup Condition="'$(ToolTargetOS)' == 'Linux'">
     <DefineConstants>$(DefineConstants);PLATFORM_LINUX;SUPPORT_VULKAN</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup>
-    <_TortureDebugConfig Condition="'$(Configuration)' == 'Debug' or '$(Configuration)' == ''">true</_TortureDebugConfig>
+    <_ToolDebugConfig Condition="'$(Configuration)' == 'Debug' or '$(Configuration)' == ''">true</_ToolDebugConfig>
 
-    <TrackAllocations Condition="'$(TrackAllocations)' == '' and '$(_TortureDebugConfig)' == 'true'">true</TrackAllocations>
+    <TrackAllocations Condition="'$(TrackAllocations)' == '' and '$(_ToolDebugConfig)' == 'true'">true</TrackAllocations>
     <TrackAllocations Condition="'$(TrackAllocations)' == ''">false</TrackAllocations>
 
-    <TortureDebug Condition="'$(TortureDebug)' == '' and '$(_TortureDebugConfig)' == 'true'">true</TortureDebug>
-    <TortureDebug Condition="'$(TortureDebug)' == ''">false</TortureDebug>
+    <ToolDebug Condition="'$(ToolDebug)' == '' and '$(_ToolDebugConfig)' == 'true'">true</ToolDebug>
+    <ToolDebug Condition="'$(ToolDebug)' == ''">false</ToolDebug>
 
-    <GraphicsDebug Condition="'$(GraphicsDebug)' == '' and '$(_TortureDebugConfig)' == 'true'">true</GraphicsDebug>
+    <GraphicsDebug Condition="'$(GraphicsDebug)' == '' and '$(_ToolDebugConfig)' == 'true'">true</GraphicsDebug>
     <GraphicsDebug Condition="'$(GraphicsDebug)' == ''">false</GraphicsDebug>
 
     <!-- Compile-time minimum log severity: Message, Info, Warning, Error, Fatal, None -->
-    <TortureLogSeverity Condition="'$(TortureLogSeverity)' == '' and '$(_TortureDebugConfig)' == 'true'">Message</TortureLogSeverity>
-    <TortureLogSeverity Condition="'$(TortureLogSeverity)' == ''">None</TortureLogSeverity>
+    <ToolLogSeverity Condition="'$(ToolLogSeverity)' == '' and '$(_ToolDebugConfig)' == 'true'">Message</ToolLogSeverity>
+    <ToolLogSeverity Condition="'$(ToolLogSeverity)' == ''">None</ToolLogSeverity>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TrackAllocations)' == 'true'">
     <DefineConstants>$(DefineConstants);TRACK_ALLOCATIONS</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TortureDebug)' == 'true'">
-    <DefineConstants>$(DefineConstants);TORTURE_DEBUG</DefineConstants>
+  <PropertyGroup Condition="'$(ToolDebug)' == 'true'">
+    <DefineConstants>$(DefineConstants);TOOL_DEBUG</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(GraphicsDebug)' == 'true'">
@@ -53,18 +53,18 @@
 
   <!-- Cascade: enabling a log severity automatically enables all higher severities -->
   <PropertyGroup>
-    <_LogMessage Condition="'$(TortureLogSeverity)' == 'Message'">true</_LogMessage>
-    <_LogInfo    Condition="'$(TortureLogSeverity)' == 'Info'    or '$(_LogMessage)' == 'true'">true</_LogInfo>
-    <_LogWarning Condition="'$(TortureLogSeverity)' == 'Warning' or '$(_LogInfo)' == 'true'">true</_LogWarning>
-    <_LogError   Condition="'$(TortureLogSeverity)' == 'Error'   or '$(_LogWarning)' == 'true'">true</_LogError>
-    <_LogFatal   Condition="'$(TortureLogSeverity)' == 'Fatal'   or '$(_LogError)' == 'true'">true</_LogFatal>
+    <_LogMessage Condition="'$(ToolLogSeverity)' == 'Message'">true</_LogMessage>
+    <_LogInfo    Condition="'$(ToolLogSeverity)' == 'Info'    or '$(_LogMessage)' == 'true'">true</_LogInfo>
+    <_LogWarning Condition="'$(ToolLogSeverity)' == 'Warning' or '$(_LogInfo)' == 'true'">true</_LogWarning>
+    <_LogError   Condition="'$(ToolLogSeverity)' == 'Error'   or '$(_LogWarning)' == 'true'">true</_LogError>
+    <_LogFatal   Condition="'$(ToolLogSeverity)' == 'Fatal'   or '$(_LogError)' == 'true'">true</_LogFatal>
   </PropertyGroup>
   <PropertyGroup>
-    <DefineConstants Condition="'$(_LogFatal)' == 'true'">$(DefineConstants);TORTURE_LOG</DefineConstants>
-    <DefineConstants Condition="'$(_LogMessage)' == 'true'">$(DefineConstants);TORTURE_LOG_MESSAGE</DefineConstants>
-    <DefineConstants Condition="'$(_LogInfo)' == 'true'">$(DefineConstants);TORTURE_LOG_INFO</DefineConstants>
-    <DefineConstants Condition="'$(_LogWarning)' == 'true'">$(DefineConstants);TORTURE_LOG_WARNING</DefineConstants>
-    <DefineConstants Condition="'$(_LogError)' == 'true'">$(DefineConstants);TORTURE_LOG_ERROR</DefineConstants>
-    <DefineConstants Condition="'$(_LogFatal)' == 'true'">$(DefineConstants);TORTURE_LOG_FATAL</DefineConstants>
+    <DefineConstants Condition="'$(_LogFatal)' == 'true'">$(DefineConstants);TOOL_LOG</DefineConstants>
+    <DefineConstants Condition="'$(_LogMessage)' == 'true'">$(DefineConstants);TOOL_LOG_MESSAGE</DefineConstants>
+    <DefineConstants Condition="'$(_LogInfo)' == 'true'">$(DefineConstants);TOOL_LOG_INFO</DefineConstants>
+    <DefineConstants Condition="'$(_LogWarning)' == 'true'">$(DefineConstants);TOOL_LOG_WARNING</DefineConstants>
+    <DefineConstants Condition="'$(_LogError)' == 'true'">$(DefineConstants);TOOL_LOG_ERROR</DefineConstants>
+    <DefineConstants Condition="'$(_LogFatal)' == 'true'">$(DefineConstants);TOOL_LOG_FATAL</DefineConstants>
   </PropertyGroup>
 </Project>

@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SDL3-CS" />
+    <PackageReference Include="Vortice.Mathematics" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(ToolTargetOS)' == 'Windows'">
+    <PackageReference Include="SDL3-CS.Windows" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(ToolTargetOS)' == 'Linux'">
+    <PackageReference Include="SDL3-CS.Linux" />
+  </ItemGroup>
+
+</Project>

@@ -8,7 +8,7 @@
     <PackageVersion Include="StbImageSharp" Version="2.30.16" />
     <PackageVersion Include="Vortice.Mathematics" Version="2.1.1" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TortureTargetOS)' == 'Windows'">
+  <ItemGroup Condition="'$(ToolTargetOS)' == 'Windows'">
     <PackageVersion Include="AssimpNetter" Version="6.0.5" />
     <PackageVersion Include="ImGui.NET" Version="1.91.6.1" />
     <PackageVersion Include="SDL3-CS.Windows" Version="3.4.20" />
@@ -16,10 +16,10 @@
     <PackageVersion Include="Vortice.Direct3D11" Version="3.8.3" />
     <PackageVersion Include="Vortice.DXGI" Version="3.8.3" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TortureTargetOS)' == 'Linux'">
+  <ItemGroup Condition="'$(ToolTargetOS)' == 'Linux'">
     <PackageVersion Include="SDL3-CS.Linux" Version="3.4.20" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TortureTargetOS)' == 'Linux' or '$(TortureTargetOS)' == 'Windows'">
+  <ItemGroup Condition="'$(ToolTargetOS)' == 'Linux' or '$(ToolTargetOS)' == 'Windows'">
     <PackageVersion Include="Vortice.ShaderCompiler" Version="1.9.0" />
     <PackageVersion Include="Vortice.SpirvCross" Version="1.6.0" />
     <PackageVersion Include="Vortice.Vulkan" Version="3.3.0" />

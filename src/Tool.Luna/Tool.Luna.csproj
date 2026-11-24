@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>exe</OutputType>
+    <!-- Workstation GC: suitable for client games. Server GC allocates a heap per core,
+       consumes more memory, and its threads contend with game/render threads. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <!-- Background GC: Gen2 collections run concurrently with frames. SustainedLowLatency is ineffective without it. -->
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <!-- Retain committed segments instead of returning them to the OS to minimize latency spikes during heap growth. -->
+    <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AssimpNetter" />
+    <PackageReference Include="StbImageSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tool\Tool.csproj" />
+    <ProjectReference Include="..\Tool.Direct3D11\Tool.Direct3D11.csproj" Condition="'$(ToolTargetOS)' == 'Windows'" />
+    <ProjectReference Include="..\Tool.Vulkan\Tool.Vulkan.csproj" Condition="'$(ToolTargetOS)' == 'Linux' or '$(ToolTargetOS)' == 'Windows'" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Shaders\Phong.hlsl">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

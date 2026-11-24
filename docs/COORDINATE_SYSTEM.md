@@ -1,12 +1,12 @@
 # Coordinate System, Matrix, and Shader Conventions
 
-This document defines the mathematical and graphics conventions used across the **Torture** engine (`System.Numerics` + **NVRHI**-style architecture + **HLSL**).
+This document defines the mathematical and graphics conventions used across the **Tool** engine (`System.Numerics` + **NVRHI**-style architecture + **HLSL**).
 
 ---
 
 ## 1. Quick Reference
 
-| Property | Torture Standard | Configured In |
+| Property | Tool Standard | Configured In |
 | :--- | :--- | :--- |
 | **World / View Space** | **Right-Handed (RHS)**: `+X` Right, `+Y` Up, **`-Z` Forward** (`+Z` points out of the screen toward the viewer) | `Matrix4x4.CreateLookAt`, `Matrix4x4.CreatePerspectiveFieldOfView` |
 | **Clip Space (NDC)** | `X: [-1 .. 1]`, `Y: [-1 .. 1]` (upward), **`Z: [0 .. 1]`** (Near to Far) | D3D11 / D3D12 / Vulkan (with negative viewport height) |
@@ -80,7 +80,7 @@ Front-facing triangles (when viewed from the outside of a mesh) use **Counter-Cl
 ```
 
 * `RasterStateDescription` defaults to `FrontCounterClockwise = true` and `CullMode = RasterCullMode.Back`.
-* Procedural geometry in `Torture.Core.Graphics.Geometry` generates all meshes in `RHS + CCW`.
+* Procedural geometry in `Tool.Core.Graphics.Geometry` generates all meshes in `RHS + CCW`.
 * External 3D assets authored in **glTF 2.0 / Blender / OBJ** natively follow `RHS + CCW` and can be loaded directly into vertex/index buffers without axis conversion or index flipping.
 
 ---

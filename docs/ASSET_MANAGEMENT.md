@@ -1,6 +1,6 @@
 # Resource and Asset Management
 
-This document defines resource ownership, lifetime rules, and usage conventions for `GraphicsDevice`, `AssetManager`, and `AssetScope` in the **Torture** engine.
+This document defines resource ownership, lifetime rules, and usage conventions for `GraphicsDevice`, `AssetManager`, and `AssetScope` in the **Tool** engine.
 
 ---
 
