@@ -33,44 +33,7 @@ public readonly record struct GraphicsPipelineDescription(
     InputLayoutHandle InputLayout = default,
     BindingLayoutVector BindingLayouts = default,
     RasterStateHandle RasterState = default,
-    PrimitiveTopology Topology = PrimitiveTopology.TriangleList) : IEquatable<GraphicsPipelineDescription>
-{
-    public bool Equals(GraphicsPipelineDescription other)
-    {
-        for (int i = 0; i < Constants.MaxBindingLayouts; i++)
-        {
-            if (BindingLayouts[i] != other.BindingLayouts[i])
-            {
-                return false;
-            }
-        }
-
-        return
-            VertexShader == other.VertexShader &&
-            PixelShader == other.PixelShader &&
-            InputLayout == other.InputLayout &&
-            RasterState == other.RasterState &&
-            Topology == other.Topology;
-    }
-
-    public override int GetHashCode()
-    {
-        HashCode hash = new();
-
-        hash.Add(VertexShader);
-        hash.Add(PixelShader);
-        hash.Add(InputLayout);
-        hash.Add(RasterState);
-        hash.Add(Topology);
-
-        for (int i = 0; i < Constants.MaxBindingLayouts; i++)
-        {
-            hash.Add(BindingLayouts[i]);
-        }
-
-        return hash.ToHashCode();
-    }
-}
+    PrimitiveTopology Topology = PrimitiveTopology.TriangleList);
 
 public readonly record struct GraphicsPipelineHandle(SlotHandle Raw)
 {

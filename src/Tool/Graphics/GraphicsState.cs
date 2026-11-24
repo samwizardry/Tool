@@ -4,35 +4,25 @@
 
 namespace Tool.Graphics;
 
-/// <summary>
-/// Represents a vertex buffer binding to input assembler slot.
-/// </summary>
 public readonly record struct VertexBufferBinding(
     BufferHandle Buffer,
     uint Slot = 0,
     uint ByteOffset = 0);
 
-/// <summary>
-/// Represents an index buffer binding to input assembler slot.
-/// </summary>
 public readonly record struct IndexBufferBinding(
     BufferHandle Buffer,
     uint ByteOffset = 0);
 
-/// <summary>
-/// Fixed-size zero-allocation container for up to 4 <see cref="BindingSet"/> slots (e.g. PerFrame, PerPass, PerMaterial, PerObject).
-/// </summary>
-public struct BindingSetVector
+public record struct BindingSetVector(
+    BindingSetHandle Set0 = default,
+    BindingSetHandle Set1 = default,
+    BindingSetHandle Set2 = default,
+    BindingSetHandle Set3 = default)
+    //BindingSetHandle Set4 = default,
+    //BindingSetHandle Set5 = default,
+    //BindingSetHandle Set6 = default,
+    //BindingSetHandle Set7 = default)
 {
-    public BindingSetHandle Set0;
-    public BindingSetHandle Set1;
-    public BindingSetHandle Set2;
-    public BindingSetHandle Set3;
-    //public BindingSetHandle Set4;
-    //public BindingSetHandle Set5;
-    //public BindingSetHandle Set6;
-    //public BindingSetHandle Set7;
-
     public BindingSetHandle this[int index]
     {
         readonly get => index switch

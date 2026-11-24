@@ -490,7 +490,11 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     public override Graphics.BindingSetHandle CreateBindingSet(in Graphics.BindingSetDescription desc, Graphics.BindingLayoutHandle layout)
     {
         ref readonly var layoutData = ref _bindingLayouts.Get(layout.Raw);
+#if GRAPHICS_DEBUG
+        return new(_bindingSets.Add(D3D11BindingSet.Create(layout, in desc, in layoutData, _buffers, _textures, _samplers)));
+#else
         return new(_bindingSets.Add(D3D11BindingSet.Create(in desc, in layoutData, _buffers, _textures, _samplers)));
+#endif
     }
 
     public override ref readonly Graphics.BufferDescription GetBufferDescription(Graphics.BufferHandle buffer) =>
@@ -641,6 +645,36 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
 
     public override void SetGraphicsState(in Graphics.GraphicsState state)
     {
+#if GRAPHICS_DEBUG
+        if (state.Pipeline.IsValid)
+        {
+            ref readonly var pipelineData = ref _pipelines.Get(state.Pipeline.Raw);
+            for (int i = 0; i < Graphics.Constants.MaxBindingLayouts; i++)
+            {
+                var expectedLayout = pipelineData.BindingLayouts[i];
+                var set = state.Bindings[i];
+
+                if (expectedLayout.IsValid)
+                {
+                    if (!set.IsValid)
+                    {
+                        throw new InvalidOperationException($"Missing BindingSet at slot {i} required by GraphicsPipeline.");
+                    }
+
+                    ref readonly var setData = ref _bindingSets.Get(set.Raw);
+                    if (setData.Layout != expectedLayout)
+                    {
+                        throw new InvalidOperationException($"BindingSet at slot {i} does not match pipeline BindingLayout.");
+                    }
+                }
+                else if (set.IsValid)
+                {
+                    throw new InvalidOperationException($"Unexpected BindingSet at slot {i}: GraphicsPipeline does not declare a BindingLayout for this slot.");
+                }
+            }
+        }
+#endif
+
         if (_currentPipeline != state.Pipeline)
         {
             if (state.Pipeline.IsValid)

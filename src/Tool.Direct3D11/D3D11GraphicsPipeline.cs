@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-using Tool.Collections;
+﻿using Tool.Collections;
 
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
@@ -12,6 +10,9 @@ internal readonly struct D3D11GraphicsPipeline
     public readonly ID3D11VertexShader? VertexShader;
     public readonly ID3D11PixelShader? PixelShader;
     public readonly ID3D11InputLayout? InputLayout;
+#if GRAPHICS_DEBUG
+    public readonly Graphics.BindingLayoutVector BindingLayouts;
+#endif
     public readonly ID3D11RasterizerState? RasterState;
     public readonly PrimitiveTopology Topology;
 
@@ -19,12 +20,18 @@ internal readonly struct D3D11GraphicsPipeline
         ID3D11VertexShader? vs,
         ID3D11PixelShader? ps,
         ID3D11InputLayout? il,
+#if GRAPHICS_DEBUG
+        in Graphics.BindingLayoutVector bls,
+#endif
         ID3D11RasterizerState? rs,
         PrimitiveTopology topology)
     {
         VertexShader = vs;
         PixelShader = ps;
         InputLayout = il;
+#if GRAPHICS_DEBUG
+        BindingLayouts = bls;
+#endif
         RasterState = rs;
         Topology = topology;
     }
@@ -54,7 +61,15 @@ internal readonly struct D3D11GraphicsPipeline
             ? rasterStates.Get(desc.RasterState.Raw).Native
             : null;
 
-        return new D3D11GraphicsPipeline(vs, ps, il, rs, desc.Topology.ToD3D11PrimitiveTopology());
+        return new D3D11GraphicsPipeline(
+            vs,
+            ps,
+            il,
+#if GRAPHICS_DEBUG
+            desc.BindingLayouts,
+#endif
+            rs,
+            desc.Topology.ToD3D11PrimitiveTopology());
     }
 
     public void Apply(ID3D11DeviceContext4 imContext)

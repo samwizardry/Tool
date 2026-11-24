@@ -12,18 +12,28 @@ internal readonly struct D3D11BindingSet
     internal readonly record struct UavSlot(uint Slot, ID3D11UnorderedAccessView? Uav);
     internal readonly record struct SamplerSlot(uint Slot, ID3D11SamplerState Sampler);
 
+#if GRAPHICS_DEBUG
+    public readonly BindingLayoutHandle Layout;
+#endif
     private readonly ShaderType _visibility;
     private readonly BufferSlot[] _constantBuffers;
     private readonly SrvSlot[] _srvSlots;
     private readonly UavSlot[] _uavSlots;
     private readonly SamplerSlot[] _samplerSlots;
 
-    private D3D11BindingSet(ShaderType visibility,
+    private D3D11BindingSet(
+#if GRAPHICS_DEBUG
+        BindingLayoutHandle layout,
+#endif
+        ShaderType visibility,
         BufferSlot[] constantBuffers,
         SrvSlot[] srvSlots,
         UavSlot[] uavSlots,
         SamplerSlot[] samplerSlots)
     {
+#if GRAPHICS_DEBUG
+        Layout = layout;
+#endif
         _visibility = visibility;
         _constantBuffers = constantBuffers;
         _srvSlots = srvSlots;
@@ -36,8 +46,11 @@ internal readonly struct D3D11BindingSet
     }
 
     public static D3D11BindingSet Create(
+#if GRAPHICS_DEBUG
+        BindingLayoutHandle layout,
+#endif
         in BindingSetDescription desc,
-        in D3D11BindingLayout layout,
+        in D3D11BindingLayout layoutData,
         SlotMap<D3D11Buffer> buffers,
         SlotMap<D3D11Texture> textures,
         SlotMap<D3D11Sampler> samplers)
@@ -72,7 +85,10 @@ internal readonly struct D3D11BindingSet
         }
 
         return new D3D11BindingSet(
-            layout.Visibility,
+#if GRAPHICS_DEBUG
+            layout,
+#endif
+            layoutData.Visibility,
             [.. constantBuffers],
             [.. srvSlots],
             [.. uavSlots],
