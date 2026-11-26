@@ -1,4 +1,7 @@
-﻿using Tool.Collections;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+
+using Tool.Collections;
 
 namespace Tool.Graphics;
 
@@ -51,4 +54,61 @@ public readonly record struct BindingLayoutHandle
     public bool IsValid => Raw.IsValid;
     public uint Index => Raw.Index;
     public uint Generation => Raw.Generation;
+}
+
+[InlineArray(Constants.MaxBindingLayouts)]
+public struct BindingLayoutArray : IEquatable<BindingLayoutArray>
+{
+    private BindingLayoutHandle _layout0;
+
+    public BindingLayoutArray(params ReadOnlySpan<BindingLayoutHandle> layouts)
+    {
+        if (layouts.Length > Constants.MaxBindingLayouts)
+        {
+            throw new ArgumentOutOfRangeException(nameof(layouts));
+        }
+
+        for (int i = 0; i < layouts.Length; i++)
+        {
+            this[i] = layouts[i];
+        }
+    }
+
+    public readonly bool Equals(BindingLayoutArray other)
+    {
+        for (int i = 0; i < Constants.MaxBindingLayouts; i++)
+        {
+            if (this[i] != other[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public override readonly bool Equals([NotNullWhen(true)] object? obj) =>
+        obj is BindingLayoutArray other && Equals(other);
+
+    public override readonly int GetHashCode()
+    {
+        HashCode hash = default;
+
+        for (int i = 0; i < Constants.MaxBindingLayouts; i++)
+        {
+            hash.Add(this[i]);
+        }
+
+        return hash.ToHashCode();
+    }
+
+    public static bool operator ==(BindingLayoutArray left, BindingLayoutArray right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(BindingLayoutArray left, BindingLayoutArray right)
+    {
+        return !(left == right);
+    }
 }

@@ -1,6 +1,8 @@
 ﻿using Tool.Assets;
 using Tool.Graphics;
 
+using Vortice.Mathematics;
+
 namespace Tool.Luna;
 
 public static class Resources
@@ -18,6 +20,8 @@ public static class Resources
 
     public static AssetHandle<TextureAsset> WhitePixel;
 
+    public static ViewportState Viewport;
+
     public static void Load(GraphicsDevice device, AssetScope scope)
     {
         CullNone = device.GetOrCreateRasterState(RasterStateDescription.CullNone);
@@ -32,9 +36,16 @@ public static class Resources
         Anisotropic16 = device.GetOrCreateSampler(SamplerDescription.AnisotropicWrap(16.0f));
 
         WhitePixel = scope.CreateTexture(new byte[] { 255, 255, 255, 127 }, TextureDescription.Texture2D(1u, 1u));
+
+        Viewport = new ViewportState(new Viewport(device.ClientSize.Width, device.ClientSize.Height));
     }
 
     public static void Unload(GraphicsDevice device)
     {
+    }
+
+    public static void OnResize(int width, int height)
+    {
+        Viewport = new ViewportState(new Viewport(width, height));
     }
 }

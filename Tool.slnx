@@ -6,6 +6,7 @@
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Tool/Tool.csproj" />
+    <Project Path="src/Tool.Analyzers/Tool.Analyzers.csproj" />
     <Project Path="src/Tool.Direct3D11/Tool.Direct3D11.csproj" />
     <Project Path="src/Tool.Vulkan/Tool.Vulkan.csproj" />
     <Project Path="src/Tool.ImGui/Tool.ImGui.csproj" />

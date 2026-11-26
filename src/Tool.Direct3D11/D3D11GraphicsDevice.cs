@@ -1,4 +1,9 @@
-﻿using Tool.Collections;
+﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+
+using SharpGen.Runtime;
+
+using Tool.Collections;
 using Tool.Core;
 using Tool.Logging;
 
@@ -74,7 +79,9 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
 
     // Cached state for SetGraphicsState diffing
     private Graphics.GraphicsPipelineHandle _currentPipeline = default;
-    private Graphics.BindingSetVector _currentBindings = default;
+    private Graphics.ViewportState _currentViewport = default;
+    private Color4 _currentBlendConstantColor = default;
+    private Graphics.BindingSetArray _currentBindings = default;
     private Graphics.VertexBufferBinding _currentVertexBuffer = default;
     private Graphics.IndexBufferBinding _currentIndexBuffer = default;
 
@@ -297,10 +304,6 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
 
     public override SizeI ClientSize { get; protected set; }
 
-    public override Viewport Viewport { get; protected set; }
-
-    public override RectI ScissorRect { get; protected set; }
-
     public override bool VSync { get; set; }
 
     public override Color4 ClearColor { get; set; } = Colors.CornflowerBlue;
@@ -310,8 +313,6 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     public override void OnResize(int width, int height)
     {
         ClientSize = new SizeI(width, height);
-        Viewport = new Viewport(width, height);
-        ScissorRect = new RectI(width, height);
 
         _imContext.OMSetRenderTargets((ID3D11RenderTargetView)null!);
 
@@ -338,10 +339,6 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
 
         // Bind the render target view and depth/stencil view to the pipeline.
         _imContext.OMSetRenderTargets(_renderTargetView, _depthStencilView);
-
-        // Set the viewport and scissor rect.
-        _imContext.RSSetViewport(Viewport);
-        _imContext.RSSetScissorRect(ScissorRect);
     }
 
     public override void OnWindowMoved(RectI bounds) { }
@@ -361,6 +358,8 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
         ProcessDeferredDeletions();
 
         _currentPipeline = default;
+        _currentViewport = default;
+        _currentBlendConstantColor = default;
         _currentBindings = default;
         _currentVertexBuffer = default;
         _currentIndexBuffer = default;
@@ -369,8 +368,6 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
         _imContext.ClearDepthStencilView(_depthStencilView, DepthStencilClearFlags.Depth | DepthStencilClearFlags.Stencil, 1.0f, 0);
 
         _imContext.OMSetRenderTargets(_renderTargetView, _depthStencilView);
-        _imContext.RSSetViewport(Viewport);
-        _imContext.RSSetScissorRect(ScissorRect);
 
         return true;
     }
@@ -665,22 +662,22 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
             for (int i = 0; i < Graphics.Constants.MaxBindingLayouts; i++)
             {
                 var expectedLayout = pipelineData.BindingLayouts[i];
-                var set = state.Bindings[i];
+                var binding = state.Bindings[i];
 
                 if (expectedLayout.IsValid)
                 {
-                    if (!set.IsValid)
+                    if (!binding.IsValid)
                     {
                         throw new InvalidOperationException($"Missing BindingSet at slot {i} required by GraphicsPipeline.");
                     }
 
-                    ref readonly var setData = ref _bindingSets.Get(set.Raw);
+                    ref readonly var setData = ref _bindingSets.Get(binding.Raw);
                     if (setData.Layout != expectedLayout)
                     {
                         throw new InvalidOperationException($"BindingSet at slot {i} does not match pipeline BindingLayout.");
                     }
                 }
-                else if (set.IsValid)
+                else if (binding.IsValid)
                 {
                     throw new InvalidOperationException($"Unexpected BindingSet at slot {i}: GraphicsPipeline does not declare a BindingLayout for this slot.");
                 }
@@ -688,25 +685,73 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
         }
 #endif
 
-        if (_currentPipeline != state.Pipeline)
+        bool pipelineChanged = _currentPipeline != state.Pipeline;
+        bool blendColorChanged = _currentBlendConstantColor != state.BlendConstantColor;
+
+        if (pipelineChanged)
         {
             if (state.Pipeline.IsValid)
             {
-                _pipelines.Get(state.Pipeline.Raw).Apply(_imContext);
+                _pipelines.Get(state.Pipeline.Raw).Apply(_imContext, state.BlendConstantColor);
             }
             _currentPipeline = state.Pipeline;
+            _currentBlendConstantColor = state.BlendConstantColor;
+        }
+        else if (blendColorChanged && state.Pipeline.IsValid)
+        {
+            ref readonly var pipelineData = ref _pipelines.Get(state.Pipeline.Raw);
+            if (pipelineData.UseBlendConstants)
+            {
+                _imContext.OMSetBlendState(pipelineData.BlendState, state.BlendConstantColor);
+                _currentBlendConstantColor = state.BlendConstantColor;
+            }
+        }
+
+        if ((state.Viewport.ViewportCount > 0 || state.Viewport.ScissorRectCount > 0) &&
+            !_currentViewport.Equals(in state.Viewport))
+        {
+            ref readonly var vpState = ref state.Viewport;
+            ref readonly var vpArr = ref vpState.Viewports;
+            ref readonly var srArr = ref vpState.ScissorRects;
+
+            if (vpState.ViewportCount == 1)
+            {
+                _imContext.RSSetViewport(vpArr[0]);
+            }
+            else if (vpState.ViewportCount > 1)
+            {
+                ref readonly var vp = ref vpArr[0];
+
+                _imContext.RSSetViewports(MemoryMarshal.CreateSpan(ref Unsafe.AsRef(in vp), vpState.ViewportCount));
+            }
+
+            if (vpState.ScissorRectCount == 1)
+            {
+                _imContext.RSSetScissorRect(srArr[0]);
+            }
+            else if (vpState.ScissorRectCount > 1)
+            {
+                Span<Vortice.RawRect> rects = stackalloc Vortice.RawRect[vpState.ScissorRectCount];
+                for (int i = 0; i < vpState.ScissorRectCount; i++)
+                {
+                    rects[i] = srArr[i];
+                }
+                _imContext.RSSetScissorRects(rects);
+            }
+
+            _currentViewport = state.Viewport;
         }
 
         for (int i = 0; i < Graphics.Constants.MaxBindingLayouts; i++)
         {
-            var set = state.Bindings[i];
-            if (_currentBindings[i] != set)
+            var binding = state.Bindings[i];
+            if (_currentBindings[i] != binding)
             {
-                if (set.IsValid)
+                if (binding.IsValid)
                 {
-                    _bindingSets.Get(set.Raw).Apply(_imContext);
+                    _bindingSets.Get(binding.Raw).Apply(_imContext);
                 }
-                _currentBindings[i] = set;
+                _currentBindings[i] = binding;
             }
         }
 

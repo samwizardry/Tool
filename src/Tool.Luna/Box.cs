@@ -5,13 +5,9 @@ using Tool.Graphics;
 
 namespace Tool.Luna;
 
-public class Box : Actor
+public class Box(GraphicsDevice device, AssetHandle<ModelAsset> model) : Actor(device, model)
 {
-    public Box(GraphicsDevice device, AssetHandle<ModelAsset> model) : base(device, model)
-    {
-    }
-
-    float _angle = 0.0f;
+    float _angle;
 
     public override void Update(float dt)
     {

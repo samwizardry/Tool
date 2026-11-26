@@ -35,7 +35,7 @@ public abstract class Actor : IDisposable
 
     public virtual void Draw(AssetManager assets)
     {
-        assets.DrawModel(_model, Phong.PerFrameBS, _perObjBS);
+        assets.DrawModel(_model, Resources.Viewport, Phong.PerFrameBS, _perObjBS);
     }
 
     public virtual void Dispose()

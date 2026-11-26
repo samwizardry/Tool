@@ -2,10 +2,10 @@
 
 public record struct VertexElement : IEquatable<VertexElement>
 {
-    public readonly VertexElementSemantic SemanticName;
     public uint SemanticIndex = 0;
-    public readonly VertexElementFormat Format;
     public uint ByteOffset = 0;
+    public readonly VertexElementSemantic SemanticName;
+    public readonly VertexElementFormat Format;
 
     public VertexElement(VertexElementSemantic semanticName, VertexElementFormat format)
     {

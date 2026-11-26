@@ -67,4 +67,17 @@
     <DefineConstants Condition="'$(_LogError)' == 'true'">$(DefineConstants);TOOL_LOG_ERROR</DefineConstants>
     <DefineConstants Condition="'$(_LogFatal)' == 'true'">$(DefineConstants);TOOL_LOG_FATAL</DefineConstants>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'Tool.Analyzers'">
+    <PackageReference Include="ZeroAlloc.Analyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'Tool.Analyzers'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Tool.Analyzers\Tool.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
 </Project>

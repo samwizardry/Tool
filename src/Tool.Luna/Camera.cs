@@ -10,23 +10,21 @@ public class Camera
     private Matrix4x4 _proj;
     private Matrix4x4 _viewProj;
     private Vector3 _position = new(0.0f, 2.0f, 5.0f);
-    private float _yaw = 0.0f;
-    private float _pitch = 0.0f;
+    private float _yaw;
+    private float _pitch;
     private Vector3 _right = Vector3.UnitX;
     private Vector3 _front = -Vector3.UnitZ;
     private Vector3 _up = Vector3.UnitY;
 
     private float _fov;
-    private int _width;
-    private int _height;
     private float _nearPlane;
     private float _farPlane;
 
     public Camera(float fov, int width, int height, float nearPlane = 0.1f, float farPlane = 1000.0f)
     {
         _fov = fov;
-        _width = width;
-        _height = height;
+        Width = width;
+        Height = height;
         _nearPlane = nearPlane;
         _farPlane = farPlane;
         CalculateProjectionMatrix();
@@ -41,6 +39,9 @@ public class Camera
     public float Speed { get; set; } = 10.0f;
     public float Sensetivity { get; set; } = 5f;
 
+    public int Width { get; private set; }
+    public int Height { get; private set; }
+
     public float Fov
     {
         get => _fov;
@@ -50,9 +51,6 @@ public class Camera
             CalculateProjectionMatrix();
         }
     }
-
-    public int Width => _width;
-    public int Height => _height;
 
     public float NearPlane
     {
@@ -130,14 +128,14 @@ public class Camera
 
     public void OnResize(int width, int height)
     {
-        _width = width;
-        _height = height;
+        Width = width;
+        Height = height;
         CalculateProjectionMatrix();
     }
 
     private void CalculateProjectionMatrix()
     {
-        _proj = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(_fov), (float)_width / (float)_height, _nearPlane, _farPlane);
+        _proj = Matrix4x4.CreatePerspectiveFieldOfView(float.DegreesToRadians(_fov), (float)Width / (float)Height, _nearPlane, _farPlane);
         _viewProj = _view * _proj;
     }
 }

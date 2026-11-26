@@ -223,7 +223,7 @@ public abstract class Application<TApp> : SDL.IMainCallbacks<TApp>
         Log.AddSink(new ConsoleLogSink());
     }
 
-    protected abstract GraphicsDevice CreateGraphicsDevice(GraphicsAPI api, NativeWindowInfo window);
+    protected abstract GraphicsDevice CreateGraphicsDevice(GraphicsAPI api, in NativeWindowInfo window);
 
     #endregion
 

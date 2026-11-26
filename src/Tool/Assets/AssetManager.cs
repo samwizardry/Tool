@@ -1,6 +1,8 @@
 ﻿using Tool.Graphics;
 using Tool.Logging;
 
+using Vortice.Mathematics;
+
 namespace Tool.Assets;
 
 /// <summary>
@@ -261,6 +263,7 @@ public sealed class AssetManager : IDisposable
 
     public void DrawModel(
         AssetHandle<ModelAsset> handle,
+        in ViewportState viewport,
         BindingSetHandle perFrame = default,
         BindingSetHandle perObject = default)
     {
@@ -281,11 +284,13 @@ public sealed class AssetManager : IDisposable
 
                 GraphicsState state = new GraphicsState(
                     pipeline: material.Pipeline,
-                    bindings: new BindingSetVector(
-                        set0: perFrame,
-                        set1: default,
-                        set2: material.BindingSet,
-                        set3: perObject),
+                    viewport: viewport,
+                    blendConstantColor: Colors.White,
+                    bindings: new BindingSetArray(
+                        perFrame,
+                        default,
+                        material.BindingSet,
+                        perObject),
                     vertexBuffer: vbBinding,
                     indexBuffer: ibBinding);
 

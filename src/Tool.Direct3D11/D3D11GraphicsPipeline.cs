@@ -2,6 +2,7 @@
 
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
+using Vortice.Mathematics;
 
 namespace Tool.Direct3D11;
 
@@ -11,22 +12,25 @@ internal readonly struct D3D11GraphicsPipeline
     public readonly ID3D11PixelShader? PixelShader;
     public readonly ID3D11InputLayout? InputLayout;
 #if GRAPHICS_DEBUG
-    public readonly Graphics.BindingLayoutVector BindingLayouts;
+    public readonly Graphics.BindingLayoutArray BindingLayouts;
 #endif
     public readonly ID3D11RasterizerState? RasterState;
     public readonly ID3D11BlendState1? BlendState;
     public readonly PrimitiveTopology Topology;
+
+    public readonly bool UseBlendConstants;
 
     private D3D11GraphicsPipeline(
         ID3D11VertexShader? vs,
         ID3D11PixelShader? ps,
         ID3D11InputLayout? il,
 #if GRAPHICS_DEBUG
-        in Graphics.BindingLayoutVector bls,
+        in Graphics.BindingLayoutArray bls,
 #endif
         ID3D11RasterizerState? rs,
         ID3D11BlendState1? bs,
-        PrimitiveTopology topology)
+        PrimitiveTopology topology,
+        bool useBlendConstants)
     {
         VertexShader = vs;
         PixelShader = ps;
@@ -37,6 +41,7 @@ internal readonly struct D3D11GraphicsPipeline
         RasterState = rs;
         BlendState = bs;
         Topology = topology;
+        UseBlendConstants = useBlendConstants;
     }
 
     public void Destroy()
@@ -65,9 +70,14 @@ internal readonly struct D3D11GraphicsPipeline
             ? rasterStates.Get(desc.RasterState.Raw).Native
             : null;
 
-        var bs = desc.BlendState.IsValid
-            ? blendStates.Get(desc.BlendState.Raw).Native
-            : null;
+        ID3D11BlendState1? bs = null;
+        bool useBlendConstants = false;
+        if (desc.BlendState.IsValid)
+        {
+            ref readonly var bsData = ref blendStates.Get(desc.BlendState.Raw);
+            bs = bsData.Native;
+            useBlendConstants = bsData.UseBlendConstants;
+        }
 
         return new D3D11GraphicsPipeline(
             vs,
@@ -78,16 +88,17 @@ internal readonly struct D3D11GraphicsPipeline
 #endif
             rs,
             bs,
-            desc.Topology.ToD3D11PrimitiveTopology());
+            desc.Topology.ToD3D11PrimitiveTopology(),
+            useBlendConstants);
     }
 
-    public void Apply(ID3D11DeviceContext4 imContext)
+    public void Apply(ID3D11DeviceContext4 imContext, Color4 blendConstantColor)
     {
         imContext.IASetPrimitiveTopology(Topology);
         imContext.IASetInputLayout(InputLayout);
         imContext.VSSetShader(VertexShader);
         imContext.PSSetShader(PixelShader);
         imContext.RSSetState(RasterState);
-        imContext.OMSetBlendState(BlendState);
+        imContext.OMSetBlendState(BlendState, blendConstantColor);
     }
 }

@@ -35,7 +35,7 @@ public sealed partial class Luna : Application<Luna>
         Identifier = "semisoft.tool.luna";
     }
 
-    protected override GraphicsDevice CreateGraphicsDevice(GraphicsAPI api, NativeWindowInfo window)
+    protected override GraphicsDevice CreateGraphicsDevice(GraphicsAPI api, in NativeWindowInfo window)
     {
         if (api == GraphicsAPI.Default)
         {
@@ -83,10 +83,10 @@ public sealed partial class Luna : Application<Luna>
         InfGrid.Load(GraphicsDevice, _globalScope);
 
         // Create box
-        var data = Geometry.ComputeBox(Vector3.One * 2.0f);
+        var (vertices, indices) = Geometry.ComputeBox(Vector3.One * 2.0f);
         var mesh = Mesh.Create(GraphicsDevice,
-            GraphicsDevice.CreateBuffer(data.Vertices.AsSpan(), BufferDescription.Vertex(0, 0)),
-            GraphicsDevice.CreateBuffer(data.Indices.AsSpan(), BufferDescription.Index(0)),
+            GraphicsDevice.CreateBuffer(vertices.AsSpan(), BufferDescription.Vertex(0, 0)),
+            GraphicsDevice.CreateBuffer(indices.AsSpan(), BufferDescription.Index(0)),
             IndexFormat.UInt16);
 
         _actors.Add(new Box(GraphicsDevice, _sceneScope.CreateModel(mesh, Phong.BoxMaterial)));
@@ -113,7 +113,7 @@ public sealed partial class Luna : Application<Luna>
             _elapsedSeconds += gameTime.DeltaSeconds;
             if (_elapsedSeconds >= 1.0f)
             {
-                double fps = _frameCount / _elapsedSeconds;
+                //double fps = _frameCount / _elapsedSeconds;
                 //Log.Info(LogCat, $"FPS: {fps:F1}");
                 _elapsedSeconds -= 1.0f;
                 _frameCount = 0;
@@ -133,7 +133,7 @@ public sealed partial class Luna : Application<Luna>
 
         Phong.PerFrame.Update(GraphicsDevice);
 
-        foreach (var actor in _actors)
+        foreach (var actor in _actors.AsSpan())
         {
             actor.Update(gameTime.DeltaSeconds);
         }
@@ -144,7 +144,7 @@ public sealed partial class Luna : Application<Luna>
         //GraphicsDevice.SetGraphicsState(new(ResourceFactoryCache.InfGridPipeline, Bindings: new(set0: ResourceFactoryCache.InfGridPerFrameBindSet)));
         //GraphicsDevice.Draw(6);
 
-        foreach (var actor in _actors)
+        foreach (var actor in _actors.AsSpan())
         {
             actor.Draw(AssetManager);
         }
@@ -153,11 +153,12 @@ public sealed partial class Luna : Application<Luna>
     protected override void OnResize(int width, int height)
     {
         _camera.OnResize(width, height);
+        Resources.OnResize(width, height);
     }
 
     protected override void UnloadContent()
     {
-        foreach (var actor in _actors)
+        foreach (var actor in _actors.AsSpan())
         {
             actor?.Dispose();
         }

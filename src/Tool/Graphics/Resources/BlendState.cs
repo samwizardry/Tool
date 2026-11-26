@@ -1,4 +1,7 @@
-﻿using Tool.Collections;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+
+using Tool.Collections;
 
 namespace Tool.Graphics;
 
@@ -43,47 +46,108 @@ public readonly record struct BlendStateDescription
         public static RenderTarget Opaque => new();
     }
 
-    public readonly RenderTarget RenderTarget0;
-    public readonly RenderTarget RenderTarget1;
-    public readonly RenderTarget RenderTarget2;
-    public readonly RenderTarget RenderTarget3;
-    public readonly RenderTarget RenderTarget4;
-    public readonly RenderTarget RenderTarget5;
-    public readonly RenderTarget RenderTarget6;
-    public readonly RenderTarget RenderTarget7;
+    [InlineArray(Constants.MaxRenderTargets)]
+    public struct RenderTargetArray : IEquatable<RenderTargetArray>
+    {
+        private RenderTarget _element0;
+
+        public RenderTargetArray()
+        {
+            for (int i = 0; i < Constants.MaxRenderTargets; i++)
+            {
+                this[i] = RenderTarget.Opaque;
+            }
+        }
+
+        public RenderTargetArray(params ReadOnlySpan<RenderTarget> renderTargets)
+        {
+            if (renderTargets.Length > Constants.MaxRenderTargets)
+            {
+                throw new ArgumentOutOfRangeException(nameof(renderTargets));
+            }
+
+            int i = 0;
+            for (; i < renderTargets.Length; i++)
+            {
+                this[i] = renderTargets[i];
+            }
+
+            for (; i < Constants.MaxRenderTargets; i++)
+            {
+                this[i] = RenderTarget.Opaque;
+            }
+        }
+
+        public static RenderTargetArray CreateUniform(RenderTarget renderTarget)
+        {
+            RenderTargetArray array = default;
+
+            for (int i = 0; i < Constants.MaxRenderTargets; i++)
+            {
+                array[i] = renderTarget;
+            }
+
+            return array;
+        }
+
+        public readonly bool Equals(RenderTargetArray other)
+        {
+            for (int i = 0; i < Constants.MaxRenderTargets; i++)
+            {
+                if (this[i] != other[i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        public override readonly bool Equals([NotNullWhen(true)] object? obj) =>
+            obj is RenderTargetArray other && Equals(other);
+
+        public override readonly int GetHashCode()
+        {
+            HashCode hash = default;
+
+            for (int i = 0; i < Constants.MaxRenderTargets; i++)
+            {
+                hash.Add(this[i]);
+            }
+
+            return hash.ToHashCode();
+        }
+
+        public static bool operator ==(RenderTargetArray left, RenderTargetArray right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(RenderTargetArray left, RenderTargetArray right)
+        {
+            return !(left == right);
+        }
+    }
+
+    public readonly RenderTargetArray RenderTargets;
     public readonly bool AlphaToCoverageEnable;
 
     /// <summary>
     /// Opaque by default.
     /// </summary>
-    public BlendStateDescription() : this(renderTarget0: RenderTarget.Opaque) { }
-
-    public BlendStateDescription(
-        RenderTarget? renderTarget0 = null,
-        RenderTarget? renderTarget1 = null,
-        RenderTarget? renderTarget2 = null,
-        RenderTarget? renderTarget3 = null,
-        RenderTarget? renderTarget4 = null,
-        RenderTarget? renderTarget5 = null,
-        RenderTarget? renderTarget6 = null,
-        RenderTarget? renderTarget7 = null,
-        bool alphaToCoverageEnable = false)
+    public BlendStateDescription()
     {
-        RenderTarget0 = renderTarget0 ?? RenderTarget.Opaque;
-        RenderTarget1 = renderTarget1 ?? RenderTarget.Opaque;
-        RenderTarget2 = renderTarget2 ?? RenderTarget.Opaque;
-        RenderTarget3 = renderTarget3 ?? RenderTarget.Opaque;
-        RenderTarget4 = renderTarget4 ?? RenderTarget.Opaque;
-        RenderTarget5 = renderTarget5 ?? RenderTarget.Opaque;
-        RenderTarget6 = renderTarget6 ?? RenderTarget.Opaque;
-        RenderTarget7 = renderTarget7 ?? RenderTarget.Opaque;
+        RenderTargets = RenderTargetArray.CreateUniform(RenderTarget.Opaque);
+        AlphaToCoverageEnable = false;
+    }
 
+    public BlendStateDescription(in RenderTargetArray renderTargets, bool alphaToCoverageEnable = false)
+    {
+        RenderTargets = renderTargets;
         AlphaToCoverageEnable = alphaToCoverageEnable;
     }
 
     public BlendStateDescription(BlendFactor srcBlend, BlendFactor destBlend, BlendFactor srcBlendAlpha, BlendFactor destBlendAlpha)
     {
-        RenderTarget0 = new RenderTarget(blendEnable: IsBlendEnabled(srcBlend, destBlend, srcBlendAlpha, destBlendAlpha),
+        RenderTarget rt = new(blendEnable: IsBlendEnabled(srcBlend, destBlend, srcBlendAlpha, destBlendAlpha),
             srcBlend: srcBlend,
             destBlend: destBlend,
             blendOp: BlendOp.Add,
@@ -92,43 +156,22 @@ public readonly record struct BlendStateDescription
             blendOpAlpha: BlendOp.Add,
             colorWriteMask: ColorMask.All);
 
-        RenderTarget1 = RenderTarget0;
-        RenderTarget2 = RenderTarget0;
-        RenderTarget3 = RenderTarget0;
-        RenderTarget4 = RenderTarget0;
-        RenderTarget5 = RenderTarget0;
-        RenderTarget6 = RenderTarget0;
-        RenderTarget7 = RenderTarget0;
-
+        RenderTargets = RenderTargetArray.CreateUniform(rt);
         AlphaToCoverageEnable = false;
     }
-
-    public RenderTarget this[int index] => index switch
-    {
-        0 => RenderTarget0,
-        1 => RenderTarget1,
-        2 => RenderTarget2,
-        3 => RenderTarget3,
-        4 => RenderTarget4,
-        5 => RenderTarget5,
-        6 => RenderTarget6,
-        7 => RenderTarget7,
-        _ => throw new IndexOutOfRangeException()
-    };
 
     public static BlendStateDescription Opaque => new();
     public static BlendStateDescription NonPremultiplied => new(BlendFactor.SrcAlpha, BlendFactor.InvSrcAlpha, BlendFactor.One, BlendFactor.InvSrcAlpha);
     public static BlendStateDescription PremultipliedAlpha => new(BlendFactor.One, BlendFactor.InvSrcAlpha, BlendFactor.One, BlendFactor.InvSrcAlpha);
     public static BlendStateDescription Additive => new(BlendFactor.SrcAlpha, BlendFactor.One, BlendFactor.One, BlendFactor.One);
+    public static BlendStateDescription Uniform(RenderTarget renderTarget, bool alphaToCoverageEnable = false) =>
+        new(RenderTargetArray.CreateUniform(renderTarget), alphaToCoverageEnable);
 
     private static bool IsBlendEnabled(BlendFactor srcBlend, BlendFactor destBlend, BlendFactor srcBlendAlpha, BlendFactor destBlendAlpha) =>
         srcBlendAlpha != BlendFactor.One ||
         destBlendAlpha != BlendFactor.Zero ||
         srcBlend != BlendFactor.One ||
         destBlend != BlendFactor.Zero;
-
-    public static BlendStateDescription Uniform(in RenderTarget target, bool alphaToCoverageEnable = false) =>
-        new(target, target, target, target, target, target, target, target, alphaToCoverageEnable);
 }
 
 public readonly record struct BlendStateHandle

@@ -5,10 +5,12 @@ namespace Tool.Direct3D11;
 internal readonly struct D3D11BlendState
 {
     public readonly ID3D11BlendState1 Native;
+    public readonly bool UseBlendConstants;
 
-    private D3D11BlendState(ID3D11BlendState1 blendState)
+    private D3D11BlendState(ID3D11BlendState1 blendState, bool useBlendConstants)
     {
         Native = blendState;
+        UseBlendConstants = useBlendConstants;
     }
 
     public void Destroy()
@@ -20,12 +22,21 @@ internal readonly struct D3D11BlendState
     {
         RenderTargetBlendDescription1[] renderTargets = new RenderTargetBlendDescription1[Graphics.Constants.MaxRenderTargets];
         bool independentBlendEnable = false;
+        bool useBlendConstants = false;
 
-        var rt0 = desc[0];
+        ref readonly var rt0 = ref desc.RenderTargets[0];
 
         for (int i = 0; i < Graphics.Constants.MaxRenderTargets; i++)
         {
-            Graphics.BlendStateDescription.RenderTarget rt = desc[i];
+            ref readonly var rt = ref desc.RenderTargets[i];
+
+            if (rt.SrcBlend is Graphics.BlendFactor.ConstantColor or Graphics.BlendFactor.InvConstantColor ||
+                rt.SrcBlendAlpha is Graphics.BlendFactor.ConstantColor or Graphics.BlendFactor.InvConstantColor ||
+                rt.DestBlend is Graphics.BlendFactor.ConstantColor or Graphics.BlendFactor.InvConstantColor ||
+                rt.DestBlendAlpha is Graphics.BlendFactor.ConstantColor or Graphics.BlendFactor.InvConstantColor)
+            {
+                useBlendConstants = true;
+            }
 
             if (i > 0 && rt != rt0)
             {
@@ -54,6 +65,6 @@ internal readonly struct D3D11BlendState
             IndependentBlendEnable = independentBlendEnable
         };
 
-        return new D3D11BlendState(device.CreateBlendState1(nativeDesc));
+        return new D3D11BlendState(device.CreateBlendState1(nativeDesc), useBlendConstants);
     }
 }

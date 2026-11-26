@@ -13,10 +13,6 @@ public abstract class GraphicsDevice : IDisposable
 
     public virtual SizeI ClientSize { get; protected set; }
 
-    public virtual Viewport Viewport { get; protected set; }
-
-    public virtual RectI ScissorRect { get; protected set; }
-
     public virtual bool VSync { get; set; }
 
     public virtual Color4 ClearColor { get; set; }
