@@ -3,6 +3,7 @@
 // Licensed under the MIT License. See THIRD-PARTY-NOTICES.md in the project root for license information.
 
 using Vortice.Direct3D;
+using Vortice.Direct3D11;
 using Vortice.DXGI;
 
 namespace Tool.Direct3D11;
@@ -162,6 +163,41 @@ internal static class Extensions
             Graphics.PrimitiveTopology.TriangleFan => PrimitiveTopology.TriangleFan,
             Graphics.PrimitiveTopology.TriangleListWithAdjacency => PrimitiveTopology.TriangleListAdjacency,
             Graphics.PrimitiveTopology.TriangleStripWithAdjacency => PrimitiveTopology.TriangleStripAdjacency,
+            _ => throw new NotSupportedException()
+        };
+
+    public static Blend ToD3D11Blend(this Graphics.BlendFactor blend) =>
+        blend switch
+        {
+            Graphics.BlendFactor.Zero => Blend.Zero,
+            Graphics.BlendFactor.One => Blend.One,
+            Graphics.BlendFactor.SrcColor => Blend.SourceColor,
+            Graphics.BlendFactor.InvSrcColor => Blend.InverseSourceColor,
+            Graphics.BlendFactor.SrcAlpha => Blend.SourceAlpha,
+            Graphics.BlendFactor.InvSrcAlpha => Blend.InverseSourceAlpha,
+            Graphics.BlendFactor.DstAlpha => Blend.DestinationAlpha,
+            Graphics.BlendFactor.InvDstAlpha => Blend.InverseDestinationAlpha,
+            Graphics.BlendFactor.DstColor => Blend.DestinationColor,
+            Graphics.BlendFactor.InvDstColor => Blend.InverseDestinationColor,
+            Graphics.BlendFactor.SrcAlphaSaturate => Blend.SourceAlphaSaturate,
+            Graphics.BlendFactor.ConstantColor => Blend.BlendFactor,
+            Graphics.BlendFactor.InvConstantColor => Blend.InverseBlendFactor,
+            Graphics.BlendFactor.Src1Color => Blend.Source1Color,
+            Graphics.BlendFactor.InvSrc1Color => Blend.InverseSource1Color,
+            Graphics.BlendFactor.Src1Alpha => Blend.Source1Alpha,
+            Graphics.BlendFactor.InvSrc1Alpha => Blend.InverseSource1Alpha,
+            _ => throw new NotSupportedException()
+        };
+
+    public static BlendOperation ToD3D11BlendOp(this Graphics.BlendOp blend) =>
+        blend switch
+        {
+
+            Graphics.BlendOp.Add => BlendOperation.Add,
+            Graphics.BlendOp.Subtract => BlendOperation.Subtract,
+            Graphics.BlendOp.ReverseSubtract => BlendOperation.ReverseSubtract,
+            Graphics.BlendOp.Min => BlendOperation.Min,
+            Graphics.BlendOp.Max => BlendOperation.Max,
             _ => throw new NotSupportedException()
         };
 }

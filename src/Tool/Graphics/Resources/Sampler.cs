@@ -73,8 +73,15 @@ public readonly record struct SamplerDescription
         new(true, true, true, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, SamplerAddressMode.Wrap, maxAnisotropy);
 }
 
-public readonly record struct SamplerHandle(SlotHandle Raw)
+public readonly record struct SamplerHandle
 {
+    public readonly SlotHandle Raw;
+
+    public SamplerHandle(SlotHandle raw)
+    {
+        Raw = raw;
+    }
+
     public static SamplerHandle Invalid => default;
     public bool IsValid => Raw.IsValid;
     public uint Index => Raw.Index;

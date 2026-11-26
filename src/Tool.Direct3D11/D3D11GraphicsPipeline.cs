@@ -14,6 +14,7 @@ internal readonly struct D3D11GraphicsPipeline
     public readonly Graphics.BindingLayoutVector BindingLayouts;
 #endif
     public readonly ID3D11RasterizerState? RasterState;
+    public readonly ID3D11BlendState1? BlendState;
     public readonly PrimitiveTopology Topology;
 
     private D3D11GraphicsPipeline(
@@ -24,6 +25,7 @@ internal readonly struct D3D11GraphicsPipeline
         in Graphics.BindingLayoutVector bls,
 #endif
         ID3D11RasterizerState? rs,
+        ID3D11BlendState1? bs,
         PrimitiveTopology topology)
     {
         VertexShader = vs;
@@ -33,6 +35,7 @@ internal readonly struct D3D11GraphicsPipeline
         BindingLayouts = bls;
 #endif
         RasterState = rs;
+        BlendState = bs;
         Topology = topology;
     }
 
@@ -43,7 +46,8 @@ internal readonly struct D3D11GraphicsPipeline
     public static D3D11GraphicsPipeline Create(in Graphics.GraphicsPipelineDescription desc,
         SlotMap<D3D11Shader> shaders,
         SlotMap<D3D11InputLayout> inputLayouts,
-        SlotMap<D3D11RasterState> rasterStates)
+        SlotMap<D3D11RasterState> rasterStates,
+        SlotMap<D3D11BlendState> blendStates)
     {
         var vs = desc.VertexShader.IsValid
             ? (ID3D11VertexShader)shaders.Get(desc.VertexShader.Raw).Native
@@ -61,6 +65,10 @@ internal readonly struct D3D11GraphicsPipeline
             ? rasterStates.Get(desc.RasterState.Raw).Native
             : null;
 
+        var bs = desc.BlendState.IsValid
+            ? blendStates.Get(desc.BlendState.Raw).Native
+            : null;
+
         return new D3D11GraphicsPipeline(
             vs,
             ps,
@@ -69,6 +77,7 @@ internal readonly struct D3D11GraphicsPipeline
             desc.BindingLayouts,
 #endif
             rs,
+            bs,
             desc.Topology.ToD3D11PrimitiveTopology());
     }
 
@@ -79,5 +88,6 @@ internal readonly struct D3D11GraphicsPipeline
         imContext.VSSetShader(VertexShader);
         imContext.PSSetShader(PixelShader);
         imContext.RSSetState(RasterState);
+        imContext.OMSetBlendState(BlendState);
     }
 }

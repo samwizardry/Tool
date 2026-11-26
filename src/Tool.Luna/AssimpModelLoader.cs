@@ -110,6 +110,7 @@ public sealed class AssimpModelLoader : IModelLoader
         return new Graphics.Mesh(
             vb,
             ib,
+            IndexFormat.UInt32,
             [MeshPart.Indexed(device.GetBufferDescription(ib).Count, materialIndex: mesh.MaterialIndex)]);
     }
 
@@ -143,10 +144,11 @@ public sealed class AssimpModelLoader : IModelLoader
             }
 
             materials[index] = assets.CreateMaterial(new MaterialDescription(
-                Pipeline: ResourceFactoryCache.PhongPipeline,
-                BindingLayout: ResourceFactoryCache.PhongBindingLayout,
+                Pipeline: Phong.Pipeline,
+                BindingLayout: Phong.MatBL,
                 Textures: [new(0, diffuseTextures[0]), new(1, specularTextures[0])],
-                Samplers: [new(0, diffuseSamplers[0])]));
+                Samplers: [new(0, Resources.Anisotropic16)]
+            ));
         }
     }
 

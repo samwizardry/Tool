@@ -32,12 +32,14 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     private readonly Format _depthStencilFormat;
 
     // Immutable States: cached & owned by GraphicsDevice until shutdown
+    private readonly SlotMap<D3D11InputLayout> _inputLayouts = new();
+    private readonly Dictionary<Graphics.VertexLayout, Graphics.InputLayoutHandle> _inputLayoutCache = [];
     private readonly SlotMap<D3D11RasterState> _rasterStates = new();
     private readonly Dictionary<Graphics.RasterStateDescription, Graphics.RasterStateHandle> _rasterStateCache = [];
     private readonly SlotMap<D3D11Sampler> _samplers = new();
     private readonly Dictionary<Graphics.SamplerDescription, Graphics.SamplerHandle> _samplerCache = [];
-    private readonly SlotMap<D3D11InputLayout> _inputLayouts = new();
-    private readonly Dictionary<Graphics.VertexLayout, Graphics.InputLayoutHandle> _inputLayoutCache = [];
+    private readonly SlotMap<D3D11BlendState> _blendStates = new();
+    private readonly Dictionary<Graphics.BlendStateDescription, Graphics.BlendStateHandle> _blendStateCache = [];
     private readonly SlotMap<D3D11BindingLayout> _bindingLayouts = new();
     private readonly Dictionary<Graphics.BindingLayoutDescription, Graphics.BindingLayoutHandle> _bindingLayoutCache = [];
     private readonly SlotMap<D3D11GraphicsPipeline> _pipelines = new();
@@ -409,6 +411,19 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     #region Resource Creation & Binding
 
     // Immutable States: cached & owned by GraphicsDevice until shutdown
+    public override Graphics.InputLayoutHandle GetOrCreateInputLayout(in Graphics.VertexLayout layout, Graphics.ShaderHandle vs)
+    {
+        if (!_inputLayoutCache.TryGetValue(layout, out var handle))
+        {
+            ref readonly var shader = ref _shaders.Get(vs.Raw);
+            var raw = _inputLayouts.Add(D3D11InputLayout.Create(_device, in layout, in shader));
+            handle = new Graphics.InputLayoutHandle(raw);
+            _inputLayoutCache[layout] = handle;
+        }
+
+        return handle;
+    }
+
     public override Graphics.RasterStateHandle GetOrCreateRasterState(in Graphics.RasterStateDescription desc)
     {
         if (!_rasterStateCache.TryGetValue(desc, out var handle))
@@ -433,14 +448,13 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
         return handle;
     }
 
-    public override Graphics.InputLayoutHandle GetOrCreateInputLayout(in Graphics.VertexLayout layout, Graphics.ShaderHandle vs)
+    public override Graphics.BlendStateHandle GetOrCreateBlendState(in Graphics.BlendStateDescription desc)
     {
-        if (!_inputLayoutCache.TryGetValue(layout, out var handle))
+        if (!_blendStateCache.TryGetValue(desc, out var handle))
         {
-            ref readonly var shader = ref _shaders.Get(vs.Raw);
-            var raw = _inputLayouts.Add(D3D11InputLayout.Create(_device, in layout, in shader));
-            handle = new Graphics.InputLayoutHandle(raw);
-            _inputLayoutCache[layout] = handle;
+            var raw = _blendStates.Add(D3D11BlendState.Create(_device, in desc));
+            handle = new Graphics.BlendStateHandle(raw);
+            _blendStateCache[desc] = handle;
         }
 
         return handle;
@@ -462,7 +476,7 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     {
         if (!_pipelineCache.TryGetValue(desc, out var handle))
         {
-            var raw = _pipelines.Add(D3D11GraphicsPipeline.Create(in desc, _shaders, _inputLayouts, _rasterStates));
+            var raw = _pipelines.Add(D3D11GraphicsPipeline.Create(in desc, _shaders, _inputLayouts, _rasterStates, _blendStates));
             handle = new Graphics.GraphicsPipelineHandle(raw);
             _pipelineCache[desc] = handle;
         }
@@ -711,7 +725,7 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
             if (state.IndexBuffer.Buffer.IsValid)
             {
                 ref readonly var ib = ref _buffers.Get(state.IndexBuffer.Buffer.Raw);
-                _imContext.IASetIndexBuffer(ib.Native, ((Graphics.IndexFormat)ib.Desc.ByteStride).ToDXGIFormat(), state.IndexBuffer.ByteOffset);
+                _imContext.IASetIndexBuffer(ib.Native, state.IndexBuffer.Format.ToDXGIFormat(), state.IndexBuffer.ByteOffset);
             }
             _currentIndexBuffer = state.IndexBuffer;
         }
@@ -837,6 +851,9 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
 
         _samplers.DrainAll((_, res) => res.Destroy());
         _samplerCache.Clear();
+
+        _blendStates.DrainAll((_, res) => res.Destroy());
+        _blendStateCache.Clear();
 
         // Release main interfaces and debug leak reports
         _depthStencilView?.Dispose();

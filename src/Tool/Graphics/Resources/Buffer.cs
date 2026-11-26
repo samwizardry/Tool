@@ -68,8 +68,15 @@ public readonly record struct BufferDescription
     private static uint Align16(uint size) => (size + 15u) & ~15u;
 }
 
-public readonly record struct BufferHandle(SlotHandle Raw)
+public readonly record struct BufferHandle
 {
+    public readonly SlotHandle Raw;
+
+    public BufferHandle(SlotHandle raw)
+    {
+        Raw = raw;
+    }
+
     public static BufferHandle Invalid => default;
     public bool IsValid => Raw.IsValid;
     public uint Index => Raw.Index;

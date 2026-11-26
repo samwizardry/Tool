@@ -43,21 +43,16 @@ public enum CpuAccess : byte
     /// Resource is accessible only by the GPU (best performance).
     /// </summary>
     None = 0,
-
     /// <summary>
     /// CPU can write to the resource (Dynamic / Upload).
     /// </summary>
     Write,
-
     /// <summary>
     /// CPU can read from the resource (Staging / Readback).
     /// </summary>
     Read
 }
 
-/// <summary>
-/// Resource data formats modeled after nvrhi::Format.
-/// </summary>
 public enum Format : byte
 {
     Unknown = 0,
@@ -149,9 +144,6 @@ public enum TextureDimension : byte
     Texture3D
 }
 
-/// <summary>
-/// The value of an element is equal to the byte stride of the index buffer.
-/// </summary>
 public enum IndexFormat : byte
 {
     UInt16 = 2,
@@ -229,11 +221,11 @@ public enum BlendOp : byte
 public enum ColorMask : byte
 {
     None = 0,
-    Red = 1 << 0,
-    Green = 1 << 1,
-    Blue = 1 << 2,
-    Alpha = 1 << 3,
-    All = Red | Green | Blue | Alpha
+    Red = 1,
+    Green = 2,
+    Blue = 4,
+    Alpha = 8,
+    All = 0xF
 }
 
 public enum StencilOp : byte
@@ -290,9 +282,6 @@ public enum SamplerReductionType : byte
     Maximum
 }
 
-/// <summary>
-/// Specifies the type of resource bound in a <see cref="BindingLayout"/> and <see cref="BindingSet"/>.
-/// </summary>
 public enum BindingResourceType : byte
 {
     None = 0,

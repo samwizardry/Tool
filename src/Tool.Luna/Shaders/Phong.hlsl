@@ -1,9 +1,3 @@
-struct Material
-{
-    float Shininess;
-    float3 Pad0;
-};
-
 struct DirectionalLight
 {
     float3 Direction;
@@ -45,18 +39,24 @@ struct Light
     SpotLight SpotLight;
 };
 
-cbuffer PerFrameBuffer : register(b0)
+cbuffer PerFrameCB : register(b0)
 {
     float4x4 gViewProj;
     Light gLight;
     float3 gViewPos;
+    float gPad0;
 };
 
-cbuffer PerObjectBuffer : register(b1)
+cbuffer MatCB : register(b2)
 {
-    float4x4 gModel;
+    float gShininess;
+    float3 gPad1;
+}
+
+cbuffer PerObjCB : register(b3)
+{
+    float4x4 gModelMatrix;
     float4x4 gNormalMatrix;
-    Material gMaterial;
 };
 
 Texture2D gDiffuseMap : register(t0);
@@ -82,7 +82,7 @@ PSInput VSMain(VSInput input)
 {
     PSInput output;
 
-    float4 vertPos = mul(float4(input.Position, 1.0f), gModel);
+    float4 vertPos = mul(float4(input.Position, 1.0f), gModelMatrix);
 
     output.Position = mul(vertPos, gViewProj);
     output.VertPos = vertPos;
@@ -92,7 +92,7 @@ PSInput VSMain(VSInput input)
     return output;
 }
 
-float3 ComputeDirLight(DirectionalLight light, Material mat, float3 viewPos, float3 vertPos, float3 normal, float3 baseColor, float3 specColor)
+float3 ComputeDirLight(DirectionalLight light, float3 viewPos, float3 vertPos, float3 normal, float3 baseColor, float3 specColor)
 {
     // Ambient
     float3 ambient = baseColor * light.Ambient;
@@ -108,14 +108,14 @@ float3 ComputeDirLight(DirectionalLight light, Material mat, float3 viewPos, flo
     {
         float3 viewDir = normalize(viewPos - vertPos);
         float3 reflectDir = reflect(-lightDir, normal);
-        float specFactor = pow(max(dot(viewDir, reflectDir), 0.0f), mat.Shininess);
+        float specFactor = pow(max(dot(viewDir, reflectDir), 0.0f), gShininess);
         specular = specColor * light.Specular * specFactor;
     }
 
     return ambient + diffuse + specular;
 }
 
-float3 ComputePointLight(PointLight light, Material mat, float3 viewPos, float3 vertPos, float3 normal, float3 baseColor, float3 specColor)
+float3 ComputePointLight(PointLight light, float3 viewPos, float3 vertPos, float3 normal, float3 baseColor, float3 specColor)
 {
     float3 toLight = light.Position - vertPos;
     float distance = length(toLight);
@@ -134,14 +134,14 @@ float3 ComputePointLight(PointLight light, Material mat, float3 viewPos, float3 
     {
         float3 viewDir = normalize(viewPos - vertPos);
         float3 reflectDir = reflect(-lightDir, normal);
-        float specFactor = pow(max(dot(viewDir, reflectDir), 0.0f), mat.Shininess);
+        float specFactor = pow(max(dot(viewDir, reflectDir), 0.0f), gShininess);
         specular = specColor * light.Specular * specFactor;
     }
 
     return (diffuse + specular) * attenuation;
 }
 
-float3 ComputeSpotLight(SpotLight light, Material mat, float3 viewPos, float3 vertPos, float3 normal, float3 baseColor, float3 specColor)
+float3 ComputeSpotLight(SpotLight light, float3 viewPos, float3 vertPos, float3 normal, float3 baseColor, float3 specColor)
 {
     float3 toLight = light.Position - vertPos;
     float distance = length(toLight);
@@ -168,7 +168,7 @@ float3 ComputeSpotLight(SpotLight light, Material mat, float3 viewPos, float3 ve
     {
         float3 viewDir = normalize(viewPos - vertPos);
         float3 reflectDir = reflect(-lightDir, normal);
-        float specFactor = pow(max(dot(viewDir, reflectDir), 0.0f), mat.Shininess);
+        float specFactor = pow(max(dot(viewDir, reflectDir), 0.0f), gShininess);
         specular = specColor * light.Specular * specFactor;
     }
 
@@ -182,9 +182,9 @@ float4 PSMain(PSInput input) : SV_TARGET
 
     float3 normal = normalize(input.Normal);
 
-    float3 dirLight = ComputeDirLight(gLight.DirLight, gMaterial, gViewPos, input.VertPos, normal, baseColor.rgb, specColor.rgb);
-    float3 pointLight = ComputePointLight(gLight.PointLight, gMaterial, gViewPos, input.VertPos, normal, baseColor.rgb, specColor.rgb);
-    float3 spotLight = ComputeSpotLight(gLight.SpotLight, gMaterial, gViewPos, input.VertPos, normal, baseColor.rgb, specColor.rgb);
+    float3 dirLight = ComputeDirLight(gLight.DirLight, gViewPos, input.VertPos, normal, baseColor.rgb, specColor.rgb);
+    float3 pointLight = ComputePointLight(gLight.PointLight, gViewPos, input.VertPos, normal, baseColor.rgb, specColor.rgb);
+    float3 spotLight = ComputeSpotLight(gLight.SpotLight, gViewPos, input.VertPos, normal, baseColor.rgb, specColor.rgb);
 
     return float4(dirLight + pointLight + spotLight, baseColor.a);
 }

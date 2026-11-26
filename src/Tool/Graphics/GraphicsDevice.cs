@@ -48,9 +48,10 @@ public abstract class GraphicsDevice : IDisposable
     #region Resource Creation & Binding
 
     // Immutable States: cached & owned by GraphicsDevice until shutdown
+    public abstract InputLayoutHandle GetOrCreateInputLayout(in VertexLayout layout, ShaderHandle vs);
     public abstract RasterStateHandle GetOrCreateRasterState(in RasterStateDescription desc);
     public abstract SamplerHandle GetOrCreateSampler(in SamplerDescription desc);
-    public abstract InputLayoutHandle GetOrCreateInputLayout(in VertexLayout layout, ShaderHandle vs);
+    public abstract BlendStateHandle GetOrCreateBlendState(in BlendStateDescription desc);
     public abstract BindingLayoutHandle GetOrCreateBindingLayout(in BindingLayoutDescription desc);
     public abstract GraphicsPipelineHandle GetOrCreateGraphicsPipeline(in GraphicsPipelineDescription desc);
 

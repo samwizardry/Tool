@@ -26,8 +26,15 @@ public readonly record struct RasterStateDescription(
     public static RasterStateDescription Wireframe => new(FillMode: RasterFillMode.Wireframe, CullMode: RasterCullMode.None);
 }
 
-public readonly record struct RasterStateHandle(SlotHandle Raw)
+public readonly record struct RasterStateHandle
 {
+    public readonly SlotHandle Raw;
+
+    public RasterStateHandle(SlotHandle raw)
+    {
+        Raw = raw;
+    }
+
     public static RasterStateHandle Invalid => default;
     public bool IsValid => Raw.IsValid;
     public uint Index => Raw.Index;

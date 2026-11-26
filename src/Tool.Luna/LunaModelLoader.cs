@@ -129,7 +129,8 @@ public sealed class LunaModelLoader : IModelLoader
 
         Mesh mesh = Mesh.Create(device,
             device.CreateBuffer(vertices, BufferDescription.Vertex(0, 8 * sizeof(float))),
-            device.CreateBuffer(indices, BufferDescription.Index(0)));
+            device.CreateBuffer(indices, BufferDescription.Index(0)),
+            IndexFormat.UInt32);
 
         return mesh;
     }
@@ -141,11 +142,11 @@ public sealed class LunaModelLoader : IModelLoader
         try
         {
             mesh = Import(device, fullPath);
-            assets.AddRef(ResourceFactoryCache.CarMaterial);
+            assets.AddRef(Phong.CommonMaterial);
             return new ModelAsset
             {
                 Meshes = [mesh],
-                Materials = [ResourceFactoryCache.CarMaterial]
+                Materials = [Phong.CommonMaterial]
             };
         }
         catch

@@ -24,22 +24,25 @@ public readonly record struct MeshPart(
 /// </summary>
 public sealed class Mesh
 {
+    public readonly IndexFormat IndexFormat;
+
     private readonly MeshPart[] _parts;
 
-    public Mesh(BufferHandle vertexBuffer, BufferHandle indexBuffer, MeshPart[] parts)
+    public Mesh(BufferHandle vertexBuffer, BufferHandle indexBuffer, IndexFormat format, MeshPart[] parts)
     {
         VertexBuffer = vertexBuffer;
         IndexBuffer = indexBuffer;
+        IndexFormat = format;
         _parts = parts;
     }
 
-    public static Mesh Create(GraphicsDevice graphicsDevice, BufferHandle vertexBuffer, BufferHandle indexBuffer = default)
+    public static Mesh Create(GraphicsDevice graphicsDevice, BufferHandle vertexBuffer, BufferHandle indexBuffer, IndexFormat format)
     {
         MeshPart part = indexBuffer.IsValid
             ? MeshPart.Indexed(graphicsDevice.GetBufferDescription(indexBuffer).Count)
             : MeshPart.NonIndexed(graphicsDevice.GetBufferDescription(vertexBuffer).Count);
 
-        return new Mesh(vertexBuffer, indexBuffer, [part]);
+        return new Mesh(vertexBuffer, indexBuffer, format, [part]);
     }
 
     public BufferHandle VertexBuffer { get; private set; }

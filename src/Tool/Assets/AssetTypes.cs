@@ -2,11 +2,17 @@
 
 namespace Tool.Assets;
 
+#region Shader
+
 public struct ShaderAsset
 {
     public ShaderHandle Handle;
     public ShaderType ShaderType;
 }
+
+#endregion
+
+#region Texture
 
 public struct TextureAsset
 {
@@ -14,6 +20,10 @@ public struct TextureAsset
     public uint Width;
     public uint Height;
 }
+
+#endregion
+
+#region Material
 
 public readonly record struct MaterialTextureBinding(
     uint Slot,
@@ -26,10 +36,10 @@ public readonly record struct MaterialSamplerBinding(
 public readonly record struct MaterialDescription(
     GraphicsPipelineHandle Pipeline,
     BindingLayoutHandle BindingLayout,
-    MaterialTextureBinding[]? Textures = null,
-    MaterialSamplerBinding[]? Samplers = null,
     BufferDescription? ConstantBufferDesc = null,
-    uint ConstantBufferSlot = 0);
+    uint ConstantBufferSlot = 0,
+    MaterialTextureBinding[]? Textures = null,
+    MaterialSamplerBinding[]? Samplers = null);
 
 public struct MaterialAsset
 {
@@ -47,8 +57,14 @@ public struct MaterialAsset
     public bool IsBindingSetDirty;
 }
 
+#endregion
+
+#region Model
+
 public struct ModelAsset
 {
     public Mesh[] Meshes;
     public AssetHandle<MaterialAsset>[] Materials;
 }
+
+#endregion

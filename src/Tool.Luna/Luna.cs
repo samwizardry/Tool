@@ -28,7 +28,6 @@ public sealed partial class Luna : Application<Luna>
     AssetScope _sceneScope = null!;
 
     private readonly List<Actor> _actors = [];
-    private PhongPerFrameData _sceneData = default!;
 
     public Luna()
     {
@@ -79,56 +78,26 @@ public sealed partial class Luna : Application<Luna>
 
         _camera = new Camera(60.0f, PreferredWindowSize.Width, PreferredWindowSize.Height);
 
-        ResourceFactoryCache.Load(GraphicsDevice, _globalScope);
-
-        _sceneData = new PhongPerFrameData(ResourceFactoryCache.PerFrameCb);
+        Resources.Load(GraphicsDevice, _globalScope);
+        Phong.Load(GraphicsDevice, _globalScope);
+        InfGrid.Load(GraphicsDevice, _globalScope);
 
         // Create box
         var data = Geometry.ComputeBox(Vector3.One * 2.0f);
         var mesh = Mesh.Create(GraphicsDevice,
             GraphicsDevice.CreateBuffer(data.Vertices.AsSpan(), BufferDescription.Vertex(0, 0)),
-            GraphicsDevice.CreateBuffer(data.Indices.AsSpan(), BufferDescription.Index(0))
-        );
+            GraphicsDevice.CreateBuffer(data.Indices.AsSpan(), BufferDescription.Index(0)),
+            IndexFormat.UInt16);
 
-        _actors.Add(new Box(GraphicsDevice, _sceneScope.CreateModel(mesh, ResourceFactoryCache.BoxMaterial)));
-
-        // Create car
-        AssetManager.RegisterModelLoader(new LunaModelLoader());
-        _actors.Add(new Car(GraphicsDevice, _sceneScope.LoadModel("resources/objects/car.txt")));
+        _actors.Add(new Box(GraphicsDevice, _sceneScope.CreateModel(mesh, Phong.BoxMaterial)));
 
         // Create backpack
         AssetManager.RegisterModelLoader(new AssimpModelLoader());
         _actors.Add(new Backpack(GraphicsDevice, _sceneScope.LoadModel("resources/objects/backpack/backpack.obj")));
 
-        _sceneData.SetDirLight(new DirectionalLight
-        {
-            Direction = Vector3.Normalize(new Vector3(-0.2f, -1.0f, -0.3f)),
-            Ambient = new Vector3(0.1f, 0.1f, 0.1f),
-            Diffuse = new Vector3(0.4f, 0.4f, 0.4f),
-            Specular = new Vector3(0.5f, 0.5f, 0.5f)
-        });
-
-        _sceneData.SetPointLight(new PointLight()
-        {
-            Position = new Vector3(1.2f, 1.0f, 2.0f),
-            Diffuse = new Vector3(0.6f, 0.6f, 0.6f),
-            Specular = new Vector3(1.0f, 1.0f, 1.0f),
-            Constant = 1.0f,
-            Linear = 0.22f,
-            Quadratic = 0.20f
-        });
-
-        _sceneData.SetSpotLight(new SpotLight()
-        {
-            Position = _camera.Position,
-            Direction = _camera.Direction,
-            Diffuse = new Vector3(0.6f, 0.6f, 0.6f),
-            Specular = new Vector3(1.0f, 1.0f, 1.0f),
-            CutOff = MathF.Cos(float.DegreesToRadians(12.5f)),
-            OuterCutOff = MathF.Cos(float.DegreesToRadians(17.5f)),
-            Linear = 0.09f,
-            Quadratic = 0.032f,
-        });
+        // Create car
+        AssetManager.RegisterModelLoader(new LunaModelLoader());
+        _actors.Add(new Car(GraphicsDevice, _sceneScope.LoadModel("resources/objects/car.txt")));
     }
 
     protected override void Update(GameTime gameTime)
@@ -153,12 +122,16 @@ public sealed partial class Luna : Application<Luna>
 
         _camera.Update(gameTime.DeltaSeconds);
 
-        _sceneData.SetViewProj(_camera.ViewProj);
-        _sceneData.SetViewPos(_camera.Position);
-        _sceneData.SetSpotLightPosition(_camera.Position);
-        _sceneData.SetSpotLightDirection(_camera.Direction);
+        //_gridPerFrameData.SetViewProj(_camera.ViewProj);
+        //_gridPerFrameData.SetCamWorldPos(_camera.Position);
+        //_gridPerFrameData.Update(GraphicsDevice);
 
-        _sceneData.Update(GraphicsDevice);
+        Phong.PerFrame.SetViewProj(_camera.ViewProj);
+        Phong.PerFrame.SetViewPos(_camera.Position);
+        Phong.PerFrame.SetSpotLightPosition(_camera.Position);
+        Phong.PerFrame.SetSpotLightDirection(_camera.Direction);
+
+        Phong.PerFrame.Update(GraphicsDevice);
 
         foreach (var actor in _actors)
         {
@@ -168,6 +141,9 @@ public sealed partial class Luna : Application<Luna>
 
     protected override void Draw()
     {
+        //GraphicsDevice.SetGraphicsState(new(ResourceFactoryCache.InfGridPipeline, Bindings: new(set0: ResourceFactoryCache.InfGridPerFrameBindSet)));
+        //GraphicsDevice.Draw(6);
+
         foreach (var actor in _actors)
         {
             actor.Draw(AssetManager);
@@ -186,9 +162,11 @@ public sealed partial class Luna : Application<Luna>
             actor?.Dispose();
         }
 
+        Phong.Unload(GraphicsDevice);
+        InfGrid.Unload(GraphicsDevice);
         _sceneScope.Dispose();
         _globalScope.Dispose();
-        ResourceFactoryCache.Unload(GraphicsDevice);
+        Resources.Unload(GraphicsDevice);
     }
 
     protected override void Cleanup()

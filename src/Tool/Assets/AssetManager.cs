@@ -194,13 +194,13 @@ public sealed class AssetManager : IDisposable
     /// <summary>
     /// Updates per-material scalar/vector constants without recreating the BindingSet.
     /// </summary>
-    public void UpdateMaterialConstants<T>(AssetHandle<MaterialAsset> handle, ref T data, uint byteOffset = 0)
+    public void UpdateMaterialConstants<T>(AssetHandle<MaterialAsset> handle, in T data, uint byteOffset = 0)
         where T : unmanaged
     {
         ref MaterialAsset mat = ref _materials.Get(handle);
         if (mat.ConstantBuffer.IsValid)
         {
-            _device.UpdateBuffer(mat.ConstantBuffer, ref data, byteOffset);
+            _device.UpdateBuffer(mat.ConstantBuffer, in data, byteOffset);
         }
     }
 
@@ -272,22 +272,22 @@ public sealed class AssetManager : IDisposable
         {
             VertexBufferBinding vbBinding = new(mesh.VertexBuffer);
             IndexBufferBinding ibBinding = mesh.IsIndexed
-                ? new IndexBufferBinding(mesh.IndexBuffer)
+                ? new IndexBufferBinding(mesh.IndexBuffer, mesh.IndexFormat)
                 : default;
 
             foreach (ref readonly MeshPart part in mesh.Parts)
             {
                 ref readonly MaterialAsset material = ref ResolveMaterial(materials[part.MaterialIndex]);
 
-                GraphicsState state = new(
-                    Pipeline: material.Pipeline,
-                    Bindings: new BindingSetVector(
+                GraphicsState state = new GraphicsState(
+                    pipeline: material.Pipeline,
+                    bindings: new BindingSetVector(
                         set0: perFrame,
                         set1: default,
                         set2: material.BindingSet,
                         set3: perObject),
-                    VertexBuffer: vbBinding,
-                    IndexBuffer: ibBinding);
+                    vertexBuffer: vbBinding,
+                    indexBuffer: ibBinding);
 
                 _device.SetGraphicsState(in state);
 
@@ -307,7 +307,10 @@ public sealed class AssetManager : IDisposable
 
     #region Lifetime & Shutdown
 
+    public void AddRef(AssetHandle<ShaderAsset> handle) => _shaders.AddRef(handle);
+    public void AddRef(AssetHandle<TextureAsset> handle) => _textures.AddRef(handle);
     public void AddRef(AssetHandle<MaterialAsset> handle) => _materials.AddRef(handle);
+    public void AddRef(AssetHandle<ModelAsset> handle) => _models.AddRef(handle);
 
     public void Release(AssetHandle<ModelAsset> handle)
     {

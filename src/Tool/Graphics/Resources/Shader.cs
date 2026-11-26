@@ -31,8 +31,15 @@ public readonly record struct ShaderDescription(
         new(ShaderType.Compute, entryPoint, packAsRowMajor, debug, debugName);
 }
 
-public readonly record struct ShaderHandle(SlotHandle Raw)
+public readonly record struct ShaderHandle
 {
+    public readonly SlotHandle Raw;
+
+    public ShaderHandle(SlotHandle raw)
+    {
+        Raw = raw;
+    }
+
     public static ShaderHandle Invalid => default;
     public bool IsValid => Raw.IsValid;
     public uint Index => Raw.Index;

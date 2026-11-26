@@ -113,8 +113,15 @@ public readonly record struct TextureDescription
         (uint)BitOperations.Log2(Math.Max(Math.Max(width, height), depth)) + 1u;
 }
 
-public readonly record struct TextureHandle(SlotHandle Raw)
+public readonly record struct TextureHandle
 {
+    public readonly SlotHandle Raw;
+
+    public TextureHandle(SlotHandle raw)
+    {
+        Raw = raw;
+    }
+
     public static TextureHandle Invalid => default;
     public bool IsValid => Raw.IsValid;
     public uint Index => Raw.Index;

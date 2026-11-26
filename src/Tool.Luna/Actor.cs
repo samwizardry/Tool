@@ -6,9 +6,9 @@ namespace Tool.Luna;
 public abstract class Actor : IDisposable
 {
     protected readonly GraphicsDevice _device;
-    protected readonly BufferHandle _perObjectCb;
-    protected readonly BindingSetHandle _perObjBindingSet;
-    protected readonly PhongPerObjectData _actorData;
+    protected readonly BufferHandle _perObjectCB;
+    protected readonly BindingSetHandle _perObjBS;
+    protected readonly Phong.PerObjDCB _perObj;
 
     private readonly AssetHandle<ModelAsset> _model;
 
@@ -17,30 +17,30 @@ public abstract class Actor : IDisposable
         _device = device;
         _model = model;
 
-        _perObjectCb = device.CreateBuffer(BufferDescription.Constant<PhongObject>());
-        _actorData = new PhongPerObjectData(_perObjectCb);
+        _perObjectCB = device.CreateBuffer(BufferDescription.Constant<Phong.PerObjData>());
+        _perObj = new Phong.PerObjDCB(_perObjectCB);
 
-        _perObjBindingSet = device.CreateBindingSet(
+        _perObjBS = device.CreateBindingSet(
             desc: new BindingSetDescription(
                 Bindings: [
-                    BindingSetItem.ConstantBuffer(1, _perObjectCb)
+                    BindingSetItem.ConstantBuffer(3, _perObjectCB)
                 ]),
-            layout: ResourceFactoryCache.PhongPerObjBindingLayout);
+            layout: Phong.PerObjBL);
     }
 
     public virtual void Update(float dt)
     {
-        _actorData.Update(_device);
+        _perObj.Update(_device);
     }
 
     public virtual void Draw(AssetManager assets)
     {
-        assets.DrawModel(_model, ResourceFactoryCache.PhongPerFrameBindingSet, _perObjBindingSet);
+        assets.DrawModel(_model, Phong.PerFrameBS, _perObjBS);
     }
 
     public virtual void Dispose()
     {
-        _device.Destroy(_perObjBindingSet);
-        _device.Destroy(_perObjectCb);
+        _device.Destroy(_perObjBS);
+        _device.Destroy(_perObjectCB);
     }
 }

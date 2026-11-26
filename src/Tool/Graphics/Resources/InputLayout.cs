@@ -2,8 +2,15 @@
 
 namespace Tool.Graphics;
 
-public readonly record struct InputLayoutHandle(SlotHandle Raw)
+public readonly record struct InputLayoutHandle
 {
+    public readonly SlotHandle Raw;
+
+    public InputLayoutHandle(SlotHandle raw)
+    {
+        Raw = raw;
+    }
+
     public static InputLayoutHandle Invalid => default;
     public bool IsValid => Raw.IsValid;
     public uint Index => Raw.Index;

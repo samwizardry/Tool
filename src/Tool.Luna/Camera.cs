@@ -9,7 +9,7 @@ public class Camera
     private Matrix4x4 _view;
     private Matrix4x4 _proj;
     private Matrix4x4 _viewProj;
-    private Vector3 _position = new(0.0f, 0.0f, 5.0f);
+    private Vector3 _position = new(0.0f, 2.0f, 5.0f);
     private float _yaw = 0.0f;
     private float _pitch = 0.0f;
     private Vector3 _right = Vector3.UnitX;

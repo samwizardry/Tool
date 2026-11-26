@@ -9,7 +9,7 @@ public static class Constants
     public const int MaxRenderTargets = 8;
     public const int MaxViewports = 16;
     public const int MaxVertexAttributes = 16;
-    public const int MaxBindingLayouts = 4;
+    public const int MaxBindingLayouts = 8;
     public const int MaxBindlessRegisterSpaces = 16;
     public const int MaxVolatileConstantBuffersPerLayout = 6;
     public const int MaxVolatileConstantBuffers = 32;
