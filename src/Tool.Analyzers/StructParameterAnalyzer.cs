@@ -56,9 +56,8 @@ public sealed class StructParameterAnalyzer : DiagnosticAnalyzer
 
         foreach (IParameterSymbol param in method.Parameters)
         {
-            // 'ref' and 'out' parameters are semantic (mutation/output) and independent of struct size.
             if (param.IsParams ||
-                param.RefKind is RefKind.Ref or RefKind.Out ||
+                param.RefKind == RefKind.Out ||
                 SymbolHelpers.TryGetAnalyzableStruct(param.Type) is not { } structType)
             {
                 continue;
@@ -88,10 +87,17 @@ public sealed class StructParameterAnalyzer : DiagnosticAnalyzer
                     DiagnosticDescriptors.LargeStructParameter, location, param.Name, structType.Name, layout.Size));
             }
             else if (layout.Size < SymbolHelpers.SizeThresholdBytes &&
-                     param.RefKind is RefKind.In or RefKind.RefReadOnlyParameter)
+                     param.RefKind is RefKind.In or RefKind.Ref or RefKind.RefReadOnlyParameter)
             {
+                string modifier = param.RefKind switch
+                {
+                    RefKind.Ref => "ref",
+                    RefKind.RefReadOnlyParameter => "ref readonly",
+                    _ => "in"
+                };
+
                 context.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.SmallStructInParameter, location, param.Name, structType.Name, layout.Size));
+                    DiagnosticDescriptors.SmallStructInParameter, location, param.Name, structType.Name, layout.Size, modifier));
             }
         }
     }

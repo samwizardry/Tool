@@ -27,7 +27,7 @@ public sealed class StructReturnAnalyzer : DiagnosticAnalyzer
             var calculator = new StructLayoutCalculator(compilationContext.Compilation);
 
             compilationContext.RegisterSymbolAction(
-                ctx => AnalyzeSmallRefReadOnlyReturn(ctx, calculator),
+                ctx => AnalyzeSmallRefReturn(ctx, calculator),
                 SymbolKind.Method);
 
             compilationContext.RegisterOperationBlockStartAction(
@@ -35,11 +35,11 @@ public sealed class StructReturnAnalyzer : DiagnosticAnalyzer
         });
     }
 
-    private static void AnalyzeSmallRefReadOnlyReturn(SymbolAnalysisContext context, StructLayoutCalculator calculator)
+    private static void AnalyzeSmallRefReturn(SymbolAnalysisContext context, StructLayoutCalculator calculator)
     {
         var method = (IMethodSymbol)context.Symbol;
 
-        if (!method.ReturnsByRefReadonly ||
+        if ((!method.ReturnsByRef && !method.ReturnsByRefReadonly) ||
             method.IsImplicitlyDeclared ||
             method.IsOverride ||
             method.IsExtern)
@@ -81,12 +81,14 @@ public sealed class StructReturnAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        string modifier = method.ReturnsByRefReadonly ? "ref readonly" : "ref";
         context.ReportDiagnostic(Diagnostic.Create(
             DiagnosticDescriptors.SmallStructRefReadOnlyReturn,
             location,
             target.Name,
             structType.Name,
-            layout.Size));
+            layout.Size,
+            modifier));
     }
 
     private static void AnalyzeLargeReturnByValue(
@@ -209,9 +211,6 @@ public sealed class StructReturnAnalyzer : DiagnosticAnalyzer
         return false;
     }
 
-    /// <summary>
-    /// Determines whether an expression refers to storage that can safely escape the current method via 'return ref'.
-    /// </summary>
     private static bool IsRefReturnable(IOperation? operation)
     {
         if (operation is null)
@@ -237,11 +236,9 @@ public sealed class StructReturnAnalyzer : DiagnosticAnalyzer
                     return true;
                 }
 
-                // Struct fields cannot escape via 'this' (CS8170); they can only escape if the receiver escapes.
                 return IsRefReturnable(fieldRef.Instance);
 
             case IArrayElementReferenceOperation:
-                // Managed arrays live on the heap, so their elements can always escape by ref.
                 return true;
 
             case IInlineArrayAccessOperation inlineAccess:
@@ -278,7 +275,6 @@ public sealed class StructReturnAnalyzer : DiagnosticAnalyzer
                     return false;
                 }
 
-                // Conservatively ensure no ref/in/ref-struct argument references a local variable that cannot escape.
                 foreach (IArgumentOperation arg in invocation.Arguments)
                 {
                     bool mayContributeToRefReturn =
@@ -297,7 +293,6 @@ public sealed class StructReturnAnalyzer : DiagnosticAnalyzer
                 return IsRefReturnable(conditional.WhenTrue) && IsRefReturnable(conditional.WhenFalse);
 
             default:
-                // Locals, struct 'this', object creations, literals, and switch expressions cannot safely return by ref.
                 return false;
         }
     }

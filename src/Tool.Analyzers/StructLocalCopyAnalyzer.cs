@@ -1,6 +1,4 @@
-using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using System.Threading;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
@@ -30,94 +28,17 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
             INamedTypeSymbol? spanType = compilationContext.Compilation.GetTypeByMetadataName("System.Span`1");
             INamedTypeSymbol? readOnlySpanType = compilationContext.Compilation.GetTypeByMetadataName("System.ReadOnlySpan`1");
 
-            compilationContext.RegisterOperationBlockStartAction(blockContext =>
-                AnalyzeOperationBlock(blockContext, calculator, spanType, readOnlySpanType));
+            compilationContext.RegisterOperationAction(
+                ctx => AnalyzeVariableDeclarator(ctx, calculator),
+                OperationKind.VariableDeclarator);
+
+            compilationContext.RegisterOperationAction(
+                ctx => AnalyzeForEachLoop(ctx, calculator, spanType, readOnlySpanType),
+                OperationKind.Loop);
         });
     }
 
-    private static void AnalyzeOperationBlock(
-        OperationBlockStartAnalysisContext blockContext,
-        StructLayoutCalculator calculator,
-        INamedTypeSymbol? spanType,
-        INamedTypeSymbol? readOnlySpanType)
-    {
-        // 'ref' locals are illegal inside async methods.
-        if (blockContext.OwningSymbol is IMethodSymbol { IsAsync: true })
-        {
-            return;
-        }
-
-        var candidates = new ConcurrentBag<LocalCopyCandidate>();
-        var disqualified = new ConcurrentDictionary<ISymbol, byte>(SymbolEqualityComparer.Default);
-        int hasYield = 0;
-
-        blockContext.RegisterOperationAction(
-            ctx => AnalyzeVariableDeclarator(ctx, calculator, candidates),
-            OperationKind.VariableDeclarator);
-
-        blockContext.RegisterOperationAction(
-            ctx => AnalyzeForEachLoop(ctx, calculator, spanType, readOnlySpanType, candidates),
-            OperationKind.Loop);
-
-        blockContext.RegisterOperationAction(
-            ctx => TrackLocalUsage((ILocalReferenceOperation)ctx.Operation, disqualified),
-            OperationKind.LocalReference);
-
-        blockContext.RegisterOperationAction(
-            _ => Interlocked.Exchange(ref hasYield, 1),
-            OperationKind.YieldReturn,
-            OperationKind.YieldBreak);
-
-        blockContext.RegisterOperationBlockEndAction(endContext =>
-        {
-            // 'ref' locals are illegal inside iterator methods (yield return / yield break).
-            if (Volatile.Read(ref hasYield) != 0)
-            {
-                return;
-            }
-
-            foreach (LocalCopyCandidate candidate in candidates)
-            {
-                if (disqualified.ContainsKey(candidate.Local))
-                {
-                    continue;
-                }
-
-                if (candidate.UnknownType is not null)
-                {
-                    endContext.ReportDiagnostic(Diagnostic.Create(
-                        DiagnosticDescriptors.UnknownStructLayout,
-                        candidate.Location,
-                        candidate.StructType.Name,
-                        candidate.UnknownType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
-                }
-                else if (candidate.ForEachSuggestion is not null)
-                {
-                    endContext.ReportDiagnostic(Diagnostic.Create(
-                        DiagnosticDescriptors.LargeStructForEachCopy,
-                        candidate.Location,
-                        candidate.Local.Name,
-                        candidate.StructType.Name,
-                        candidate.Size,
-                        candidate.ForEachSuggestion));
-                }
-                else
-                {
-                    endContext.ReportDiagnostic(Diagnostic.Create(
-                        DiagnosticDescriptors.LargeStructLocalCopy,
-                        candidate.Location,
-                        candidate.Local.Name,
-                        candidate.StructType.Name,
-                        candidate.Size));
-                }
-            }
-        });
-    }
-
-    private static void AnalyzeVariableDeclarator(
-        OperationAnalysisContext context,
-        StructLayoutCalculator calculator,
-        ConcurrentBag<LocalCopyCandidate> candidates)
+    private static void AnalyzeVariableDeclarator(OperationAnalysisContext context, StructLayoutCalculator calculator)
     {
         var declarator = (IVariableDeclaratorOperation)context.Operation;
         ILocalSymbol local = declarator.Symbol;
@@ -128,7 +49,7 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        // 'using var' cannot be combined with 'ref readonly'.
+        // 'using var' cannot be combined with 'ref' / 'ref readonly'.
         if (declarator.Parent?.Parent is IUsingDeclarationOperation)
         {
             return;
@@ -139,12 +60,11 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        bool isRefReadOnly = local.IsRef && local.RefKind == RefKind.In;
         bool isCopyCandidate = !local.IsRef &&
-            !IsInsideAsyncFunction(declarator) &&
+            !IsInsideAsyncMethod(context, declarator) &&
             IsRefAddressableSource(declarator.Initializer.Value, isRoot: true);
 
-        if (!isRefReadOnly && !isCopyCandidate)
+        if (!local.IsRef && !isCopyCandidate)
         {
             return;
         }
@@ -154,20 +74,11 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
 
         if (layout.IsUnknownLayout)
         {
-            ITypeSymbol unknownType = layout.UnknownType ?? structType;
-            if (isRefReadOnly)
-            {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.UnknownStructLayout,
-                    location,
-                    structType.Name,
-                    unknownType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
-            }
-            else
-            {
-                candidates.Add(new LocalCopyCandidate(local, structType, 0, location, forEachSuggestion: null, unknownType));
-            }
-
+            context.ReportDiagnostic(Diagnostic.Create(
+                DiagnosticDescriptors.UnknownStructLayout,
+                location,
+                structType.Name,
+                (layout.UnknownType ?? structType).ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
             return;
         }
 
@@ -176,18 +87,25 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        if (isRefReadOnly && layout.Size < SymbolHelpers.SizeThresholdBytes)
+        if (local.IsRef && layout.Size < SymbolHelpers.SizeThresholdBytes)
         {
+            string modifier = local.RefKind == RefKind.In ? "ref readonly" : "ref";
             context.ReportDiagnostic(Diagnostic.Create(
                 DiagnosticDescriptors.SmallStructRefReadOnlyLocal,
                 location,
                 local.Name,
                 structType.Name,
-                layout.Size));
+                layout.Size,
+                modifier));
         }
         else if (isCopyCandidate && layout.Size > SymbolHelpers.SizeThresholdBytes)
         {
-            candidates.Add(new LocalCopyCandidate(local, structType, layout.Size, location, forEachSuggestion: null, unknownType: null));
+            context.ReportDiagnostic(Diagnostic.Create(
+                DiagnosticDescriptors.LargeStructLocalCopy,
+                location,
+                local.Name,
+                structType.Name,
+                layout.Size));
         }
     }
 
@@ -195,8 +113,7 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
         OperationAnalysisContext context,
         StructLayoutCalculator calculator,
         INamedTypeSymbol? spanType,
-        INamedTypeSymbol? readOnlySpanType,
-        ConcurrentBag<LocalCopyCandidate> candidates)
+        INamedTypeSymbol? readOnlySpanType)
     {
         if (context.Operation is not IForEachLoopOperation forEach ||
             forEach.LoopControlVariable is not IVariableDeclaratorOperation loopDeclarator)
@@ -210,10 +127,8 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        bool isRefReadOnly = local.IsRef && local.RefKind == RefKind.In;
         string? forEachSuggestion = null;
-
-        if (!local.IsRef && !IsInsideAsyncFunction(forEach))
+        if (!local.IsRef && !IsInsideAsyncMethod(context, forEach))
         {
             IOperation collection = UnwrapConversions(forEach.Collection);
             if (collection.Type is IArrayTypeSymbol { Rank: 1 })
@@ -227,7 +142,7 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
             }
         }
 
-        if (!isRefReadOnly && forEachSuggestion is null)
+        if (!local.IsRef && forEachSuggestion is null)
         {
             return;
         }
@@ -237,20 +152,11 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
 
         if (layout.IsUnknownLayout)
         {
-            ITypeSymbol unknownType = layout.UnknownType ?? structType;
-            if (isRefReadOnly)
-            {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.UnknownStructLayout,
-                    location,
-                    structType.Name,
-                    unknownType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
-            }
-            else
-            {
-                candidates.Add(new LocalCopyCandidate(local, structType, 0, location, forEachSuggestion, unknownType));
-            }
-
+            context.ReportDiagnostic(Diagnostic.Create(
+                DiagnosticDescriptors.UnknownStructLayout,
+                location,
+                structType.Name,
+                (layout.UnknownType ?? structType).ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
             return;
         }
 
@@ -259,18 +165,26 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        if (isRefReadOnly && layout.Size < SymbolHelpers.SizeThresholdBytes)
+        if (local.IsRef && layout.Size < SymbolHelpers.SizeThresholdBytes)
         {
+            string modifier = local.RefKind == RefKind.In ? "ref readonly" : "ref";
             context.ReportDiagnostic(Diagnostic.Create(
                 DiagnosticDescriptors.SmallStructRefReadOnlyLocal,
                 location,
                 local.Name,
                 structType.Name,
-                layout.Size));
+                layout.Size,
+                modifier));
         }
         else if (forEachSuggestion is not null && layout.Size > SymbolHelpers.SizeThresholdBytes)
         {
-            candidates.Add(new LocalCopyCandidate(local, structType, layout.Size, location, forEachSuggestion, unknownType: null));
+            context.ReportDiagnostic(Diagnostic.Create(
+                DiagnosticDescriptors.LargeStructForEachCopy,
+                location,
+                local.Name,
+                structType.Name,
+                layout.Size,
+                forEachSuggestion));
         }
     }
 
@@ -296,7 +210,6 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
             return true;
         }
 
-        // Check custom ref-returning GetEnumerator().Current patterns.
         foreach (ISymbol member in named.GetMembers("GetEnumerator"))
         {
             if (member is IMethodSymbol { Parameters.Length: 0, ReturnType: INamedTypeSymbol enumeratorType })
@@ -312,16 +225,6 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
         }
 
         return false;
-    }
-
-    private static void TrackLocalUsage(
-        ILocalReferenceOperation localRef,
-        ConcurrentDictionary<ISymbol, byte> disqualified)
-    {
-        if (IsCapturedByNestedFunction(localRef) || IsMutatingOrIncompatibleUsage(localRef))
-        {
-            disqualified.TryAdd(localRef.Local, 0);
-        }
     }
 
     private static bool IsRefAddressableSource(IOperation? operation, bool isRoot)
@@ -367,7 +270,6 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
             case IParameterReferenceOperation:
             case ILocalReferenceOperation:
             case IInstanceReferenceOperation:
-                // Allow as receiver in a chain (e.g. 'state.Viewport'), but skip direct 'var copy = state;'.
                 return !isRoot;
 
             default:
@@ -375,106 +277,19 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    private static bool IsInsideAsyncFunction(IOperation operation)
+    private static bool IsInsideAsyncMethod(OperationAnalysisContext context, IOperation operation)
     {
+        if (context.ContainingSymbol is IMethodSymbol { IsAsync: true })
+        {
+            return true;
+        }
+
         for (IOperation? current = operation.Parent; current is not null; current = current.Parent)
         {
             if (current is IAnonymousFunctionOperation { Symbol.IsAsync: true } ||
                 current is ILocalFunctionOperation { Symbol.IsAsync: true })
             {
                 return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool IsCapturedByNestedFunction(ILocalReferenceOperation localRef)
-    {
-        ISymbol? declaringSymbol = localRef.Local.ContainingSymbol;
-
-        for (IOperation? current = localRef.Parent; current is not null; current = current.Parent)
-        {
-            if (current is IAnonymousFunctionOperation anon)
-            {
-                return !SymbolEqualityComparer.Default.Equals(declaringSymbol, anon.Symbol);
-            }
-
-            if (current is ILocalFunctionOperation localFn)
-            {
-                return !SymbolEqualityComparer.Default.Equals(declaringSymbol, localFn.Symbol);
-            }
-        }
-
-        return false;
-    }
-
-    private static bool IsMutatingOrIncompatibleUsage(ILocalReferenceOperation localRef)
-    {
-        if (localRef.Parent is not { } parent)
-        {
-            return false;
-        }
-
-        switch (parent)
-        {
-            case IAssignmentOperation assign when assign.Target == localRef:
-            case IIncrementOrDecrementOperation:
-            case IAddressOfOperation:
-                return true;
-
-            case IArgumentOperation arg when arg.Parameter?.RefKind is RefKind.Ref or RefKind.Out:
-                return true;
-
-            case IVariableInitializerOperation init
-                when init.Parent is IVariableDeclaratorOperation { Symbol: { IsRef: true, RefKind: RefKind.Ref } }:
-                return true;
-
-            case IInvocationOperation inv when inv.Instance == localRef:
-                return !inv.TargetMethod.IsReadOnly && !localRef.Local.Type.IsReadOnly;
-
-            case IFieldReferenceOperation fieldRef when fieldRef.Instance == localRef:
-                return IsWriteTarget(fieldRef);
-
-            case IPropertyReferenceOperation propRef when propRef.Instance == localRef:
-                if (IsWriteTarget(propRef))
-                {
-                    return true;
-                }
-                return propRef.Property.GetMethod is { IsReadOnly: false } && !localRef.Local.Type.IsReadOnly;
-
-            case IInlineArrayAccessOperation inlineAccess when inlineAccess.Instance == localRef:
-                return IsWriteTarget(inlineAccess);
-
-            default:
-                return false;
-        }
-    }
-
-    private static bool IsWriteTarget(IOperation op)
-    {
-        IOperation? parent = op.Parent;
-        while (parent is not null)
-        {
-            switch (parent)
-            {
-                case IAssignmentOperation assign when assign.Target == op:
-                case IIncrementOrDecrementOperation:
-                case IAddressOfOperation:
-                    return true;
-
-                case IArgumentOperation arg when arg.Parameter?.RefKind is RefKind.Ref or RefKind.Out:
-                    return true;
-
-                case IFieldReferenceOperation fieldRef when fieldRef.Instance == op:
-                case IPropertyReferenceOperation propRef when propRef.Instance == op:
-                case IInlineArrayAccessOperation inlineAccess when inlineAccess.Instance == op:
-                    op = parent;
-                    parent = op.Parent;
-                    continue;
-
-                default:
-                    return false;
             }
         }
 
@@ -489,21 +304,5 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
         }
 
         return operation;
-    }
-
-    private readonly struct LocalCopyCandidate(
-        ILocalSymbol local,
-        INamedTypeSymbol structType,
-        int size,
-        Location location,
-        string? forEachSuggestion,
-        ITypeSymbol? unknownType)
-    {
-        public readonly ILocalSymbol Local = local;
-        public readonly INamedTypeSymbol StructType = structType;
-        public readonly int Size = size;
-        public readonly Location Location = location;
-        public readonly string? ForEachSuggestion = forEachSuggestion;
-        public readonly ITypeSymbol? UnknownType = unknownType;
     }
 }
