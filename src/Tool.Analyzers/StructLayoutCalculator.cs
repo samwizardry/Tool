@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 using Microsoft.CodeAnalysis;
 
@@ -8,20 +9,24 @@ namespace Tool.Analyzers;
 
 /// <summary>
 /// Compilation-scoped, thread-safe estimator of x64 CLR struct sizes, alignment, and padding.
+/// Reads exact PE metadata for external compiled assemblies and reports unknown layouts explicitly.
 /// </summary>
 internal sealed class StructLayoutCalculator(Compilation compilation)
 {
-    private const int LayoutKindSequential = 0;
-    private const int LayoutKindExplicit = 2;
-    private const int LayoutKindAuto = 3;
-
     private readonly INamedTypeSymbol? _inlineArrayAttribute =
         compilation.GetTypeByMetadataName("System.Runtime.CompilerServices.InlineArrayAttribute");
     private readonly INamedTypeSymbol? _structLayoutAttribute =
         compilation.GetTypeByMetadataName("System.Runtime.InteropServices.StructLayoutAttribute");
+    private readonly INamedTypeSymbol? _extendedLayoutAttribute =
+        compilation.GetTypeByMetadataName("System.Runtime.InteropServices.ExtendedLayoutAttribute");
     private readonly INamedTypeSymbol? _fieldOffsetAttribute =
         compilation.GetTypeByMetadataName("System.Runtime.InteropServices.FieldOffsetAttribute");
+    private readonly INamedTypeSymbol? _keyValuePairType =
+        compilation.GetTypeByMetadataName("System.Collections.Generic.KeyValuePair`2");
+    private readonly INamedTypeSymbol? _valueTaskGenericType =
+        compilation.GetTypeByMetadataName("System.Threading.Tasks.ValueTask`1");
     private readonly Dictionary<ISymbol, StructLayoutInfo> _knownLayouts = BuildKnownLayouts(compilation);
+    private readonly MetadataLayoutReader _metadataReader = new();
     private readonly ConcurrentDictionary<ISymbol, StructLayoutInfo> _cache = new(SymbolEqualityComparer.Default);
 
     public StructLayoutInfo GetLayout(ITypeSymbol type)
@@ -35,9 +40,9 @@ internal sealed class StructLayoutCalculator(Compilation compilation)
         return ComputeLayout(type, visited);
     }
 
-    public bool HasExplicitStructLayout(INamedTypeSymbol type)
+    public bool HasExplicitSourceLayout(INamedTypeSymbol type)
     {
-        if (TryGetStructLayout(type, out _, out _, out _))
+        if (TryGetSourceStructLayout(type, out _))
         {
             return true;
         }
@@ -50,7 +55,7 @@ internal sealed class StructLayoutCalculator(Compilation compilation)
         foreach (ISymbol member in type.GetMembers())
         {
             if (member is IFieldSymbol { IsStatic: false, IsConst: false } field &&
-                TryGetFieldOffset(field, out _))
+                TryGetSourceFieldOffset(field, out _))
             {
                 return true;
             }
@@ -118,13 +123,29 @@ internal sealed class StructLayoutCalculator(Compilation compilation)
             return StructLayoutInfo.Unknown(type);
         }
 
-        if (namedType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T &&
+        INamedTypeSymbol originalDef = namedType.OriginalDefinition;
+
+        if (originalDef.SpecialType == SpecialType.System_Nullable_T &&
             namedType.TypeArguments.Length == 1)
         {
             return ComputeNullableLayout(namedType.TypeArguments[0], visited);
         }
 
-        if (_knownLayouts.TryGetValue(namedType.OriginalDefinition, out StructLayoutInfo known))
+        if (_keyValuePairType is not null &&
+            SymbolEqualityComparer.Default.Equals(originalDef, _keyValuePairType) &&
+            namedType.TypeArguments.Length == 2)
+        {
+            return ComputeKeyValuePairLayout(namedType.TypeArguments[0], namedType.TypeArguments[1], visited);
+        }
+
+        if (_valueTaskGenericType is not null &&
+            SymbolEqualityComparer.Default.Equals(originalDef, _valueTaskGenericType) &&
+            namedType.TypeArguments.Length == 1)
+        {
+            return ComputeValueTaskLayout(namedType.TypeArguments[0], visited);
+        }
+
+        if (_knownLayouts.TryGetValue(originalDef, out StructLayoutInfo known))
         {
             return known;
         }
@@ -149,25 +170,79 @@ internal sealed class StructLayoutCalculator(Compilation compilation)
             return elem;
         }
 
-        // Nullable<T> layout: 'bool hasValue' (1 byte) + 'T value' (auto-packed if T contains GC references).
-        int size = elem.HasReferences
-            ? AlignUp(elem.Size + 1, elem.Alignment)
-            : AlignUp(AlignUp(1, elem.Alignment) + elem.Size, elem.Alignment);
-
+        // Nullable<T> holds 'bool hasValue' (1 byte) + 'T value' with generic Auto layout.
+        int size = AlignUp(elem.Size + 1, elem.Alignment);
         return StructLayoutInfo.Known(size, size, elem.Alignment, elem.HasReferences);
+    }
+
+    private StructLayoutInfo ComputeKeyValuePairLayout(
+        ITypeSymbol keyType,
+        ITypeSymbol valueType,
+        HashSet<ISymbol> visited)
+    {
+        StructLayoutInfo key = ComputeLayout(keyType, visited);
+        if (!key.IsKnown)
+        {
+            return key;
+        }
+
+        StructLayoutInfo val = ComputeLayout(valueType, visited);
+        if (!val.IsKnown)
+        {
+            return val;
+        }
+
+        int maxAlign = Math.Max(key.Alignment, val.Alignment);
+        int size = AlignUp(key.Size + val.Size, maxAlign);
+        return StructLayoutInfo.Known(size, size, maxAlign, key.HasReferences || val.HasReferences);
+    }
+
+    private StructLayoutInfo ComputeValueTaskLayout(ITypeSymbol resultType, HashSet<ISymbol> visited)
+    {
+        StructLayoutInfo res = ComputeLayout(resultType, visited);
+        if (!res.IsKnown)
+        {
+            return res;
+        }
+
+        // ValueTask<TResult>: object? _obj (8B) + TResult _result + short _token (2B) + bool _continueOnCapturedContext (1B).
+        int maxAlign = Math.Max(8, res.Alignment);
+        int size = AlignUp(8 + res.Size + 2 + 1, maxAlign);
+        return StructLayoutInfo.Known(size, size, maxAlign, hasReferences: true);
     }
 
     private StructLayoutInfo ComputeStructLayout(INamedTypeSymbol namedType, HashSet<ISymbol> visited)
     {
-        bool hasExplicitLayout = TryGetStructLayout(namedType, out int layoutKind, out int pack, out int explicitSize);
-        bool isExplicit = hasExplicitLayout && layoutKind == LayoutKindExplicit;
+        bool isInSource = namedType.Locations.Length > 0 && namedType.Locations[0].IsInSource;
+
+        RawTypeLayout rawLayout;
+        if (isInSource)
+        {
+            if (!TryGetSourceStructLayout(namedType, out rawLayout))
+            {
+                rawLayout = new RawTypeLayout(MetadataLayoutKind.Sequential, pack: 0, size: 0, fieldOffsets: null);
+            }
+        }
+        else if (!_metadataReader.TryGetTypeLayout(namedType, out rawLayout))
+        {
+            // External metadata could not be read; report unknown instead of guessing layout/pack/offsets.
+            return StructLayoutInfo.Unknown(namedType);
+        }
+
+        if (rawLayout.Kind == MetadataLayoutKind.Extended)
+        {
+            return StructLayoutInfo.Unknown(namedType);
+        }
+
+        bool isExplicit = rawLayout.Kind == MetadataLayoutKind.Explicit;
+        int pack = rawLayout.Pack;
+        int explicitSize = rawLayout.Size;
 
         int sequentialOffset = 0;
         int explicitMaxEnd = 0;
         int sumFieldSizes = 0;
         int maxAlign = 1;
         bool hasReferences = false;
-        bool hasAnyFieldOffset = false;
         int fieldCount = 0;
 
         foreach (ISymbol member in namedType.GetMembers())
@@ -191,13 +266,17 @@ internal sealed class StructLayoutCalculator(Compilation compilation)
                     : StructLayoutInfo.GenericOrUnresolved;
             }
 
-            int effectiveAlign = (hasExplicitLayout && pack > 0)
+            int effectiveAlign = pack > 0
                 ? Math.Min(fieldLayout.Alignment, pack)
                 : fieldLayout.Alignment;
 
-            if (TryGetFieldOffset(field, out int fieldOffset))
+            if (isExplicit)
             {
-                hasAnyFieldOffset = true;
+                if (!TryGetFieldOffset(field, isInSource, rawLayout, out int fieldOffset))
+                {
+                    return StructLayoutInfo.Unknown(namedType);
+                }
+
                 int fieldEnd = fieldOffset + fieldLayout.Size;
                 if (fieldEnd > explicitMaxEnd)
                 {
@@ -223,8 +302,7 @@ internal sealed class StructLayoutCalculator(Compilation compilation)
                 return StructLayoutInfo.Known(explicitSize, explicitSize, 1, hasReferences: false);
             }
 
-            // Empty source structs occupy 1 byte in the CLR; metadata-only 0-field structs may be stripped ref types.
-            bool isInSource = namedType.Locations.Length > 0 && namedType.Locations[0].IsInSource;
+            // Empty C# structs occupy 1 byte in the CLR; 0-field metadata structs with no Size may be stripped stubs.
             return isInSource
                 ? StructLayoutInfo.Known(1, 1, 1, hasReferences: false)
                 : StructLayoutInfo.Unknown(namedType);
@@ -233,30 +311,18 @@ internal sealed class StructLayoutCalculator(Compilation compilation)
         int actualSize;
         int optimalSize;
 
-        if (isExplicit || hasAnyFieldOffset)
+        if (isExplicit)
         {
-            if (hasAnyFieldOffset)
-            {
-                actualSize = AlignUp(explicitMaxEnd, maxAlign);
-                optimalSize = actualSize;
-            }
-            else if (explicitSize > 0)
-            {
-                actualSize = explicitSize;
-                optimalSize = explicitSize;
-            }
-            else
-            {
-                return StructLayoutInfo.Unknown(namedType);
-            }
+            actualSize = AlignUp(explicitMaxEnd, maxAlign);
+            optimalSize = actualSize;
         }
         else
         {
             optimalSize = AlignUp(sumFieldSizes, maxAlign);
             int sequentialSize = AlignUp(sequentialOffset, maxAlign);
 
-            // CLR promotes structs containing GC references (or marked LayoutKind.Auto) to automatic packing.
-            bool isAutoLayout = hasReferences || (hasExplicitLayout && layoutKind == LayoutKindAuto);
+            // CoreCLR uses Auto layout for structs with GC references, generic structs, or LayoutKind.Auto.
+            bool isAutoLayout = hasReferences || namedType.IsGenericType || rawLayout.Kind == MetadataLayoutKind.Auto;
             actualSize = isAutoLayout ? optimalSize : sequentialSize;
         }
 
@@ -278,6 +344,12 @@ internal sealed class StructLayoutCalculator(Compilation compilation)
 
     private StructLayoutInfo ComputeFieldLayout(IFieldSymbol field, HashSet<ISymbol> visited)
     {
+        // C# 11 ref/ref readonly fields inside ref structs store a managed pointer (8 bytes on x64).
+        if (field.RefKind != RefKind.None)
+        {
+            return StructLayoutInfo.Known(8, 8, 8, hasReferences: true);
+        }
+
         if (field.IsFixedSizeBuffer && field.Type is IPointerTypeSymbol ptr)
         {
             StructLayoutInfo elem = ComputeLayout(ptr.PointedAtType, visited);
@@ -294,7 +366,28 @@ internal sealed class StructLayoutCalculator(Compilation compilation)
         return ComputeLayout(field.Type, visited);
     }
 
-    private bool TryGetFieldOffset(IFieldSymbol field, out int offset)
+    private bool TryGetFieldOffset(
+        IFieldSymbol field,
+        bool isInSource,
+        RawTypeLayout rawLayout,
+        out int offset)
+    {
+        if (isInSource)
+        {
+            return TryGetSourceFieldOffset(field, out offset);
+        }
+
+        if (rawLayout.FieldOffsets is not null &&
+            rawLayout.FieldOffsets.TryGetValue(field.MetadataName, out offset))
+        {
+            return true;
+        }
+
+        offset = 0;
+        return false;
+    }
+
+    private bool TryGetSourceFieldOffset(IFieldSymbol field, out int offset)
     {
         offset = 0;
         if (_fieldOffsetAttribute is null)
@@ -317,29 +410,39 @@ internal sealed class StructLayoutCalculator(Compilation compilation)
         return false;
     }
 
-    private bool TryGetStructLayout(INamedTypeSymbol type, out int layoutKind, out int pack, out int size)
+    private bool TryGetSourceStructLayout(INamedTypeSymbol type, out RawTypeLayout layout)
     {
-        layoutKind = LayoutKindSequential;
-        pack = 0;
-        size = 0;
-
-        if (_structLayoutAttribute is null)
-        {
-            return false;
-        }
-
         foreach (AttributeData attr in type.GetAttributes())
         {
-            if (!SymbolEqualityComparer.Default.Equals(attr.AttributeClass, _structLayoutAttribute))
+            if (_extendedLayoutAttribute is not null &&
+                SymbolEqualityComparer.Default.Equals(attr.AttributeClass, _extendedLayoutAttribute))
+            {
+                layout = new RawTypeLayout(MetadataLayoutKind.Extended, pack: 0, size: 0, fieldOffsets: null);
+                return true;
+            }
+
+            if (_structLayoutAttribute is null ||
+                !SymbolEqualityComparer.Default.Equals(attr.AttributeClass, _structLayoutAttribute))
             {
                 continue;
             }
 
-            if (attr.ConstructorArguments.Length > 0 && attr.ConstructorArguments[0].Value is int kind)
+            MetadataLayoutKind kind = MetadataLayoutKind.Sequential;
+            if (attr.ConstructorArguments.Length > 0)
             {
-                layoutKind = kind;
+                object? rawArg = attr.ConstructorArguments[0].Value;
+                int rawKind = rawArg is int intVal ? intVal : rawArg is short shortVal ? shortVal : -1;
+                kind = (LayoutKind)rawKind switch
+                {
+                    LayoutKind.Sequential => MetadataLayoutKind.Sequential,
+                    LayoutKind.Explicit => MetadataLayoutKind.Explicit,
+                    LayoutKind.Auto => MetadataLayoutKind.Auto,
+                    _ => MetadataLayoutKind.Extended
+                };
             }
 
+            int pack = 0;
+            int size = 0;
             foreach (KeyValuePair<string, TypedConstant> named in attr.NamedArguments)
             {
                 if (named.Key == "Pack" && named.Value.Value is int p)
@@ -352,9 +455,11 @@ internal sealed class StructLayoutCalculator(Compilation compilation)
                 }
             }
 
+            layout = new RawTypeLayout(kind, pack, size, fieldOffsets: null);
             return true;
         }
 
+        layout = default;
         return false;
     }
 
@@ -362,10 +467,12 @@ internal sealed class StructLayoutCalculator(Compilation compilation)
     {
         var map = new Dictionary<ISymbol, StructLayoutInfo>(SymbolEqualityComparer.Default);
 
-        // Core BCL value types whose private fields are stripped in .NET reference assemblies.
+        // Core .NET BCL value types whose private fields are stripped in Microsoft.NETCore.App.Ref.
+        Add(compilation, map, "System.ValueTuple", 1, 1);
         Add(compilation, map, "System.Half", 2, 2);
         Add(compilation, map, "System.Index", 4, 4);
         Add(compilation, map, "System.DateOnly", 4, 4);
+        Add(compilation, map, "System.Text.Rune", 4, 4);
         Add(compilation, map, "System.TimeSpan", 8, 8);
         Add(compilation, map, "System.DateTime", 8, 8);
         Add(compilation, map, "System.TimeOnly", 8, 8);
@@ -373,18 +480,28 @@ internal sealed class StructLayoutCalculator(Compilation compilation)
         Add(compilation, map, "System.Runtime.InteropServices.NFloat", 8, 8);
         Add(compilation, map, "System.Runtime.InteropServices.GCHandle", 8, 8);
         Add(compilation, map, "System.Threading.CancellationToken", 8, 8, hasReferences: true);
+        Add(compilation, map, "System.RuntimeTypeHandle", 8, 8, hasReferences: true);
+        Add(compilation, map, "System.RuntimeFieldHandle", 8, 8, hasReferences: true);
+        Add(compilation, map, "System.RuntimeMethodHandle", 8, 8, hasReferences: true);
         Add(compilation, map, "System.Guid", 16, 4);
         Add(compilation, map, "System.Int128", 16, 8);
         Add(compilation, map, "System.UInt128", 16, 8);
         Add(compilation, map, "System.DateTimeOffset", 16, 8);
+        Add(compilation, map, "System.Threading.Tasks.ValueTask", 16, 8, hasReferences: true);
+        Add(compilation, map, "System.Memory`1", 16, 8, hasReferences: true);
+        Add(compilation, map, "System.ReadOnlyMemory`1", 16, 8, hasReferences: true);
+        Add(compilation, map, "System.ArraySegment`1", 16, 8, hasReferences: true);
+        Add(compilation, map, "System.Span`1", 16, 8, hasReferences: true);
+        Add(compilation, map, "System.ReadOnlySpan`1", 16, 8, hasReferences: true);
+        Add(compilation, map, "System.HashCode", 32, 4);
 
-        // Hardware SIMD intrinsic vectors (reference assemblies omit pseudo-custom [StructLayout(Size = ...)]).
+        // Hardware SIMD intrinsic vectors (reference assemblies omit ClassLayout.Size and private fields).
         Add(compilation, map, "System.Runtime.Intrinsics.Vector64`1", 8, 8);
         Add(compilation, map, "System.Runtime.Intrinsics.Vector128`1", 16, 8);
         Add(compilation, map, "System.Runtime.Intrinsics.Vector256`1", 32, 8);
         Add(compilation, map, "System.Runtime.Intrinsics.Vector512`1", 64, 8);
 
-        // System.Numerics math types.
+        // System.Numerics fixed-size math types (System.Numerics.Vector<T> is intentionally omitted: CPU-ISA-dependent).
         Add(compilation, map, "System.Numerics.Vector2", 8, 4);
         Add(compilation, map, "System.Numerics.Vector3", 12, 4);
         Add(compilation, map, "System.Numerics.Vector4", 16, 4);
@@ -393,6 +510,15 @@ internal sealed class StructLayoutCalculator(Compilation compilation)
         Add(compilation, map, "System.Numerics.Matrix3x2", 24, 4);
         Add(compilation, map, "System.Numerics.Matrix4x4", 64, 4);
         Add(compilation, map, "System.Numerics.Complex", 16, 8);
+
+        // System.Drawing.Primitives structs (private fields stripped in ref assemblies).
+        Add(compilation, map, "System.Drawing.Point", 8, 4);
+        Add(compilation, map, "System.Drawing.PointF", 8, 4);
+        Add(compilation, map, "System.Drawing.Size", 8, 4);
+        Add(compilation, map, "System.Drawing.SizeF", 8, 4);
+        Add(compilation, map, "System.Drawing.Rectangle", 16, 4);
+        Add(compilation, map, "System.Drawing.RectangleF", 16, 4);
+        Add(compilation, map, "System.Drawing.Color", 24, 8, hasReferences: true);
 
         return map;
 
@@ -431,7 +557,7 @@ internal sealed class StructLayoutCalculator(Compilation compilation)
         SpecialType.System_IntPtr or
         SpecialType.System_UIntPtr => StructLayoutInfo.Known(8, 8, 8, false),
 
-        SpecialType.System_Decimal => StructLayoutInfo.Known(16, 16, 4, false),
+        SpecialType.System_Decimal => StructLayoutInfo.Known(16, 16, 8, false),
 
         _ => StructLayoutInfo.GenericOrUnresolved
     };

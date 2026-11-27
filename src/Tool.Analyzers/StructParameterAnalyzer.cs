@@ -1,17 +1,23 @@
+using System;
 using System.Collections.Immutable;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace Tool.Analyzers;
 
+/// <summary>
+/// Audits struct parameter passing against the 16-byte size threshold across methods,
+/// constructors, C# 14 extension blocks, delegates, and local functions.
+/// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class StructParameterAnalyzer : DiagnosticAnalyzer
 {
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
     [
         DiagnosticDescriptors.LargeStructParameter,
-        DiagnosticDescriptors.SmallStructInParameter,
+        DiagnosticDescriptors.SmallStructRefParameter,
         DiagnosticDescriptors.UnknownStructLayout
     ];
 
@@ -23,7 +29,18 @@ public sealed class StructParameterAnalyzer : DiagnosticAnalyzer
         context.RegisterCompilationStartAction(compilationContext =>
         {
             var calculator = new StructLayoutCalculator(compilationContext.Compilation);
-            compilationContext.RegisterSymbolAction(ctx => AnalyzeMethod(ctx, calculator), SymbolKind.Method);
+
+            compilationContext.RegisterSymbolAction(
+                ctx => AnalyzeMethod(ctx, calculator),
+                SymbolKind.Method);
+
+            compilationContext.RegisterSymbolAction(
+                ctx => AnalyzeNamedType(ctx, calculator),
+                SymbolKind.NamedType);
+
+            compilationContext.RegisterOperationAction(
+                ctx => AnalyzeLocalFunction(ctx, calculator),
+                OperationKind.LocalFunction);
         });
     }
 
@@ -34,7 +51,8 @@ public sealed class StructParameterAnalyzer : DiagnosticAnalyzer
         if (method.IsImplicitlyDeclared ||
             method.IsOverride ||
             method.IsAsync ||
-            method.IsExtern)
+            method.IsExtern ||
+            method.PartialDefinitionPart is not null)
         {
             return;
         }
@@ -44,61 +62,116 @@ public sealed class StructParameterAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        if (SymbolHelpers.IsPositionalRecordPrimaryConstructor(method, context.CancellationToken))
-        {
-            return;
-        }
-
         if (method.MethodKind == MethodKind.Ordinary && SymbolHelpers.IsInterfaceImplementation(method))
         {
             return;
         }
 
-        foreach (IParameterSymbol param in method.Parameters)
+        // Primary constructors (CS8908 / CS9109) and iterators (CS1623) disallow adding 'in',
+        // but existing ref/in/ref readonly modifiers on small structs are still reported.
+        bool allowSuggestIn =
+            !SymbolHelpers.IsPrimaryConstructor(method, context.CancellationToken) &&
+            !SymbolHelpers.IsIteratorMethod(method, context.CancellationToken);
+
+        AnalyzeParameters(method.Parameters, allowSuggestIn, calculator, context.ReportDiagnostic);
+    }
+
+    private static void AnalyzeNamedType(SymbolAnalysisContext context, StructLayoutCalculator calculator)
+    {
+        var type = (INamedTypeSymbol)context.Symbol;
+
+        // C# 14 extension block receiver parameter: extension(MyStruct s) / extension(in MyStruct s).
+        if (type.IsExtension && type.ExtensionParameter is { IsImplicitlyDeclared: false } extensionParam)
         {
-            if (param.IsParams ||
-                param.RefKind == RefKind.Out ||
-                SymbolHelpers.TryGetAnalyzableStruct(param.Type) is not { } structType)
-            {
-                continue;
-            }
+            // Unnamed extension(MyStruct) blocks declare only static members and pass no receiver.
+            bool allowSuggestIn = !string.IsNullOrEmpty(extensionParam.Name);
+            AnalyzeParameter(extensionParam, allowSuggestIn, calculator, context.ReportDiagnostic);
+            return;
+        }
 
-            Location location = SymbolHelpers.GetPrimaryLocation(param);
-            StructLayoutInfo layout = calculator.GetLayout(structType);
+        if (type.IsImplicitlyDeclared)
+        {
+            return;
+        }
 
-            if (layout.IsUnknownLayout)
-            {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.UnknownStructLayout,
-                    location,
-                    structType.Name,
-                    (layout.UnknownType ?? structType).ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
-                continue;
-            }
+        if (type.TypeKind == TypeKind.Delegate && type.DelegateInvokeMethod is { } invoke)
+        {
+            AnalyzeParameters(invoke.Parameters, allowSuggestIn: true, calculator, context.ReportDiagnostic);
+        }
+    }
 
-            if (!layout.IsKnown || layout.Size <= 0)
-            {
-                continue;
-            }
+    private static void AnalyzeLocalFunction(OperationAnalysisContext context, StructLayoutCalculator calculator)
+    {
+        var localFunc = (ILocalFunctionOperation)context.Operation;
+        IMethodSymbol method = localFunc.Symbol;
 
-            if (layout.Size > SymbolHelpers.SizeThresholdBytes && param.RefKind == RefKind.None)
-            {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.LargeStructParameter, location, param.Name, structType.Name, layout.Size));
-            }
-            else if (layout.Size < SymbolHelpers.SizeThresholdBytes &&
-                     param.RefKind is RefKind.In or RefKind.Ref or RefKind.RefReadOnlyParameter)
-            {
-                string modifier = param.RefKind switch
-                {
-                    RefKind.Ref => "ref",
-                    RefKind.RefReadOnlyParameter => "ref readonly",
-                    _ => "in"
-                };
+        if (method.IsImplicitlyDeclared || method.IsAsync || method.IsExtern)
+        {
+            return;
+        }
 
-                context.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.SmallStructInParameter, location, param.Name, structType.Name, layout.Size, modifier));
-            }
+        bool allowSuggestIn = !SymbolHelpers.IsIteratorMethod(method, context.CancellationToken);
+        AnalyzeParameters(method.Parameters, allowSuggestIn, calculator, context.ReportDiagnostic);
+    }
+
+    private static void AnalyzeParameters(
+        ImmutableArray<IParameterSymbol> parameters,
+        bool allowSuggestIn,
+        StructLayoutCalculator calculator,
+        Action<Diagnostic> reportDiagnostic)
+    {
+        foreach (IParameterSymbol param in parameters)
+        {
+            AnalyzeParameter(param, allowSuggestIn, calculator, reportDiagnostic);
+        }
+    }
+
+    private static void AnalyzeParameter(
+        IParameterSymbol param,
+        bool allowSuggestIn,
+        StructLayoutCalculator calculator,
+        Action<Diagnostic> reportDiagnostic)
+    {
+        if (param.IsParams ||
+            param.RefKind == RefKind.Out ||
+            SymbolHelpers.TryGetAnalyzableStruct(param.Type) is not { } structType)
+        {
+            return;
+        }
+
+        Location location = SymbolHelpers.GetPrimaryLocation(param);
+        StructLayoutInfo layout = calculator.GetLayout(structType);
+
+        if (layout.IsUnknownLayout)
+        {
+            reportDiagnostic(SymbolHelpers.CreateUnknownLayoutDiagnostic(location, structType, layout));
+            return;
+        }
+
+        if (!layout.IsKnown || layout.Size <= 0)
+        {
+            return;
+        }
+
+        if (allowSuggestIn && layout.Size > SymbolHelpers.SizeThresholdBytes && param.RefKind == RefKind.None)
+        {
+            reportDiagnostic(Diagnostic.Create(
+                DiagnosticDescriptors.LargeStructParameter,
+                location,
+                param.Name,
+                SymbolHelpers.FormatTypeName(structType),
+                layout.Size));
+        }
+        else if (layout.Size < SymbolHelpers.SizeThresholdBytes &&
+                 param.RefKind is RefKind.In or RefKind.Ref or RefKind.RefReadOnlyParameter)
+        {
+            reportDiagnostic(Diagnostic.Create(
+                DiagnosticDescriptors.SmallStructRefParameter,
+                location,
+                param.Name,
+                SymbolHelpers.FormatTypeName(structType),
+                layout.Size,
+                SymbolHelpers.FormatParameterRefKind(param.RefKind)));
         }
     }
 }

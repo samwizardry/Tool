@@ -5,6 +5,9 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace Tool.Analyzers;
 
+/// <summary>
+/// Reports sequential unmanaged structs whose field order introduces avoidable alignment padding.
+/// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class StructPaddingAnalyzer : DiagnosticAnalyzer
 {
@@ -30,16 +33,17 @@ public sealed class StructPaddingAnalyzer : DiagnosticAnalyzer
     {
         var type = (INamedTypeSymbol)context.Symbol;
 
+        // Generic structs (including structs nested inside generic types) use Auto layout in CoreCLR.
         if (type.TypeKind != TypeKind.Struct ||
             type.IsImplicitlyDeclared ||
             type.IsRefLikeType ||
-            type.TypeParameters.Length > 0)
+            type.IsGenericType)
         {
             return;
         }
 
-        // Respect explicit [StructLayout] (GPU constant buffers, interop, or LayoutKind.Auto) and [InlineArray].
-        if (calculator.HasExplicitStructLayout(type) || calculator.GetInlineArrayLength(type) > 0)
+        // Respect explicit [StructLayout] / [ExtendedLayout] / [FieldOffset] and [InlineArray].
+        if (calculator.HasExplicitSourceLayout(type) || calculator.GetInlineArrayLength(type) > 0)
         {
             return;
         }
@@ -49,11 +53,7 @@ public sealed class StructPaddingAnalyzer : DiagnosticAnalyzer
 
         if (layout.IsUnknownLayout)
         {
-            context.ReportDiagnostic(Diagnostic.Create(
-                DiagnosticDescriptors.UnknownStructLayout,
-                location,
-                type.Name,
-                (layout.UnknownType ?? type).ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
+            context.ReportDiagnostic(SymbolHelpers.CreateUnknownLayoutDiagnostic(location, type, layout));
             return;
         }
 
@@ -67,7 +67,7 @@ public sealed class StructPaddingAnalyzer : DiagnosticAnalyzer
             context.ReportDiagnostic(Diagnostic.Create(
                 DiagnosticDescriptors.StructPadding,
                 location,
-                type.Name,
+                SymbolHelpers.FormatTypeName(type),
                 layout.Size,
                 layout.OptimalSize,
                 layout.Size - layout.OptimalSize));

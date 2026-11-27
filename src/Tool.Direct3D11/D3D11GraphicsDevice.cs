@@ -483,7 +483,7 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
 #if GRAPHICS_DEBUG
         return new(_bindingSets.Add(D3D11BindingSet.Create(layout, desc, layoutData, _buffers, _textures, _samplers)));
 #else
-        return new(_bindingSets.Add(D3D11BindingSet.Create(in desc, in layoutData, _buffers, _textures, _samplers)));
+        return new(_bindingSets.Add(D3D11BindingSet.Create(desc, layoutData, _buffers, _textures, _samplers)));
 #endif
     }
 

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading;
 
@@ -7,13 +9,17 @@ using Microsoft.CodeAnalysis.Operations;
 
 namespace Tool.Analyzers;
 
+/// <summary>
+/// Audits struct return values on methods, properties, indexers, delegates, and local functions
+/// against the 16-byte size threshold.
+/// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class StructReturnAnalyzer : DiagnosticAnalyzer
 {
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
     [
         DiagnosticDescriptors.LargeStructReturnByValue,
-        DiagnosticDescriptors.SmallStructRefReadOnlyReturn,
+        DiagnosticDescriptors.SmallStructRefReturn,
         DiagnosticDescriptors.UnknownStructLayout
     ];
 
@@ -27,22 +33,31 @@ public sealed class StructReturnAnalyzer : DiagnosticAnalyzer
             var calculator = new StructLayoutCalculator(compilationContext.Compilation);
 
             compilationContext.RegisterSymbolAction(
-                ctx => AnalyzeSmallRefReturn(ctx, calculator),
+                ctx => AnalyzeMethodSmallRefReturn(ctx, calculator),
                 SymbolKind.Method);
+
+            compilationContext.RegisterSymbolAction(
+                ctx => AnalyzeDelegateSmallRefReturn(ctx, calculator),
+                SymbolKind.NamedType);
+
+            compilationContext.RegisterOperationAction(
+                ctx => AnalyzeLocalFunctionReturn(ctx, calculator),
+                OperationKind.LocalFunction);
 
             compilationContext.RegisterOperationBlockStartAction(
                 blockContext => AnalyzeLargeReturnByValue(blockContext, calculator));
         });
     }
 
-    private static void AnalyzeSmallRefReturn(SymbolAnalysisContext context, StructLayoutCalculator calculator)
+    private static void AnalyzeMethodSmallRefReturn(SymbolAnalysisContext context, StructLayoutCalculator calculator)
     {
         var method = (IMethodSymbol)context.Symbol;
 
         if ((!method.ReturnsByRef && !method.ReturnsByRefReadonly) ||
             method.IsImplicitlyDeclared ||
             method.IsOverride ||
-            method.IsExtern)
+            method.IsExtern ||
+            method.PartialDefinitionPart is not null)
         {
             return;
         }
@@ -57,22 +72,98 @@ public sealed class StructReturnAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        ISymbol target = method.AssociatedSymbol ?? method;
+        ReportIfSmallRefReturn(method, target, calculator, context.ReportDiagnostic);
+    }
+
+    private static void AnalyzeDelegateSmallRefReturn(SymbolAnalysisContext context, StructLayoutCalculator calculator)
+    {
+        var type = (INamedTypeSymbol)context.Symbol;
+        if (type.IsImplicitlyDeclared ||
+            type.TypeKind != TypeKind.Delegate ||
+            type.DelegateInvokeMethod is not { } invoke)
+        {
+            return;
+        }
+
+        if (!invoke.ReturnsByRef && !invoke.ReturnsByRefReadonly)
+        {
+            return;
+        }
+
+        ReportIfSmallRefReturn(invoke, type, calculator, context.ReportDiagnostic);
+    }
+
+    private static void AnalyzeLocalFunctionReturn(OperationAnalysisContext context, StructLayoutCalculator calculator)
+    {
+        var localFunc = (ILocalFunctionOperation)context.Operation;
+        IMethodSymbol method = localFunc.Symbol;
+
+        if (method.IsImplicitlyDeclared || method.IsExtern)
+        {
+            return;
+        }
+
+        if (method.ReturnsByRef || method.ReturnsByRefReadonly)
+        {
+            ReportIfSmallRefReturn(method, method, calculator, context.ReportDiagnostic);
+            return;
+        }
+
+        if (method.IsAsync || localFunc.Body is null)
+        {
+            return;
+        }
+
         if (SymbolHelpers.TryGetAnalyzableStruct(method.ReturnType) is not { } structType)
         {
             return;
         }
 
-        ISymbol target = method.AssociatedSymbol ?? method;
+        StructLayoutInfo layout = calculator.GetLayout(structType);
+        if (layout.Status == LayoutStatus.GenericOrUnresolved ||
+            (layout.IsKnown && layout.Size <= SymbolHelpers.SizeThresholdBytes))
+        {
+            return;
+        }
+
+        if (!AllDirectReturnsAreRefReturnable(localFunc.Body))
+        {
+            return;
+        }
+
+        Location location = SymbolHelpers.GetPrimaryLocation(method);
+        if (layout.IsUnknownLayout)
+        {
+            context.ReportDiagnostic(SymbolHelpers.CreateUnknownLayoutDiagnostic(location, structType, layout));
+            return;
+        }
+
+        context.ReportDiagnostic(Diagnostic.Create(
+            DiagnosticDescriptors.LargeStructReturnByValue,
+            location,
+            method.Name,
+            SymbolHelpers.FormatTypeName(structType),
+            layout.Size));
+    }
+
+    private static void ReportIfSmallRefReturn(
+        IMethodSymbol method,
+        ISymbol target,
+        StructLayoutCalculator calculator,
+        Action<Diagnostic> reportDiagnostic)
+    {
+        if (SymbolHelpers.TryGetAnalyzableStruct(method.ReturnType) is not { } structType)
+        {
+            return;
+        }
+
         Location location = SymbolHelpers.GetPrimaryLocation(target);
         StructLayoutInfo layout = calculator.GetLayout(structType);
 
         if (layout.IsUnknownLayout)
         {
-            context.ReportDiagnostic(Diagnostic.Create(
-                DiagnosticDescriptors.UnknownStructLayout,
-                location,
-                structType.Name,
-                (layout.UnknownType ?? structType).ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
+            reportDiagnostic(SymbolHelpers.CreateUnknownLayoutDiagnostic(location, structType, layout));
             return;
         }
 
@@ -81,14 +172,13 @@ public sealed class StructReturnAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        string modifier = method.ReturnsByRefReadonly ? "ref readonly" : "ref";
-        context.ReportDiagnostic(Diagnostic.Create(
-            DiagnosticDescriptors.SmallStructRefReadOnlyReturn,
+        reportDiagnostic(Diagnostic.Create(
+            DiagnosticDescriptors.SmallStructRefReturn,
             location,
             target.Name,
-            structType.Name,
+            SymbolHelpers.FormatTypeName(structType),
             layout.Size,
-            modifier));
+            SymbolHelpers.FormatLocalOrReturnRefKind(method.RefKind)));
     }
 
     private static void AnalyzeLargeReturnByValue(
@@ -162,10 +252,13 @@ public sealed class StructReturnAnalyzer : DiagnosticAnalyzer
             }
         }, OperationKind.Return);
 
-        blockContext.RegisterOperationAction(
-            _ => Interlocked.Exchange(ref hasYield, 1),
-            OperationKind.YieldReturn,
-            OperationKind.YieldBreak);
+        blockContext.RegisterOperationAction(ctx =>
+        {
+            if (!IsInsideNestedFunction(ctx.Operation))
+            {
+                Interlocked.Exchange(ref hasYield, 1);
+            }
+        }, OperationKind.YieldReturn, OperationKind.YieldBreak);
 
         blockContext.RegisterOperationBlockEndAction(endContext =>
         {
@@ -181,11 +274,7 @@ public sealed class StructReturnAnalyzer : DiagnosticAnalyzer
 
             if (layout.IsUnknownLayout)
             {
-                endContext.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.UnknownStructLayout,
-                    location,
-                    structType.Name,
-                    (layout.UnknownType ?? structType).ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
+                endContext.ReportDiagnostic(SymbolHelpers.CreateUnknownLayoutDiagnostic(location, structType, layout));
                 return;
             }
 
@@ -193,9 +282,54 @@ public sealed class StructReturnAnalyzer : DiagnosticAnalyzer
                 DiagnosticDescriptors.LargeStructReturnByValue,
                 location,
                 target.Name,
-                structType.Name,
+                SymbolHelpers.FormatTypeName(structType),
                 layout.Size));
         });
+    }
+
+    private static bool AllDirectReturnsAreRefReturnable(IOperation root)
+    {
+        int returnCount = 0;
+        var stack = new Stack<IOperation>();
+        stack.Push(root);
+
+        while (stack.Count > 0)
+        {
+            IOperation current = stack.Pop();
+
+            if (current.Kind is OperationKind.YieldReturn or OperationKind.YieldBreak)
+            {
+                return false;
+            }
+
+            if (current is IReturnOperation returnOp)
+            {
+                if (returnOp.ReturnedValue is null)
+                {
+                    continue;
+                }
+
+                returnCount++;
+                if (!IsRefReturnable(returnOp.ReturnedValue))
+                {
+                    return false;
+                }
+
+                continue;
+            }
+
+            foreach (IOperation child in current.ChildOperations)
+            {
+                if (child is IAnonymousFunctionOperation or ILocalFunctionOperation)
+                {
+                    continue;
+                }
+
+                stack.Push(child);
+            }
+        }
+
+        return returnCount > 0;
     }
 
     private static bool IsInsideNestedFunction(IOperation operation)

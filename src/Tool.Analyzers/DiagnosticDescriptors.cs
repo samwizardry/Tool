@@ -8,14 +8,14 @@ internal static class DiagnosticDescriptors
 
     public static readonly DiagnosticDescriptor LargeStructParameter = new(
         id: DiagnosticIds.LargeStructParameter,
-        title: "Large struct parameter should be passed by 'in'",
-        messageFormat: "Parameter '{0}' of struct type '{1}' (~{2} bytes) should be passed using the 'in' modifier",
+        title: "Large struct parameter should be passed by 'in' or 'ref readonly'",
+        messageFormat: "Parameter '{0}' of struct type '{1}' (~{2} bytes) should be passed using 'in' or 'ref readonly'",
         category: PerformanceCategory,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
-    public static readonly DiagnosticDescriptor SmallStructInParameter = new(
-        id: DiagnosticIds.SmallStructInParameter,
+    public static readonly DiagnosticDescriptor SmallStructRefParameter = new(
+        id: DiagnosticIds.SmallStructRefParameter,
         title: "Small struct parameter should be passed by value",
         messageFormat: "Parameter '{0}' of small struct type '{1}' (~{2} bytes) should be passed by value instead of '{3}'",
         category: PerformanceCategory,
@@ -46,8 +46,8 @@ internal static class DiagnosticDescriptors
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
-    public static readonly DiagnosticDescriptor SmallStructRefReadOnlyLocal = new(
-        id: DiagnosticIds.SmallStructRefReadOnlyLocal,
+    public static readonly DiagnosticDescriptor SmallStructRefLocal = new(
+        id: DiagnosticIds.SmallStructRefLocal,
         title: "Small struct does not need 'ref' or 'ref readonly' local",
         messageFormat: "Local '{0}' of small struct type '{1}' (~{2} bytes) should be copied by value instead of '{3}'",
         category: PerformanceCategory,
@@ -62,8 +62,8 @@ internal static class DiagnosticDescriptors
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);
 
-    public static readonly DiagnosticDescriptor SmallStructRefReadOnlyReturn = new(
-        id: DiagnosticIds.SmallStructRefReadOnlyReturn,
+    public static readonly DiagnosticDescriptor SmallStructRefReturn = new(
+        id: DiagnosticIds.SmallStructRefReturn,
         title: "Small struct should be returned by value",
         messageFormat: "Member '{0}' returns small struct '{1}' (~{2} bytes) by '{3}'; consider returning by value",
         category: PerformanceCategory,

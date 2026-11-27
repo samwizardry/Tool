@@ -20,7 +20,7 @@ public readonly record struct SamplerDescription
         float maxAnisotropy = 1.0f,
         float mipBias = 0.0f,
         SamplerReductionType reductionType = SamplerReductionType.Standard,
-        Color4? borderColor = null)
+        in Color4? borderColor = null)
     {
         MinFilter = minFilter;
         MagFilter = magFilter;
@@ -31,7 +31,7 @@ public readonly record struct SamplerDescription
         MaxAnisotropy = maxAnisotropy;
         MipBias = mipBias;
         ReductionType = reductionType;
-        BorderColor = borderColor.HasValue ? borderColor.Value : Colors.White;
+        BorderColor = borderColor ?? Colors.White;
     }
 
     public readonly Color4 BorderColor { get; init; }

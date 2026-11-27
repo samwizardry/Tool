@@ -6,6 +6,9 @@ using Microsoft.CodeAnalysis.Operations;
 
 namespace Tool.Analyzers;
 
+/// <summary>
+/// Audits struct local variables and foreach loop variables against the 16-byte size threshold.
+/// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
 {
@@ -13,7 +16,7 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
     [
         DiagnosticDescriptors.LargeStructLocalCopy,
         DiagnosticDescriptors.LargeStructForEachCopy,
-        DiagnosticDescriptors.SmallStructRefReadOnlyLocal,
+        DiagnosticDescriptors.SmallStructRefLocal,
         DiagnosticDescriptors.UnknownStructLayout
     ];
 
@@ -69,44 +72,7 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        Location location = SymbolHelpers.GetPrimaryLocation(local);
-        StructLayoutInfo layout = calculator.GetLayout(structType);
-
-        if (layout.IsUnknownLayout)
-        {
-            context.ReportDiagnostic(Diagnostic.Create(
-                DiagnosticDescriptors.UnknownStructLayout,
-                location,
-                structType.Name,
-                (layout.UnknownType ?? structType).ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
-            return;
-        }
-
-        if (!layout.IsKnown || layout.Size <= 0)
-        {
-            return;
-        }
-
-        if (local.IsRef && layout.Size < SymbolHelpers.SizeThresholdBytes)
-        {
-            string modifier = local.RefKind == RefKind.In ? "ref readonly" : "ref";
-            context.ReportDiagnostic(Diagnostic.Create(
-                DiagnosticDescriptors.SmallStructRefReadOnlyLocal,
-                location,
-                local.Name,
-                structType.Name,
-                layout.Size,
-                modifier));
-        }
-        else if (isCopyCandidate && layout.Size > SymbolHelpers.SizeThresholdBytes)
-        {
-            context.ReportDiagnostic(Diagnostic.Create(
-                DiagnosticDescriptors.LargeStructLocalCopy,
-                location,
-                local.Name,
-                structType.Name,
-                layout.Size));
-        }
+        ReportLocalDiagnostic(context, calculator, local, structType, isCopyCandidate, forEachSuggestion: null);
     }
 
     private static void AnalyzeForEachLoop(
@@ -128,7 +94,7 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
         }
 
         string? forEachSuggestion = null;
-        if (!local.IsRef && !IsInsideAsyncMethod(context, forEach))
+        if (!local.IsRef && !forEach.IsAsynchronous && !IsInsideAsyncMethod(context, forEach))
         {
             IOperation collection = UnwrapConversions(forEach.Collection);
             if (collection.Type is IArrayTypeSymbol { Rank: 1 })
@@ -147,16 +113,23 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        ReportLocalDiagnostic(context, calculator, local, structType, isCopyCandidate: false, forEachSuggestion);
+    }
+
+    private static void ReportLocalDiagnostic(
+        OperationAnalysisContext context,
+        StructLayoutCalculator calculator,
+        ILocalSymbol local,
+        INamedTypeSymbol structType,
+        bool isCopyCandidate,
+        string? forEachSuggestion)
+    {
         Location location = SymbolHelpers.GetPrimaryLocation(local);
         StructLayoutInfo layout = calculator.GetLayout(structType);
 
         if (layout.IsUnknownLayout)
         {
-            context.ReportDiagnostic(Diagnostic.Create(
-                DiagnosticDescriptors.UnknownStructLayout,
-                location,
-                structType.Name,
-                (layout.UnknownType ?? structType).ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
+            context.ReportDiagnostic(SymbolHelpers.CreateUnknownLayoutDiagnostic(location, structType, layout));
             return;
         }
 
@@ -167,24 +140,35 @@ public sealed class StructLocalCopyAnalyzer : DiagnosticAnalyzer
 
         if (local.IsRef && layout.Size < SymbolHelpers.SizeThresholdBytes)
         {
-            string modifier = local.RefKind == RefKind.In ? "ref readonly" : "ref";
             context.ReportDiagnostic(Diagnostic.Create(
-                DiagnosticDescriptors.SmallStructRefReadOnlyLocal,
+                DiagnosticDescriptors.SmallStructRefLocal,
                 location,
                 local.Name,
-                structType.Name,
+                SymbolHelpers.FormatTypeName(structType),
                 layout.Size,
-                modifier));
+                SymbolHelpers.FormatLocalOrReturnRefKind(local.RefKind)));
         }
-        else if (forEachSuggestion is not null && layout.Size > SymbolHelpers.SizeThresholdBytes)
+        else if (layout.Size > SymbolHelpers.SizeThresholdBytes)
         {
-            context.ReportDiagnostic(Diagnostic.Create(
-                DiagnosticDescriptors.LargeStructForEachCopy,
-                location,
-                local.Name,
-                structType.Name,
-                layout.Size,
-                forEachSuggestion));
+            if (forEachSuggestion is not null)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    DiagnosticDescriptors.LargeStructForEachCopy,
+                    location,
+                    local.Name,
+                    SymbolHelpers.FormatTypeName(structType),
+                    layout.Size,
+                    forEachSuggestion));
+            }
+            else if (isCopyCandidate)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(
+                    DiagnosticDescriptors.LargeStructLocalCopy,
+                    location,
+                    local.Name,
+                    SymbolHelpers.FormatTypeName(structType),
+                    layout.Size));
+            }
         }
     }
 

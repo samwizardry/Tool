@@ -121,6 +121,7 @@ public abstract class GraphicsDevice : IDisposable
         FreeResources();
 
         _disposed = true;
+        GC.SuppressFinalize(this);
     }
 
     protected abstract void FreeResources();
