@@ -11,7 +11,9 @@ internal readonly struct D3D11BindingLayout
         Visibility = desc.Visibility;
     }
 
+#pragma warning disable CA1822 // Пометьте члены как статические
     public void Destroy()
+#pragma warning restore CA1822 // Пометьте члены как статические
     {
     }
 }

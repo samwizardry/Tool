@@ -7,10 +7,53 @@ namespace Tool.Direct3D11;
 
 internal readonly struct D3D11BindingSet
 {
-    internal readonly record struct BufferSlot(uint Slot, ID3D11Buffer Buffer);
-    internal readonly record struct SrvSlot(uint Slot, ID3D11ShaderResourceView? Srv);
-    internal readonly record struct UavSlot(uint Slot, ID3D11UnorderedAccessView? Uav);
-    internal readonly record struct SamplerSlot(uint Slot, ID3D11SamplerState Sampler);
+    internal readonly record struct BufferSlot
+    {
+        public readonly uint Slot;
+        public readonly ID3D11Buffer Buffer;
+
+        public BufferSlot(uint slot, ID3D11Buffer buffer)
+        {
+            Slot = slot;
+            Buffer = buffer;
+        }
+    }
+
+    internal readonly record struct SrvSlot
+    {
+        public readonly uint Slot;
+        public readonly ID3D11ShaderResourceView? Srv;
+
+        public SrvSlot(uint slot, ID3D11ShaderResourceView srv)
+        {
+            Slot = slot;
+            Srv = srv;
+        }
+    }
+
+    internal readonly record struct UavSlot
+    {
+        public readonly uint Slot;
+        public readonly ID3D11UnorderedAccessView? Uav;
+
+        public UavSlot(uint slot, ID3D11UnorderedAccessView uav)
+        {
+            Slot = slot;
+            Uav = uav;
+        }
+    }
+
+    internal readonly record struct SamplerSlot
+    {
+        public readonly uint Slot;
+        public readonly ID3D11SamplerState Sampler;
+
+        public SamplerSlot(uint slot, ID3D11SamplerState sampler)
+        {
+            Slot = slot;
+            Sampler = sampler;
+        }
+    }
 
 #if GRAPHICS_DEBUG
     public readonly BindingLayoutHandle Layout;
@@ -41,7 +84,9 @@ internal readonly struct D3D11BindingSet
         _samplerSlots = samplerSlots;
     }
 
+#pragma warning disable CA1822 // Пометьте члены как статические
     public void Destroy()
+#pragma warning restore CA1822 // Пометьте члены как статические
     {
     }
 
@@ -55,29 +100,64 @@ internal readonly struct D3D11BindingSet
         SlotMap<D3D11Texture> textures,
         SlotMap<D3D11Sampler> samplers)
     {
-        List<BufferSlot> constantBuffers = [];
-        List<SrvSlot> srvSlots = [];
-        List<UavSlot> uavSlots = [];
-        List<SamplerSlot> samplerSlots = [];
+        int constBufferCount = 0;
+        int srvCount = 0;
+        int uavCount = 0;
+        int samplerCount = 0;
 
-        foreach (ref readonly BindingSetItem item in desc.Bindings.AsSpan())
+        for (int i = 0; i < desc.Bindings.Length; i++)
+        {
+            var item = desc.Bindings[i];
+            switch (item.Type)
+            {
+                case BindingResourceType.ConstantBuffer:
+                    constBufferCount++;
+                    break;
+                case BindingResourceType.TextureSrv:
+                    srvCount++;
+                    break;
+                case BindingResourceType.BufferSrv:
+                    srvCount++;
+                    break;
+                case BindingResourceType.BufferUav:
+                    uavCount++;
+                    break;
+                case BindingResourceType.Sampler:
+                    samplerCount++;
+                    break;
+                default:
+                    throw new NotSupportedException();
+            }
+        }
+
+        BufferSlot[] constantBuffers = new BufferSlot[constBufferCount];
+        SrvSlot[] srvSlots = new SrvSlot[srvCount];
+        UavSlot[] uavSlots = new UavSlot[uavCount];
+        SamplerSlot[] samplerSlots = new SamplerSlot[samplerCount];
+
+        constBufferCount = 0;
+        srvCount = 0;
+        uavCount = 0;
+        samplerCount = 0;
+
+        foreach (BindingSetItem item in desc.Bindings)
         {
             switch (item.Type)
             {
                 case BindingResourceType.ConstantBuffer:
-                    constantBuffers.Add(new(item.Slot, buffers.Get(item.Resource).Native));
+                    constantBuffers[constBufferCount++] = new(item.Slot, buffers.Get(item.Resource).Native);
                     break;
                 case BindingResourceType.TextureSrv:
-                    srvSlots.Add(new(item.Slot, textures.Get(item.Resource).Srv));
+                    srvSlots[srvCount++] = new(item.Slot, textures.Get(item.Resource).Srv);
                     break;
                 case BindingResourceType.BufferSrv:
-                    srvSlots.Add(new(item.Slot, buffers.Get(item.Resource).Srv));
+                    srvSlots[srvCount++] = new(item.Slot, buffers.Get(item.Resource).Srv);
                     break;
                 case BindingResourceType.BufferUav:
-                    uavSlots.Add(new(item.Slot, buffers.Get(item.Resource).Uav));
+                    uavSlots[uavCount++] = new(item.Slot, buffers.Get(item.Resource).Uav);
                     break;
                 case BindingResourceType.Sampler:
-                    samplerSlots.Add(new(item.Slot, samplers.Get(item.Resource).Native));
+                    samplerSlots[samplerCount++] = new(item.Slot, samplers.Get(item.Resource).Native);
                     break;
                 default:
                     throw new NotSupportedException();
@@ -89,10 +169,10 @@ internal readonly struct D3D11BindingSet
             layout,
 #endif
             layoutData.Visibility,
-            [.. constantBuffers],
-            [.. srvSlots],
-            [.. uavSlots],
-            [.. samplerSlots]);
+            constantBuffers,
+            srvSlots,
+            uavSlots,
+            samplerSlots);
     }
 
     public void Apply(ID3D11DeviceContext4 imContext)

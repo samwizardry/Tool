@@ -32,8 +32,7 @@ public readonly record struct IndexBufferBinding
     public IndexBufferBinding(
         BufferHandle buffer,
         IndexFormat format,
-        uint byteOffset = 0
-        )
+        uint byteOffset = 0)
     {
         Buffer = buffer;
         Format = format;

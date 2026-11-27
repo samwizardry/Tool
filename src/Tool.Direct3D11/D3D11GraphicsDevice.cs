@@ -688,7 +688,7 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
         }
 
         if ((state.Viewport.ViewportCount > 0 || state.Viewport.ScissorRectCount > 0) &&
-            !_currentViewport.Equals(in state.Viewport))
+            !_currentViewport.Equals(state.Viewport))
         {
             ref readonly var vpState = ref state.Viewport;
             ref readonly var vpArr = ref vpState.Viewports;
@@ -952,7 +952,9 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
         throw new InvalidOperationException("Cannot detect Direct3D11 adapter.");
     }
 
+#pragma warning disable CA1822 // Пометьте члены как статические
     private void UpdateColorSpace()
+#pragma warning restore CA1822 // Пометьте члены как статические
     {
     }
 

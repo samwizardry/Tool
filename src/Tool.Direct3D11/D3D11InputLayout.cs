@@ -25,12 +25,11 @@ internal readonly struct D3D11InputLayout
             throw new InvalidOperationException();
         }
 
-        InputElementDescription[] nativeDescription = new InputElementDescription[layout.Elements.Length];
+        var nativeDescription = new InputElementDescription[layout.Count];
 
-        for (int i = 0; i < layout.Elements.Length; ++i)
+        for (int i = 0; i < layout.Count; ++i)
         {
-            VertexElement element = layout.Elements[i];
-
+            var element = layout[i];
             nativeDescription[i].SemanticName = element.SemanticName.ToD3D11SemanticName();
             nativeDescription[i].SemanticIndex = element.SemanticIndex;
             nativeDescription[i].Format = element.Format.ToDXGIFormat();
@@ -40,6 +39,7 @@ internal readonly struct D3D11InputLayout
             nativeDescription[i].InstanceDataStepRate = 0;
         }
 
-        return new D3D11InputLayout(device.CreateInputLayout(nativeDescription, shader.Bytecode!));
+        var il = device.CreateInputLayout(nativeDescription, shader.Bytecode!);
+        return new D3D11InputLayout(il);
     }
 }

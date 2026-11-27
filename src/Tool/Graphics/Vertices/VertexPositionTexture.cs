@@ -13,10 +13,9 @@ public record struct VertexPositionTexture
 
     static VertexPositionTexture()
     {
-        Layout = new VertexLayout([
+        Layout = new VertexLayout(
             new VertexElement(VertexElementSemantic.Position, VertexElementFormat.Float3),
-            new VertexElement(VertexElementSemantic.TexCoord, VertexElementFormat.Float2)
-        ]);
+            new VertexElement(VertexElementSemantic.TexCoord, VertexElementFormat.Float2));
     }
 
     public VertexPositionTexture(Vector3 position, Vector2 texCoord)

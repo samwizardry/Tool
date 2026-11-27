@@ -2,6 +2,7 @@
 
 public enum VertexElementSemantic : byte
 {
+    Unknown = 0,
     /// <summary>
     /// SV_Position
     /// </summary>

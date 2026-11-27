@@ -10,6 +10,18 @@ namespace Tool.Graphics;
 
 public readonly record struct TextureDescription
 {
+    public readonly uint Width;
+    public readonly uint Height;
+    public readonly uint Depth;
+    public readonly uint ArraySize;
+    public readonly uint MipLevels;
+    public readonly uint SampleCount;
+    public readonly uint SampleQuality;
+    public readonly Format Format;
+    public readonly TextureDimension Dimension;
+    public readonly TextureUsage Usage;
+    public readonly CpuAccess CpuAccess;
+
     public TextureDescription(
         uint width,
         uint height = 1,
@@ -35,18 +47,6 @@ public readonly record struct TextureDescription
         Usage = usage;
         CpuAccess = cpuAccess;
     }
-
-    public readonly uint Width { get; init; }
-    public readonly uint Height { get; init; }
-    public readonly uint Depth { get; init; }
-    public readonly uint ArraySize { get; init; }
-    public readonly uint MipLevels { get; init; }
-    public readonly uint SampleCount { get; init; }
-    public readonly uint SampleQuality { get; init; }
-    public readonly Format Format { get; init; }
-    public readonly TextureDimension Dimension { get; init; }
-    public readonly TextureUsage Usage { get; init; }
-    public readonly CpuAccess CpuAccess { get; init; }
 
     public static TextureDescription Texture2D(
         uint width,

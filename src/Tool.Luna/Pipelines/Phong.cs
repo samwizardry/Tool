@@ -196,36 +196,36 @@ public static class Phong
 
         InputLayout = device.GetOrCreateInputLayout(VertexPositionNormalTexture.Layout, vs);
 
-        PerFrameBL = device.GetOrCreateBindingLayout(new(
-            Visibility: ShaderType.Vertex | ShaderType.Pixel,
-            Bindings: [
+        PerFrameBL = device.GetOrCreateBindingLayout(new BindingLayoutDescription(
+            visibility: ShaderType.Vertex | ShaderType.Pixel,
+            bindings: [
                 new(0, BindingResourceType.ConstantBuffer),
             ],
-            RegisterSpace: 0));
+            registerSpace: 0));
 
-        MatBL = device.GetOrCreateBindingLayout(new(
-            Visibility: ShaderType.Vertex | ShaderType.Pixel,
-            Bindings: [
+        MatBL = device.GetOrCreateBindingLayout(new BindingLayoutDescription(
+            visibility: ShaderType.Vertex | ShaderType.Pixel,
+            bindings: [
                 new(0, BindingResourceType.TextureSrv),
                 new(1, BindingResourceType.TextureSrv),
                 new(0, BindingResourceType.Sampler)],
-            RegisterSpace: 0));
+            registerSpace: 0));
 
-        PerObjBL = device.GetOrCreateBindingLayout(new(
-            Visibility: ShaderType.Vertex | ShaderType.Pixel,
-            Bindings: [
+        PerObjBL = device.GetOrCreateBindingLayout(new BindingLayoutDescription(
+            visibility: ShaderType.Vertex | ShaderType.Pixel,
+            bindings: [
                 new(1, BindingResourceType.ConstantBuffer)
             ],
-            RegisterSpace: 0));
+            registerSpace: 0));
 
-        Pipeline = device.GetOrCreateGraphicsPipeline(new(
-            VertexShader: vs,
-            PixelShader: ps,
-            InputLayout: InputLayout,
-            BindingLayouts: new(PerFrameBL, default, MatBL, PerObjBL),
-            RasterState: Resources.Solid,
-            BlendState: Resources.Transparent,
-            Topology: PrimitiveTopology.TriangleList));
+        Pipeline = device.GetOrCreateGraphicsPipeline(new GraphicsPipelineDescription(
+            vertexShader: vs,
+            pixelShader: ps,
+            inputLayout: InputLayout,
+            bindingLayouts: new BindingLayoutArray(PerFrameBL, default, MatBL, PerObjBL),
+            rasterState: Resources.Solid,
+            blendState: Resources.Transparent,
+            topology: PrimitiveTopology.TriangleList));
 
         // Textures
         Container = scope.LoadTexture("resources/textures/container2.png");
@@ -235,7 +235,7 @@ public static class Phong
         PerFrameCB = device.CreateBuffer(BufferDescription.Constant<PerFrameData>());
         PerFrameBS = device.CreateBindingSet(
             desc: new(
-                Bindings: [
+                bindings: [
                     BindingSetItem.ConstantBuffer(0, PerFrameCB)
                 ]),
             layout: PerFrameBL);
@@ -243,26 +243,26 @@ public static class Phong
 
         // Materials
         CommonMaterial = scope.CreateMaterial(new MaterialDescription(
-            Pipeline: Pipeline,
-            BindingLayout: MatBL,
-            ConstantBufferDesc: BufferDescription.Constant<MaterialData>(),
-            ConstantBufferSlot: 2,
-            Textures: [
+            pipeline: Pipeline,
+            bindingLayout: MatBL,
+            constantBufferDesc: BufferDescription.Constant<MaterialData>(),
+            constantBufferSlot: 2,
+            textures: [
                 new(0, Resources.WhitePixel),
                 new(1, Resources.WhitePixel)],
-            Samplers: [
-                new(0, Resources.Bilinear)]
+            samplers: [
+                new(0, Resources.Anisotropic16)]
         ));
 
         BoxMaterial = scope.CreateMaterial(new MaterialDescription(
-            Pipeline: Pipeline,
-            BindingLayout: MatBL,
-            ConstantBufferDesc: BufferDescription.Constant<MaterialData>(),
-            ConstantBufferSlot: 2,
-            Textures: [
+            pipeline: Pipeline,
+            bindingLayout: MatBL,
+            constantBufferDesc: BufferDescription.Constant<MaterialData>(),
+            constantBufferSlot: 2,
+            textures: [
                 new(0, Container),
                 new(1, ContainerSpecular)],
-            Samplers: [
+            samplers: [
                 new(0, Resources.Anisotropic16)]
         ));
 

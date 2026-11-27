@@ -18,11 +18,6 @@ public readonly record struct BlendStateDescription
         public readonly BlendOp BlendOpAlpha;
         public readonly ColorMask ColorWriteMask;
 
-        /// <summary>
-        /// Opaque by default.
-        /// </summary>
-        public RenderTarget() : this(blendEnable: false) { }
-
         public RenderTarget(
             bool blendEnable = false,
             BlendFactor srcBlend = BlendFactor.One,
@@ -42,6 +37,11 @@ public readonly record struct BlendStateDescription
             BlendOpAlpha = blendOpAlpha;
             ColorWriteMask = colorWriteMask;
         }
+
+        /// <summary>
+        /// Opaque by default.
+        /// </summary>
+        public RenderTarget() : this(blendEnable: false) { }
 
         public static RenderTarget Opaque => new();
     }

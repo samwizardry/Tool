@@ -8,7 +8,7 @@ namespace Tool.Assets;
 /// Ownership boundary (e.g. Global, Scene, or Streaming Chunk) that tracks acquired assets
 /// and releases them deterministically in reverse dependency order upon disposal.
 /// </summary>
-public sealed class AssetScope(AssetManager manager) : IDisposable
+public sealed class AssetScope : IDisposable
 {
     private readonly List<AssetHandle<ShaderAsset>> _shaders = [];
     private readonly List<AssetHandle<TextureAsset>> _textures = [];
@@ -17,7 +17,12 @@ public sealed class AssetScope(AssetManager manager) : IDisposable
 
     private bool _disposed;
 
-    public AssetManager Manager { get; } = manager;
+    public AssetScope(AssetManager manager)
+    {
+        Manager = manager;
+    }
+
+    public AssetManager Manager { get; }
 
     public AssetHandle<ShaderAsset> LoadShader(string virtualPath, in ShaderDescription desc)
     {

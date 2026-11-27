@@ -14,11 +14,10 @@ public record struct VertexPositionDualTexture
 
     static VertexPositionDualTexture()
     {
-        Layout = new VertexLayout([
+        Layout = new VertexLayout(
             new VertexElement(VertexElementSemantic.Position, VertexElementFormat.Float3),
             new VertexElement(VertexElementSemantic.TexCoord, VertexElementFormat.Float2),
-            new VertexElement(VertexElementSemantic.TexCoord, VertexElementFormat.Float2)
-        ]);
+            new VertexElement(VertexElementSemantic.TexCoord, VertexElementFormat.Float2));
     }
 
     public VertexPositionDualTexture(Vector3 position, Vector2 texCoord0, Vector2 texCoord1)

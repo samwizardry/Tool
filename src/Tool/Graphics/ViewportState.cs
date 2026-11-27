@@ -158,21 +158,21 @@ public readonly record struct ViewportState : IEquatable<ViewportState>
         return true;
     }
 
-    public bool Equals(in ViewportState other)
-    {
-        if (ViewportCount != other.ViewportCount || ScissorRectCount != other.ScissorRectCount)
-            return false;
+    //public bool Equals(in ViewportState other)
+    //{
+    //    if (ViewportCount != other.ViewportCount || ScissorRectCount != other.ScissorRectCount)
+    //        return false;
 
-        for (int i = 0; i < ViewportCount; i++)
-            if (Viewports[i] != other.Viewports[i])
-                return false;
+    //    for (int i = 0; i < ViewportCount; i++)
+    //        if (Viewports[i] != other.Viewports[i])
+    //            return false;
 
-        for (int i = 0; i < ScissorRectCount; i++)
-            if (ScissorRects[i] != other.ScissorRects[i])
-                return false;
+    //    for (int i = 0; i < ScissorRectCount; i++)
+    //        if (ScissorRects[i] != other.ScissorRects[i])
+    //            return false;
 
-        return true;
-    }
+    //    return true;
+    //}
 
     public override int GetHashCode()
     {

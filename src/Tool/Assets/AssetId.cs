@@ -6,11 +6,18 @@ namespace Tool.Assets;
 /// <summary>
 /// Persistent, globally unique asset identifier backed by a 128-bit GUID.
 /// </summary>
-public readonly record struct AssetId(Guid Value)
+public readonly record struct AssetId
 {
+    public readonly Guid Id;
+
+    public AssetId(Guid id)
+    {
+        Id = id;
+    }
+
     public static AssetId Empty => default;
 
-    public bool IsValid => Value != Guid.Empty;
+    public bool IsValid => Id != Guid.Empty;
 
     public static AssetId New() => new(Guid.NewGuid());
 
@@ -35,5 +42,5 @@ public readonly record struct AssetId(Guid Value)
     public static string NormalizePath(string path) =>
         path.Trim().Replace('\\', '/').ToLowerInvariant();
 
-    public override string ToString() => Value.ToString("N");
+    public override string ToString() => Id.ToString("N");
 }

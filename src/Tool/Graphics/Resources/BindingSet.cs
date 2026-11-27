@@ -5,11 +5,22 @@ using Tool.Collections;
 
 namespace Tool.Graphics;
 
-public readonly record struct BindingSetItem(
-    uint Slot,
-    BindingResourceType Type,
-    SlotHandle Resource)
+public readonly record struct BindingSetItem
 {
+    public readonly uint Slot;
+    public readonly BindingResourceType Type;
+    public readonly SlotHandle Resource;
+
+    public BindingSetItem(
+        uint slot,
+        BindingResourceType type,
+        SlotHandle resource)
+    {
+        Slot = slot;
+        Type = type;
+        Resource = resource;
+    }
+
     public static BindingSetItem ConstantBuffer(uint slot, BufferHandle buffer) => new(slot, BindingResourceType.ConstantBuffer, buffer.Raw);
     public static BindingSetItem TextureSrv(uint slot, TextureHandle texture) => new(slot, BindingResourceType.TextureSrv, texture.Raw);
     public static BindingSetItem TextureUav(uint slot, TextureHandle texture) => new(slot, BindingResourceType.TextureUav, texture.Raw);
@@ -18,19 +29,13 @@ public readonly record struct BindingSetItem(
     public static BindingSetItem Sampler(uint slot, SamplerHandle sampler) => new(slot, BindingResourceType.Sampler, sampler.Raw);
 }
 
-public readonly record struct BindingSetDescription(BindingSetItem[] Bindings) : IEquatable<BindingSetDescription>
+public readonly ref struct BindingSetDescription
 {
-    public bool Equals(BindingSetDescription other) =>
-        Bindings.AsSpan().SequenceEqual(other.Bindings.AsSpan());
+    public readonly ReadOnlySpan<BindingSetItem> Bindings;
 
-    public override int GetHashCode()
+    public BindingSetDescription(ReadOnlySpan<BindingSetItem> bindings)
     {
-        HashCode hash = new();
-
-        foreach (ref readonly var item in Bindings.AsSpan())
-            hash.Add(item);
-
-        return hash.ToHashCode();
+        Bindings = bindings;
     }
 }
 

@@ -387,3 +387,12 @@ dotnet_naming_style.s_camelcase.required_suffix =
 dotnet_naming_style.s_camelcase.word_separator = 
 dotnet_naming_style.s_camelcase.capitalization = camel_case
 
+#### Diagnostics ####
+[*.{cs,vb}]
+
+# Use primary constructor
+dotnet_diagnostic.IDE0290.severity = none
+# Namespace does not match folder structure
+dotnet_diagnostic.IDE0130.severity = none
+# Use switch expression
+dotnet_diagnostic.IDE0066.severity = none

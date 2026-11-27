@@ -31,4 +31,21 @@
     </None>
   </ItemGroup>
 
+  <PropertyGroup Condition="'$(NativeAot)' == 'true'">
+    <PublishAot>true</PublishAot>
+    <!-- Prioritize runtime performance over binary size -->
+    <OptimizationPreference>Speed</OptimizationPreference>
+    <InvariantGlobalization>true</InvariantGlobalization>
+
+    <!-- Do not emit or copy .pdb symbol files (neither own nor from referenced projects) -->
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <StripSymbols>true</StripSymbols>
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+    <AllowedReferenceRelatedFileExtensions>none</AllowedReferenceRelatedFileExtensions>
+
+    <!-- Trim unused runtime diagnostics from the native binary -->
+    <EventSourceSupport>false</EventSourceSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+  </PropertyGroup>
 </Project>

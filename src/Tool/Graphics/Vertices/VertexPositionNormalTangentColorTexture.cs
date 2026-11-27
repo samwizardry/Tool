@@ -1,7 +1,6 @@
 ﻿using System.Numerics;
 using System.Runtime.InteropServices;
 
-using Vortice.Mathematics;
 using Vortice.Mathematics.PackedVector;
 
 namespace Tool.Graphics;
@@ -19,13 +18,12 @@ public record struct VertexPositionNormalTangentColorTexture
 
     static VertexPositionNormalTangentColorTexture()
     {
-        Layout = new VertexLayout([
+        Layout = new VertexLayout(
             new VertexElement(VertexElementSemantic.Position, VertexElementFormat.Float3),
             new VertexElement(VertexElementSemantic.Normal, VertexElementFormat.Float3),
             new VertexElement(VertexElementSemantic.Tangent, VertexElementFormat.Float4),
             new VertexElement(VertexElementSemantic.Color, VertexElementFormat.UNormByte4),
-            new VertexElement(VertexElementSemantic.TexCoord, VertexElementFormat.Float2)
-        ]);
+            new VertexElement(VertexElementSemantic.TexCoord, VertexElementFormat.Float2));
     }
 
     public VertexPositionNormalTangentColorTexture(Vector3 position, Vector3 normal, Vector4 tangent, UByte4Normalized color, Vector2 texCoord)

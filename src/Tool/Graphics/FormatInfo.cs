@@ -7,12 +7,7 @@ namespace Tool.Graphics;
 /// <summary>
 /// Provides size and block layout metadata for a <see cref="Format"/>.
 /// </summary>
-public readonly record struct FormatInfo(
-    Format Format,
-    byte BytesPerBlock,
-    byte BlockSize,
-    bool IsDepth,
-    bool IsStencil)
+public readonly record struct FormatInfo
 {
     private static readonly FormatInfo[] Table =
     [
@@ -85,6 +80,26 @@ public readonly record struct FormatInfo(
         new(Format.BC7_UNorm,         16, 4, false, false),
         new(Format.BC7_UNorm_Srgb,    16, 4, false, false),
     ];
+
+    public readonly Format Format;
+    public readonly byte BytesPerBlock;
+    public readonly byte BlockSize;
+    public readonly bool IsDepth;
+    public readonly bool IsStencil;
+
+    public FormatInfo(
+        Format format,
+        byte bytesPerBlock,
+        byte blockSize,
+        bool isDepth,
+        bool isStencil)
+    {
+        Format = format;
+        BytesPerBlock = bytesPerBlock;
+        BlockSize = blockSize;
+        IsDepth = isDepth;
+        IsStencil = isStencil;
+    }
 
     public static FormatInfo Get(Format format) => Table[(int)format];
 

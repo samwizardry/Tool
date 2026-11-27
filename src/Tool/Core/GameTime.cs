@@ -3,8 +3,17 @@
 /// <summary>
 /// Holds the time state of the application loop.
 /// </summary>
-public readonly record struct GameTime(TimeSpan TotalGameTime, TimeSpan ElapsedGameTime)
+public readonly record struct GameTime
 {
+    public readonly TimeSpan TotalGameTime;
+    public readonly TimeSpan ElapsedGameTime;
+
+    public GameTime(TimeSpan totalGameTime, TimeSpan elapsedGameTime)
+    {
+        TotalGameTime = totalGameTime;
+        ElapsedGameTime = elapsedGameTime;
+    }
+
     /// <summary>
     /// Elapsed time since the previous frame in seconds.
     /// </summary>

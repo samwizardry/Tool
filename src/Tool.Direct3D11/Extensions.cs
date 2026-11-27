@@ -10,11 +10,25 @@ namespace Tool.Direct3D11;
 
 internal static class Extensions
 {
-    public readonly record struct DxgiFormatMapping(
-        Graphics.Format AbstractFormat,
-        Format ResourceFormat,
-        Format SrvFormat,
-        Format RtvDsvFormat);
+    public readonly record struct DxgiFormatMapping
+    {
+        public readonly Graphics.Format AbstractFormat;
+        public readonly Format ResourceFormat;
+        public readonly Format SrvFormat;
+        public readonly Format RtvDsvFormat;
+
+        public DxgiFormatMapping(
+            Graphics.Format abstractFormat,
+            Format resourceFormat,
+            Format srvFormat,
+            Format rtvDsvFormat)
+        {
+            AbstractFormat = abstractFormat;
+            ResourceFormat = resourceFormat;
+            SrvFormat = srvFormat;
+            RtvDsvFormat = rtvDsvFormat;
+        }
+    }
 
     private static readonly DxgiFormatMapping[] FormatMappings =
     [

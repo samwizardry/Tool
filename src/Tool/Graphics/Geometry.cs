@@ -5,7 +5,6 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-using Tool.Collections;
 using Tool.Maths;
 
 namespace Tool.Graphics;

@@ -20,15 +20,14 @@ public record struct VertexPositionNormalTangentColorTextureSkinning
 
     static VertexPositionNormalTangentColorTextureSkinning()
     {
-        Layout = new VertexLayout([
+        Layout = new VertexLayout(
             new VertexElement(VertexElementSemantic.Position, VertexElementFormat.Float3),
             new VertexElement(VertexElementSemantic.Normal, VertexElementFormat.Float3),
             new VertexElement(VertexElementSemantic.Tangent, VertexElementFormat.Float4),
             new VertexElement(VertexElementSemantic.Color, VertexElementFormat.UNormByte4),
             new VertexElement(VertexElementSemantic.TexCoord, VertexElementFormat.Float2),
             new VertexElement(VertexElementSemantic.BlendIndices, VertexElementFormat.UByte4),
-            new VertexElement(VertexElementSemantic.BlendWeight, VertexElementFormat.UNormByte4),
-        ]);
+            new VertexElement(VertexElementSemantic.BlendWeight, VertexElementFormat.UNormByte4));
     }
 
     public VertexPositionNormalTangentColorTextureSkinning(Vector3 position, Vector3 normal, Vector4 tangent, UByte4Normalized color, Vector2 texCoord, UByte4 blendIndices, UByte4Normalized blendWeight)

@@ -22,7 +22,7 @@ public abstract class Actor : IDisposable
 
         _perObjBS = device.CreateBindingSet(
             desc: new BindingSetDescription(
-                Bindings: [
+                bindings: [
                     BindingSetItem.ConstantBuffer(3, _perObjectCB)
                 ]),
             layout: Phong.PerObjBL);

@@ -2,6 +2,7 @@
 
 public enum VertexElementFormat : byte
 {
+    Unknown = 0,
     /// <summary>
     /// Single 32-bit floating point number.
     /// </summary>

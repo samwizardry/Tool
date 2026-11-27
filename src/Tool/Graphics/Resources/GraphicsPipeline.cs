@@ -2,14 +2,34 @@
 
 namespace Tool.Graphics;
 
-public readonly record struct GraphicsPipelineDescription(
-    ShaderHandle VertexShader = default,
-    ShaderHandle PixelShader = default,
-    InputLayoutHandle InputLayout = default,
-    BindingLayoutArray BindingLayouts = default,
-    RasterStateHandle RasterState = default,
-    BlendStateHandle BlendState = default,
-    PrimitiveTopology Topology = PrimitiveTopology.TriangleList);
+public readonly record struct GraphicsPipelineDescription
+{
+    public readonly ShaderHandle VertexShader;
+    public readonly ShaderHandle PixelShader;
+    public readonly InputLayoutHandle InputLayout;
+    public readonly BindingLayoutArray BindingLayouts;
+    public readonly RasterStateHandle RasterState;
+    public readonly BlendStateHandle BlendState;
+    public readonly PrimitiveTopology Topology;
+
+    public GraphicsPipelineDescription(
+        ShaderHandle vertexShader = default,
+        ShaderHandle pixelShader = default,
+        InputLayoutHandle inputLayout = default,
+        in BindingLayoutArray bindingLayouts = default,
+        RasterStateHandle rasterState = default,
+        BlendStateHandle blendState = default,
+        PrimitiveTopology topology = PrimitiveTopology.TriangleList)
+    {
+        VertexShader = vertexShader;
+        PixelShader = pixelShader;
+        InputLayout = inputLayout;
+        BindingLayouts = bindingLayouts;
+        RasterState = rasterState;
+        BlendState = blendState;
+        Topology = topology;
+    }
+}
 
 public readonly record struct GraphicsPipelineHandle
 {

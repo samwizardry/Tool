@@ -12,9 +12,8 @@ public record struct VertexPosition
 
     static VertexPosition()
     {
-        Layout = new VertexLayout([
-            new VertexElement(VertexElementSemantic.Position, VertexElementFormat.Float3)
-        ]);
+        Layout = new VertexLayout(
+            new VertexElement(VertexElementSemantic.Position, VertexElementFormat.Float3));
     }
 
     public VertexPosition(Vector3 position)

@@ -9,9 +9,9 @@ namespace Tool.Assets;
 /// Central owner of loaded and procedural high-level assets, managing deduplication,
 /// reference-counted lifetimes, cascading release, and runtime material updates.
 /// </summary>
-public sealed class AssetManager(GraphicsDevice device, string rootDirectory = "") : IDisposable
+public sealed class AssetManager : IDisposable
 {
-    private readonly GraphicsDevice _device = device;
+    private readonly GraphicsDevice _device;
     private readonly AssetPool<ShaderAsset> _shaders = new();
     private readonly AssetPool<TextureAsset> _textures = new();
     private readonly AssetPool<MaterialAsset> _materials = new();
@@ -23,7 +23,13 @@ public sealed class AssetManager(GraphicsDevice device, string rootDirectory = "
 
     private bool _disposed;
 
-    public string RootDirectory { get; } = rootDirectory;
+    public AssetManager(GraphicsDevice device, string rootDirectory = "")
+    {
+        _device = device;
+        RootDirectory = rootDirectory;
+    }
+
+    public string RootDirectory { get; }
 
     public void RegisterShaderLoader(IShaderLoader loader) => _shaderLoader = loader;
     public void RegisterTextureLoader(ITextureLoader loader) => _textureLoader = loader;
@@ -418,7 +424,10 @@ public sealed class AssetManager(GraphicsDevice device, string rootDirectory = "
             return;
         }
 
-        var items = new BindingSetItem[count];
+        Span<BindingSetItem> items = count <= 32
+            ? stackalloc BindingSetItem[count]
+            : new BindingSetItem[count];
+
         int index = 0;
 
         if (mat.ConstantBuffer.IsValid)

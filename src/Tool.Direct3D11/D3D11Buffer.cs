@@ -50,12 +50,7 @@ internal readonly struct D3D11Buffer
             buffer = device.CreateBuffer(nativeDesc, initialData);
         }
 
-        Graphics.BufferDescription resolvedDesc = desc with
-        {
-            ByteSize = byteSize,
-            ByteStride = byteStride
-        };
-
+        var resolvedDesc = new Graphics.BufferDescription(byteSize, desc.Usage, desc.CpuAccess, byteStride);
         return new D3D11Buffer(resolvedDesc, buffer);
     }
 

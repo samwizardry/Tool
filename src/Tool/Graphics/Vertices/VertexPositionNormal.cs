@@ -13,10 +13,9 @@ public record struct VertexPositionNormal
 
     static VertexPositionNormal()
     {
-        Layout = new VertexLayout([
+        Layout = new VertexLayout(
             new VertexElement(VertexElementSemantic.Position, VertexElementFormat.Float3),
-            new VertexElement(VertexElementSemantic.Normal, VertexElementFormat.Float3)
-        ]);
+            new VertexElement(VertexElementSemantic.Normal, VertexElementFormat.Float3));
     }
 
     public VertexPositionNormal(Vector3 position, Vector3 normal)

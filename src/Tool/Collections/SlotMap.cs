@@ -1,7 +1,16 @@
 ﻿namespace Tool.Collections;
 
-public readonly record struct SlotHandle(uint Index, uint Generation)
+public readonly record struct SlotHandle
 {
+    public readonly uint Index;
+    public readonly uint Generation;
+
+    public SlotHandle(uint index, uint generation)
+    {
+        Index = index;
+        Generation = generation;
+    }
+
     public static SlotHandle Invalid => default;
     public bool IsValid => Generation != 0;
 }
@@ -9,7 +18,7 @@ public readonly record struct SlotHandle(uint Index, uint Generation)
 /// <summary>
 /// Contiguous generational resource pool with O(1) lookup.
 /// </summary>
-public sealed class SlotMap<T>(int initialCapacity = 64) where T : struct
+public sealed class SlotMap<T> where T : struct
 {
     private struct Slot
     {
@@ -18,9 +27,14 @@ public sealed class SlotMap<T>(int initialCapacity = 64) where T : struct
         public bool IsAlive;
     }
 
-    private Slot[] _slots = new Slot[initialCapacity];
     private readonly Stack<uint> _freeIndices = new();
+    private Slot[] _slots;
     private uint _highWaterMark;
+
+    public SlotMap(int initialCapacity = 64)
+    {
+        _slots = new Slot[initialCapacity];
+    }
 
     public int LiveCount { get; private set; }
 

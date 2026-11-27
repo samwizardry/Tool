@@ -5,10 +5,17 @@ using Tool.Collections;
 
 namespace Tool.Graphics;
 
-public readonly record struct BindingLayoutItem(
-    uint Slot,
-    BindingResourceType Type) : IEquatable<BindingLayoutItem>
+public readonly record struct BindingLayoutItem : IEquatable<BindingLayoutItem>
 {
+    public readonly uint Slot;
+    public readonly BindingResourceType Type;
+
+    public BindingLayoutItem(uint slot, BindingResourceType type)
+    {
+        Slot = slot;
+        Type = type;
+    }
+
     public static BindingLayoutItem ConstantBuffer(uint slot) => new(slot, BindingResourceType.ConstantBuffer);
     public static BindingLayoutItem TextureSrv(uint slot) => new(slot, BindingResourceType.TextureSrv);
     public static BindingLayoutItem TextureUav(uint slot) => new(slot, BindingResourceType.TextureUav);
@@ -17,11 +24,22 @@ public readonly record struct BindingLayoutItem(
     public static BindingLayoutItem Sampler(uint slot) => new(slot, BindingResourceType.Sampler);
 }
 
-public readonly record struct BindingLayoutDescription(
-    ShaderType Visibility,
-    BindingLayoutItem[] Bindings,
-    uint RegisterSpace = 0) : IEquatable<BindingLayoutDescription>
+public readonly record struct BindingLayoutDescription : IEquatable<BindingLayoutDescription>
 {
+    public readonly ShaderType Visibility;
+    public readonly BindingLayoutItem[] Bindings;
+    public readonly uint RegisterSpace;
+
+    public BindingLayoutDescription(
+        ShaderType visibility,
+        BindingLayoutItem[] bindings,
+        uint registerSpace = 0)
+    {
+        Visibility = visibility;
+        Bindings = bindings;
+        RegisterSpace = registerSpace;
+    }
+
     public bool Equals(BindingLayoutDescription other) =>
         Visibility == other.Visibility &&
         RegisterSpace == other.RegisterSpace &&

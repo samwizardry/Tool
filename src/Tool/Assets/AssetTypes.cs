@@ -25,21 +25,55 @@ public struct TextureAsset
 
 #region Material
 
-public readonly record struct MaterialTextureBinding(
-    uint Slot,
-    AssetHandle<TextureAsset> Texture);
+public readonly record struct MaterialTextureBinding
+{
+    public readonly uint Slot;
+    public readonly AssetHandle<TextureAsset> Texture;
 
-public readonly record struct MaterialSamplerBinding(
-    uint Slot,
-    SamplerHandle Sampler);
+    public MaterialTextureBinding(uint slot, AssetHandle<TextureAsset> texture)
+    {
+        Slot = slot;
+        Texture = texture;
+    }
+}
 
-public readonly record struct MaterialDescription(
-    GraphicsPipelineHandle Pipeline,
-    BindingLayoutHandle BindingLayout,
-    BufferDescription? ConstantBufferDesc = null,
-    uint ConstantBufferSlot = 0,
-    MaterialTextureBinding[]? Textures = null,
-    MaterialSamplerBinding[]? Samplers = null);
+public readonly record struct MaterialSamplerBinding
+{
+    public readonly uint Slot;
+    public readonly SamplerHandle Sampler;
+
+    public MaterialSamplerBinding(uint slot, SamplerHandle sampler)
+    {
+        Slot = slot;
+        Sampler = sampler;
+    }
+}
+
+public readonly record struct MaterialDescription
+{
+    public readonly GraphicsPipelineHandle Pipeline;
+    public readonly BindingLayoutHandle BindingLayout;
+    public readonly BufferDescription? ConstantBufferDesc;
+    public readonly uint ConstantBufferSlot;
+    public readonly MaterialTextureBinding[]? Textures;
+    public readonly MaterialSamplerBinding[]? Samplers;
+
+    public MaterialDescription(
+        GraphicsPipelineHandle pipeline,
+        BindingLayoutHandle bindingLayout,
+        BufferDescription? constantBufferDesc = null,
+        uint constantBufferSlot = 0,
+        MaterialTextureBinding[]? textures = null,
+        MaterialSamplerBinding[]? samplers = null)
+    {
+        Pipeline = pipeline;
+        BindingLayout = bindingLayout;
+        ConstantBufferDesc = constantBufferDesc;
+        ConstantBufferSlot = constantBufferSlot;
+        Textures = textures;
+        Samplers = samplers;
+    }
+}
 
 public struct MaterialAsset
 {

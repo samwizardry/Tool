@@ -6,24 +6,53 @@ using Tool.Collections;
 
 namespace Tool.Graphics;
 
-public readonly record struct RasterStateDescription(
-    RasterFillMode FillMode = RasterFillMode.Solid,
-    RasterCullMode CullMode = RasterCullMode.Back,
-    bool FrontCounterClockwise = true,
-    bool DepthClipEnable = true,
-    bool ScissorEnable = false,
-    bool MultisampleEnable = false,
-    bool AntialiasedLineEnable = false,
-    int DepthBias = 0,
-    float DepthBiasClamp = 0.0f,
-    float SlopeScaledDepthBias = 0.0f,
-    byte ForcedSampleCount = 0,
-    bool ConservativeRasterEnable = false)
+public readonly record struct RasterStateDescription
 {
-    public static RasterStateDescription CullBack => new(FillMode: RasterFillMode.Solid, CullMode: RasterCullMode.Back);
-    public static RasterStateDescription CullFront => new(FillMode: RasterFillMode.Solid, CullMode: RasterCullMode.Front);
-    public static RasterStateDescription CullNone => new(FillMode: RasterFillMode.Solid, CullMode: RasterCullMode.None);
-    public static RasterStateDescription Wireframe => new(FillMode: RasterFillMode.Wireframe, CullMode: RasterCullMode.None);
+    public readonly RasterFillMode FillMode;
+    public readonly RasterCullMode CullMode;
+    public readonly bool FrontCounterClockwise;
+    public readonly bool DepthClipEnable;
+    public readonly bool ScissorEnable;
+    public readonly bool MultisampleEnable;
+    public readonly bool AntialiasedLineEnable;
+    public readonly int DepthBias;
+    public readonly float DepthBiasClamp;
+    public readonly float SlopeScaledDepthBias;
+    public readonly byte ForcedSampleCount;
+    public readonly bool ConservativeRasterEnable;
+
+    public RasterStateDescription(
+        RasterFillMode fillMode = RasterFillMode.Solid,
+        RasterCullMode cullMode = RasterCullMode.Back,
+        bool frontCounterClockwise = true,
+        bool depthClipEnable = true,
+        bool scissorEnable = false,
+        bool multisampleEnable = false,
+        bool antialiasedLineEnable = false,
+        int depthBias = 0,
+        float depthBiasClamp = 0.0f,
+        float slopeScaledDepthBias = 0.0f,
+        byte forcedSampleCount = 0,
+        bool conservativeRasterEnable = false)
+    {
+        FillMode = fillMode;
+        CullMode = cullMode;
+        FrontCounterClockwise = frontCounterClockwise;
+        DepthClipEnable = depthClipEnable;
+        ScissorEnable = scissorEnable;
+        MultisampleEnable = multisampleEnable;
+        AntialiasedLineEnable = antialiasedLineEnable;
+        DepthBias = depthBias;
+        DepthBiasClamp = depthBiasClamp;
+        SlopeScaledDepthBias = slopeScaledDepthBias;
+        ForcedSampleCount = forcedSampleCount;
+        ConservativeRasterEnable = conservativeRasterEnable;
+    }
+
+    public static RasterStateDescription CullBack => new(fillMode: RasterFillMode.Solid, cullMode: RasterCullMode.Back);
+    public static RasterStateDescription CullFront => new(fillMode: RasterFillMode.Solid, cullMode: RasterCullMode.Front);
+    public static RasterStateDescription CullNone => new(fillMode: RasterFillMode.Solid, cullMode: RasterCullMode.None);
+    public static RasterStateDescription Wireframe => new(fillMode: RasterFillMode.Wireframe, cullMode: RasterCullMode.None);
 }
 
 public readonly record struct RasterStateHandle

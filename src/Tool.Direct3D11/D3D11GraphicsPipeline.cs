@@ -17,7 +17,6 @@ internal readonly struct D3D11GraphicsPipeline
     public readonly ID3D11RasterizerState? RasterState;
     public readonly ID3D11BlendState1? BlendState;
     public readonly PrimitiveTopology Topology;
-
     public readonly bool UseBlendConstants;
 
     private D3D11GraphicsPipeline(
@@ -44,7 +43,9 @@ internal readonly struct D3D11GraphicsPipeline
         UseBlendConstants = useBlendConstants;
     }
 
+#pragma warning disable CA1822 // Пометьте члены как статические
     public void Destroy()
+#pragma warning restore CA1822 // Пометьте члены как статические
     {
     }
 

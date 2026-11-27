@@ -1,56 +1,75 @@
-﻿namespace Tool.Graphics;
+﻿using System.Runtime.CompilerServices;
+
+namespace Tool.Graphics;
+
+[InlineArray(Constants.MaxVertexAttributes)]
+public struct VertexElementArray
+{
+    private VertexElement _element0;
+}
 
 public readonly record struct VertexLayout : IEquatable<VertexLayout>
 {
-    private readonly VertexElement[] _elements;
+    private readonly VertexElementArray _elements;
+    public readonly uint ByteSize;
+    public readonly byte Count;
 
-    public VertexLayout(VertexElement[] elements)
+    public VertexLayout(params ReadOnlySpan<VertexElement> elements)
     {
-        if (elements == null || elements.Length == 0)
+        if (elements.IsEmpty || elements.Length > Constants.MaxVertexAttributes)
         {
-            throw new ArgumentNullException(nameof(elements));
+            throw new ArgumentOutOfRangeException(nameof(elements));
         }
 
-        _elements = elements;
-
+        VertexElementArray buffer = default;
         Span<uint> semanticCounter = stackalloc uint[(int)VertexElementSemantic.Count];
+        uint offset = 0;
 
-        for (int i = 0; i < _elements.Length; ++i)
+        for (int i = 0; i < elements.Length; i++)
         {
-            uint semanticIndex = semanticCounter[(int)_elements[i].SemanticName];
-            ++semanticCounter[(int)_elements[i].SemanticName];
+            var element = elements[i];
 
-            if (i != 0)
+            if (element.SemanticName <= VertexElementSemantic.Unknown ||
+                element.SemanticName >= VertexElementSemantic.Count ||
+                element.Format == VertexElementFormat.Unknown)
             {
-                _elements[i].SemanticIndex = semanticIndex;
-                _elements[i].ByteOffset = _elements[i - 1].ByteOffset + _elements[i - 1].Format.ByteSize();
-            }
-            else
-            {
-                _elements[i].SemanticIndex = semanticIndex;
-                _elements[i].ByteOffset = 0;
+                throw new InvalidOperationException();
             }
 
-            ByteSize += _elements[i].Format.ByteSize();
+            buffer[i] = new VertexElement(element.SemanticName, semanticCounter[(int)element.SemanticName]++, element.Format, offset);
+
+            offset += element.Format.ByteSize();
         }
+
+        _elements = buffer;
+        ByteSize = offset;
+        Count = (byte)elements.Length;
     }
 
-    /// <summary>
-    /// Layout size in bytes.
-    /// </summary>
-    public uint ByteSize { get; }
+    public VertexElement this[int index] => _elements[index];
 
-    public ReadOnlySpan<VertexElement> Elements => _elements;
+    public bool Equals(VertexLayout other)
+    {
+        if (Count != other.Count || ByteSize != other.ByteSize)
+            return false;
 
-    public bool Equals(VertexLayout other) =>
-        _elements.AsSpan().SequenceEqual(other._elements.AsSpan());
+        for (int i = 0; i < Count; i++)
+        {
+            if (_elements[i] != other._elements[i])
+                return false;
+        }
+
+        return true;
+    }
 
     public override int GetHashCode()
     {
-        var hash = new HashCode();
+        HashCode hash = default;
+        hash.Add(Count);
+        hash.Add(ByteSize);
 
-        foreach (var element in _elements.AsSpan())
-            hash.Add(element);
+        for (int i = 0; i < Count; i++)
+            hash.Add(_elements[i]);
 
         return hash.ToHashCode();
     }

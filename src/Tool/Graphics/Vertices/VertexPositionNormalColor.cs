@@ -16,11 +16,10 @@ public record struct VertexPositionNormalColor
 
     static VertexPositionNormalColor()
     {
-        Layout = new VertexLayout([
+        Layout = new VertexLayout(
             new VertexElement(VertexElementSemantic.Position, VertexElementFormat.Float3),
             new VertexElement(VertexElementSemantic.Normal, VertexElementFormat.Float3),
-            new VertexElement(VertexElementSemantic.Color, VertexElementFormat.Float4)
-        ]);
+            new VertexElement(VertexElementSemantic.Color, VertexElementFormat.Float4));
     }
 
     public VertexPositionNormalColor(Vector3 position, Vector3 normal, Color4 color)

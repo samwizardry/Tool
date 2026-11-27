@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using System.Runtime.InteropServices;
 
 using Assimp;
 
@@ -61,7 +62,7 @@ public sealed class AssimpModelLoader : IModelLoader
 
     private static void ProcessNode(GraphicsDevice device, Scene scene, Node node, Graphics.Mesh[] meshes)
     {
-        foreach (int meshIndex in node.MeshIndices)
+        foreach (int meshIndex in CollectionsMarshal.AsSpan(node.MeshIndices))
         {
             meshes[meshIndex] = ProcessMesh(device, scene.Meshes[meshIndex]);
         }
@@ -144,10 +145,10 @@ public sealed class AssimpModelLoader : IModelLoader
             }
 
             materials[index] = assets.CreateMaterial(new MaterialDescription(
-                Pipeline: Phong.Pipeline,
-                BindingLayout: Phong.MatBL,
-                Textures: [new(0, diffuseTextures[0]), new(1, specularTextures[0])],
-                Samplers: [new(0, Resources.Anisotropic16)]
+                pipeline: Phong.Pipeline,
+                bindingLayout: Phong.MatBL,
+                textures: [new(0, diffuseTextures[0]), new(1, specularTextures[0])],
+                samplers: [new(0, Resources.Anisotropic16)]
             ));
         }
     }
@@ -170,11 +171,11 @@ public sealed class AssimpModelLoader : IModelLoader
             string texVirtualPath = Path.Combine(virtualDir, slot.FilePath);
             textures[slotIndex] = tempTextures.LoadTexture(texVirtualPath, generateMips: true);
 
-            samplers[slotIndex] = device.GetOrCreateSampler(SamplerDescription.AnisotropicWrap(16.0f) with
-            {
-                AddressU = ToSamplerAddressMode(slot.WrapModeU),
-                AddressV = ToSamplerAddressMode(slot.WrapModeV)
-            });
+            samplers[slotIndex] = device.GetOrCreateSampler(
+                SamplerDescription.Anisotropic(
+                    maxAnisotropy: 16.0f,
+                    addressU: ToSamplerAddressMode(slot.WrapModeU),
+                    addressV: ToSamplerAddressMode(slot.WrapModeV)));
         }
     }
 

@@ -58,27 +58,21 @@ public static class InfGrid
         var ps = scope.Get(PS).Handle;
 
         PerFrameBL = device.GetOrCreateBindingLayout(new BindingLayoutDescription(
-            Visibility: ShaderType.Vertex,
-            Bindings: [
+            visibility: ShaderType.Vertex,
+            bindings: [
                 new(0, BindingResourceType.ConstantBuffer)
                 ],
-            RegisterSpace: 0
+            registerSpace: 0
             ));
 
-        Pipeline = device.GetOrCreateGraphicsPipeline(new(
-            vs,
-            ps,
-            default,
-            new(PerFrameBL),
-            Resources.CullNone,
-            BlendState: Resources.Opaque,
-            PrimitiveTopology.TriangleList));
+        Pipeline = device.GetOrCreateGraphicsPipeline(
+            new GraphicsPipelineDescription(vs, ps, default, new(PerFrameBL), Resources.CullNone, Resources.Opaque, PrimitiveTopology.TriangleList));
 
         // Per frame
         PerFrameCB = device.CreateBuffer(BufferDescription.Constant<InfGridPerFrame>());
         PerFrameBS = device.CreateBindingSet(
             desc: new(
-                Bindings: [
+                bindings: [
                     BindingSetItem.ConstantBuffer(0, PerFrameCB)
                 ]),
             layout: PerFrameBL);

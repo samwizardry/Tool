@@ -2,13 +2,28 @@
 
 namespace Tool.Graphics;
 
-public readonly record struct ShaderDescription(
-    ShaderType ShaderType,
-    string EntryPoint,
-    bool PackAsRowMajor = true,
-    bool Debug = false,
-    string? DebugName = null)
+public readonly record struct ShaderDescription
 {
+    public readonly ShaderType ShaderType;
+    public readonly string EntryPoint;
+    public readonly bool PackAsRowMajor;
+    public readonly bool Debug;
+    public readonly string? DebugName;
+
+    public ShaderDescription(
+        ShaderType shaderType,
+        string entryPoint,
+        bool packAsRowMajor = true,
+        bool debug = false,
+        string? debugName = null)
+    {
+        ShaderType = shaderType;
+        EntryPoint = entryPoint;
+        PackAsRowMajor = packAsRowMajor;
+        Debug = debug;
+        DebugName = debugName;
+    }
+
     public static ShaderDescription Vertex(
         string entryPoint = "VSMain",
         bool packAsRowMajor = true,

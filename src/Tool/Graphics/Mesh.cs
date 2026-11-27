@@ -4,14 +4,31 @@
 /// Represents a drawable sub-region of a <see cref="Mesh"/> associated with a material slot.
 /// Supports both indexed and non-indexed geometry.
 /// </summary>
-public readonly record struct MeshPart(
-    uint IndexCount,
-    uint StartIndexLocation = 0,
-    int BaseVertexLocation = 0,
-    uint VertexCount = 0,
-    uint StartVertexLocation = 0,
-    int MaterialIndex = 0)
+public readonly record struct MeshPart
 {
+    public readonly uint IndexCount;
+    public readonly uint StartIndexLocation;
+    public readonly int BaseVertexLocation;
+    public readonly uint VertexCount;
+    public readonly uint StartVertexLocation;
+    public readonly int MaterialIndex;
+
+    public MeshPart(
+        uint indexCount,
+        uint startIndexLocation = 0,
+        int baseVertexLocation = 0,
+        uint vertexCount = 0,
+        uint startVertexLocation = 0,
+        int materialIndex = 0)
+    {
+        IndexCount = indexCount;
+        StartIndexLocation = startIndexLocation;
+        BaseVertexLocation = baseVertexLocation;
+        VertexCount = vertexCount;
+        StartVertexLocation = startVertexLocation;
+        MaterialIndex = materialIndex;
+    }
+
     public static MeshPart Indexed(uint indexCount, uint startIndex = 0, int baseVertex = 0, int materialIndex = 0) =>
         new(indexCount, startIndex, baseVertex, 0, 0, materialIndex);
 

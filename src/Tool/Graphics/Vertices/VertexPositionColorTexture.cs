@@ -16,11 +16,10 @@ public record struct VertexPositionColorTexture
 
     static VertexPositionColorTexture()
     {
-        Layout = new VertexLayout([
+        Layout = new VertexLayout(
             new VertexElement(VertexElementSemantic.Position, VertexElementFormat.Float3),
             new VertexElement(VertexElementSemantic.Color, VertexElementFormat.Float4),
-            new VertexElement(VertexElementSemantic.TexCoord, VertexElementFormat.Float2)
-        ]);
+            new VertexElement(VertexElementSemantic.TexCoord, VertexElementFormat.Float2));
     }
 
     public VertexPositionColorTexture(Vector3 position, Color4 color, Vector2 texCoord)
