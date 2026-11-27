@@ -49,8 +49,8 @@ internal readonly struct D3D11BindingSet
 #if GRAPHICS_DEBUG
         BindingLayoutHandle layout,
 #endif
-        in BindingSetDescription desc,
-        in D3D11BindingLayout layoutData,
+        BindingSetDescription desc,
+        D3D11BindingLayout layoutData,
         SlotMap<D3D11Buffer> buffers,
         SlotMap<D3D11Texture> textures,
         SlotMap<D3D11Sampler> samplers)

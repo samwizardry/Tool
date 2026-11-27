@@ -1,4 +1,6 @@
-﻿using Tool.Graphics;
+﻿using System.Runtime.InteropServices;
+
+using Tool.Graphics;
 
 namespace Tool.Assets;
 
@@ -6,10 +8,8 @@ namespace Tool.Assets;
 /// Ownership boundary (e.g. Global, Scene, or Streaming Chunk) that tracks acquired assets
 /// and releases them deterministically in reverse dependency order upon disposal.
 /// </summary>
-public sealed class AssetScope : IDisposable
+public sealed class AssetScope(AssetManager manager) : IDisposable
 {
-    private readonly AssetManager _manager;
-
     private readonly List<AssetHandle<ShaderAsset>> _shaders = [];
     private readonly List<AssetHandle<TextureAsset>> _textures = [];
     private readonly List<AssetHandle<MaterialAsset>> _materials = [];
@@ -17,23 +17,18 @@ public sealed class AssetScope : IDisposable
 
     private bool _disposed;
 
-    public AssetScope(AssetManager manager)
-    {
-        _manager = manager;
-    }
-
-    public AssetManager Manager => _manager;
+    public AssetManager Manager { get; } = manager;
 
     public AssetHandle<ShaderAsset> LoadShader(string virtualPath, in ShaderDescription desc)
     {
-        var handle = _manager.AcquireShader(virtualPath, in desc);
+        var handle = Manager.AcquireShader(virtualPath, in desc);
         _shaders.Add(handle);
         return handle;
     }
 
     public AssetHandle<TextureAsset> LoadTexture(string virtualPath, bool generateMips = true)
     {
-        var handle = _manager.AcquireTexture(virtualPath, generateMips);
+        var handle = Manager.AcquireTexture(virtualPath, generateMips);
         _textures.Add(handle);
         return handle;
     }
@@ -41,28 +36,28 @@ public sealed class AssetScope : IDisposable
     public AssetHandle<TextureAsset> CreateTexture<T>(ReadOnlySpan<T> data, in TextureDescription desc, AssetId id = default)
         where T : unmanaged
     {
-        var handle = _manager.CreateTexture(data, in desc, id);
+        var handle = Manager.CreateTexture(data, in desc, id);
         _textures.Add(handle);
         return handle;
     }
 
     public AssetHandle<MaterialAsset> CreateMaterial(in MaterialDescription desc, AssetId id = default)
     {
-        var handle = _manager.CreateMaterial(in desc, id);
+        var handle = Manager.CreateMaterial(in desc, id);
         _materials.Add(handle);
         return handle;
     }
 
     public AssetHandle<ModelAsset> LoadModel(string virtualPath)
     {
-        var handle = _manager.AcquireModel(virtualPath);
+        var handle = Manager.AcquireModel(virtualPath);
         _models.Add(handle);
         return handle;
     }
 
     public AssetHandle<ModelAsset> CreateModel(Mesh[] meshes, AssetHandle<MaterialAsset>[] materials, AssetId id = default)
     {
-        var handle = _manager.CreateModel(meshes, materials, id);
+        var handle = Manager.CreateModel(meshes, materials, id);
         _models.Add(handle);
         return handle;
     }
@@ -70,20 +65,20 @@ public sealed class AssetScope : IDisposable
     public AssetHandle<ModelAsset> CreateModel(Mesh mesh, AssetHandle<MaterialAsset> material, AssetId id = default) =>
         CreateModel([mesh], [material], id);
 
-    public ref readonly ShaderAsset Get(AssetHandle<ShaderAsset> handle) => ref _manager.Get(handle);
-    public ref readonly TextureAsset Get(AssetHandle<TextureAsset> handle) => ref _manager.Get(handle);
-    public ref readonly ModelAsset Get(AssetHandle<ModelAsset> handle) => ref _manager.Get(handle);
-    public ref readonly MaterialAsset ResolveMaterial(AssetHandle<MaterialAsset> handle) => ref _manager.ResolveMaterial(handle);
+    public ShaderAsset Get(AssetHandle<ShaderAsset> handle) => Manager.Get(handle);
+    public ref readonly TextureAsset Get(AssetHandle<TextureAsset> handle) => ref Manager.Get(handle);
+    public ref readonly ModelAsset Get(AssetHandle<ModelAsset> handle) => ref Manager.Get(handle);
+    public ref readonly MaterialAsset ResolveMaterial(AssetHandle<MaterialAsset> handle) => ref Manager.ResolveMaterial(handle);
 
     public void Dispose()
     {
         if (_disposed)
             return;
 
-        foreach (var h in _models) _manager.Release(h);
-        foreach (var h in _materials) _manager.Release(h);
-        foreach (var h in _textures) _manager.Release(h);
-        foreach (var h in _shaders) _manager.Release(h);
+        foreach (var h in CollectionsMarshal.AsSpan(_models)) Manager.Release(h);
+        foreach (var h in CollectionsMarshal.AsSpan(_materials)) Manager.Release(h);
+        foreach (var h in CollectionsMarshal.AsSpan(_textures)) Manager.Release(h);
+        foreach (var h in CollectionsMarshal.AsSpan(_shaders)) Manager.Release(h);
 
         _models.Clear();
         _materials.Clear();

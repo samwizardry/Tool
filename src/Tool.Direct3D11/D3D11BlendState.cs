@@ -24,11 +24,11 @@ internal readonly struct D3D11BlendState
         bool independentBlendEnable = false;
         bool useBlendConstants = false;
 
-        ref readonly var rt0 = ref desc.RenderTargets[0];
+        var rt0 = desc.RenderTargets[0];
 
         for (int i = 0; i < Graphics.Constants.MaxRenderTargets; i++)
         {
-            ref readonly var rt = ref desc.RenderTargets[i];
+            var rt = desc.RenderTargets[i];
 
             if (rt.SrcBlend is Graphics.BlendFactor.ConstantColor or Graphics.BlendFactor.InvConstantColor ||
                 rt.SrcBlendAlpha is Graphics.BlendFactor.ConstantColor or Graphics.BlendFactor.InvConstantColor ||

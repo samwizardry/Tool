@@ -52,14 +52,14 @@ public abstract class GraphicsDevice : IDisposable
     public abstract GraphicsPipelineHandle GetOrCreateGraphicsPipeline(in GraphicsPipelineDescription desc);
 
     // Data Resources: owned by caller, destroyed via DeferredDeletionQueue
-    public abstract BufferHandle CreateBuffer<T>(ReadOnlySpan<T> data, in BufferDescription desc) where T : unmanaged;
-    public abstract BufferHandle CreateBuffer(in BufferDescription desc);
+    public abstract BufferHandle CreateBuffer<T>(ReadOnlySpan<T> data, BufferDescription desc) where T : unmanaged;
+    public abstract BufferHandle CreateBuffer(BufferDescription desc);
     public abstract TextureHandle CreateTexture<T>(ReadOnlySpan<T> data, in TextureDescription desc) where T : unmanaged;
     public abstract TextureHandle CreateTexture(in TextureDescription desc);
     public abstract ShaderHandle CreateShader(ReadOnlySpan<byte> source, in ShaderDescription desc);
-    public abstract BindingSetHandle CreateBindingSet(in BindingSetDescription desc, BindingLayoutHandle layout);
+    public abstract BindingSetHandle CreateBindingSet(BindingSetDescription desc, BindingLayoutHandle layout);
 
-    public abstract ref readonly BufferDescription GetBufferDescription(BufferHandle buffer);
+    public abstract BufferDescription GetBufferDescription(BufferHandle buffer);
     public abstract ref readonly TextureDescription GetTextureDescription(TextureHandle texture);
 
     public abstract void UpdateBuffer<T>(BufferHandle buffer, ReadOnlySpan<T> data, uint byteOffset = 0) where T : unmanaged;

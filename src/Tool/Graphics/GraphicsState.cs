@@ -54,7 +54,7 @@ public readonly record struct GraphicsState
         GraphicsPipelineHandle pipeline = default,
         in ViewportState viewport = default,
         Color4 blendConstantColor = default,
-        BindingSetArray bindings = default,
+        in BindingSetArray bindings = default,
         VertexBufferBinding vertexBuffer = default,
         IndexBufferBinding indexBuffer = default)
     {

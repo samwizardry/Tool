@@ -9,7 +9,7 @@ public readonly record struct SlotHandle(uint Index, uint Generation)
 /// <summary>
 /// Contiguous generational resource pool with O(1) lookup.
 /// </summary>
-public sealed class SlotMap<T> where T : struct
+public sealed class SlotMap<T>(int initialCapacity = 64) where T : struct
 {
     private struct Slot
     {
@@ -18,16 +18,11 @@ public sealed class SlotMap<T> where T : struct
         public bool IsAlive;
     }
 
-    private Slot[] _slots;
+    private Slot[] _slots = new Slot[initialCapacity];
     private readonly Stack<uint> _freeIndices = new();
     private uint _highWaterMark;
 
     public int LiveCount { get; private set; }
-
-    public SlotMap(int initialCapacity = 64)
-    {
-        _slots = new Slot[initialCapacity];
-    }
 
     public SlotHandle Add(in T value)
     {

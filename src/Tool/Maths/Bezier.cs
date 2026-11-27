@@ -30,7 +30,7 @@ public static class Bezier
     /// Performs a cubic bezier interpolation between four vector values.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Vector3 CubicBezier(in Vector3 p0, in Vector3 p1, in Vector3 p2, in Vector3 p3, float t)
+    public static Vector3 CubicBezier(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
     {
         float invT = 1.0f - t;
         float b0 = invT * invT * invT;
@@ -60,7 +60,7 @@ public static class Bezier
     /// Note: The constant multiplier of 3 is factored out because tangents are normalized during normal evaluation.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Vector3 CubicBezierTangent(in Vector3 p0, in Vector3 p1, in Vector3 p2, in Vector3 p3, float t)
+    public static Vector3 CubicBezierTangent(Vector3 p0, Vector3 p1, Vector3 p2, Vector3 p3, float t)
     {
         float t2 = t * t;
         float b0 = -1.0f + (2.0f * t) - t2;

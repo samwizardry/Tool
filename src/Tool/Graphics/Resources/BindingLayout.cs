@@ -34,7 +34,7 @@ public readonly record struct BindingLayoutDescription(
         hash.Add(Visibility);
         hash.Add(RegisterSpace);
 
-        foreach (ref readonly var item in Bindings.AsSpan())
+        foreach (var item in Bindings.AsSpan())
             hash.Add(item);
 
         return hash.ToHashCode();

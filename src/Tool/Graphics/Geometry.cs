@@ -3,6 +3,7 @@
 // Licensed under the MIT License. See THIRD-PARTY-NOTICES.md in the project root for license information.
 
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 using Tool.Collections;
 using Tool.Maths;
@@ -99,10 +100,10 @@ public static class Geometry
             vertices.Add(new((normal + side1 - side2) * tsize, normal, TexCoords[3]));
         }
 
-        ReverseWinding(indices.AsSpan());
+        ReverseWinding(CollectionsMarshal.AsSpan(indices));
 
         if (invertn)
-            InvertNormals(vertices.AsSpan());
+            InvertNormals(CollectionsMarshal.AsSpan(vertices));
 
         return (vertices, indices);
     }
@@ -177,10 +178,10 @@ public static class Geometry
             }
         }
 
-        ReverseWinding(indices.AsSpan());
+        ReverseWinding(CollectionsMarshal.AsSpan(indices));
 
         if (invertn)
-            InvertNormals(vertices.AsSpan());
+            InvertNormals(CollectionsMarshal.AsSpan(vertices));
 
         return (vertices, indices);
     }
@@ -449,10 +450,10 @@ public static class Geometry
         FixPole(northPoleIndex);
         FixPole(southPoleIndex);
 
-        ReverseWinding(indices.AsSpan());
+        ReverseWinding(CollectionsMarshal.AsSpan(indices));
 
         if (invertn)
-            InvertNormals(vertices.AsSpan());
+            InvertNormals(CollectionsMarshal.AsSpan(vertices));
 
         return (vertices, indices);
     }
@@ -558,10 +559,10 @@ public static class Geometry
         CreateCylinderCap(isTop: true);
         CreateCylinderCap(isTop: false);
 
-        ReverseWinding(indices.AsSpan());
+        ReverseWinding(CollectionsMarshal.AsSpan(indices));
 
         if (invertn)
-            InvertNormals(vertices.AsSpan());
+            InvertNormals(CollectionsMarshal.AsSpan(vertices));
 
         return (vertices, indices);
     }
@@ -648,10 +649,10 @@ public static class Geometry
             IndexPushBack(indices, mantleRimStart + i);
         }
 
-        ReverseWinding(indices.AsSpan());
+        ReverseWinding(CollectionsMarshal.AsSpan(indices));
 
         if (invertn)
-            InvertNormals(vertices.AsSpan());
+            InvertNormals(CollectionsMarshal.AsSpan(vertices));
 
         return (vertices, indices);
     }
@@ -725,10 +726,10 @@ public static class Geometry
             }
         }
 
-        ReverseWinding(indices.AsSpan());
+        ReverseWinding(CollectionsMarshal.AsSpan(indices));
 
         if (invertn)
-            InvertNormals(vertices.AsSpan());
+            InvertNormals(CollectionsMarshal.AsSpan(vertices));
 
         return (vertices, indices);
     }
@@ -754,28 +755,28 @@ public static class Geometry
         // A regular tetrahedron centered around origin
         float s = size * (0.5f / MathF.Sqrt(3.0f));
 
-        ReadOnlySpan<Vector3> cornerPositions = stackalloc Vector3[]
-        {
+        ReadOnlySpan<Vector3> cornerPositions =
+        [
             new( s,  s,  s), // 0
             new(-s, -s,  s), // 1
             new(-s,  s, -s), // 2
             new( s, -s, -s), // 3
-        };
+        ];
 
-        ReadOnlySpan<int> faceIndices = stackalloc int[]
-        {
+        ReadOnlySpan<int> faceIndices =
+        [
             0, 1, 2, // Face 0
             0, 2, 3, // Face 1
             0, 3, 1, // Face 2
             1, 3, 2  // Face 3
-        };
+        ];
 
-        ReadOnlySpan<Vector2> uvs = stackalloc Vector2[]
-        {
+        ReadOnlySpan<Vector2> uvs =
+        [
             new(0.0f, 0.0f),
             new(1.0f, 0.0f),
             new(0.5f, 1.0f)
-        };
+        ];
 
         for (int i = 0; i < faceCount; ++i)
         {
@@ -796,10 +797,10 @@ public static class Geometry
             vertices.Add(new(v2, normal, uvs[2]));
         }
 
-        ReverseWinding(indices.AsSpan());
+        ReverseWinding(CollectionsMarshal.AsSpan(indices));
 
         if (invertn)
-            InvertNormals(vertices.AsSpan());
+            InvertNormals(CollectionsMarshal.AsSpan(vertices));
 
         return (vertices, indices);
     }
@@ -824,12 +825,12 @@ public static class Geometry
 
         float radius = size * 0.5f;
 
-        ReadOnlySpan<Vector2> uvs = stackalloc Vector2[]
-        {
+        ReadOnlySpan<Vector2> uvs =
+        [
             new(0.0f, 0.0f),
             new(1.0f, 0.0f),
             new(0.5f, 1.0f)
-        };
+        ];
 
         for (int i = 0; i < faceCount; ++i)
         {
@@ -850,10 +851,10 @@ public static class Geometry
             vertices.Add(new(v2, normal, uvs[2]));
         }
 
-        ReverseWinding(indices.AsSpan());
+        ReverseWinding(CollectionsMarshal.AsSpan(indices));
 
         if (invertn)
-            InvertNormals(vertices.AsSpan());
+            InvertNormals(CollectionsMarshal.AsSpan(vertices));
 
         return (vertices, indices);
     }
@@ -881,8 +882,8 @@ public static class Geometry
         float scale = size * (0.5f / MathF.Sqrt(3.0f));
 
         // 20 unique corner positions of a regular dodecahedron
-        ReadOnlySpan<Vector3> corners = stackalloc Vector3[]
-        {
+        ReadOnlySpan<Vector3> corners =
+        [
             // 8 cube corners (+-1, +-1, +-1)
             new Vector3(-1, -1, -1) * scale, // 0
             new Vector3(-1, -1,  1) * scale, // 1
@@ -908,11 +909,11 @@ public static class Geometry
             new Vector3(-phi,  invPhi, 0) * scale, // 17
             new Vector3( phi, -invPhi, 0) * scale, // 18
             new Vector3( phi,  invPhi, 0) * scale  // 19
-        };
+        ];
 
         // 12 pentagon faces (5 vertex indices per face)
-        ReadOnlySpan<int> pentagonFaces = stackalloc int[]
-        {
+        ReadOnlySpan<int> pentagonFaces =
+        [
             3, 11, 7, 15, 13,
             7, 19, 6, 14, 15,
             6, 10, 2, 12, 14,
@@ -925,17 +926,17 @@ public static class Geometry
             7, 11, 10, 6, 19,
             4, 18, 19, 6, 14,
             0, 12, 2, 10, 16
-        };
+        ];
 
         // Planar UV layout for a regular pentagon
-        ReadOnlySpan<Vector2> pentagonUVs = stackalloc Vector2[]
-        {
+        ReadOnlySpan<Vector2> pentagonUVs =
+        [
             new(0.5f + (0.5f * MathF.Cos(0 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(0 * MathF.Tau / 5.0f - Maths.Math.HalfPI))),
             new(0.5f + (0.5f * MathF.Cos(1 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(1 * MathF.Tau / 5.0f - Maths.Math.HalfPI))),
             new(0.5f + (0.5f * MathF.Cos(2 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(2 * MathF.Tau / 5.0f - Maths.Math.HalfPI))),
             new(0.5f + (0.5f * MathF.Cos(3 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(3 * MathF.Tau / 5.0f - Maths.Math.HalfPI))),
             new(0.5f + (0.5f * MathF.Cos(4 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(4 * MathF.Tau / 5.0f - Maths.Math.HalfPI)))
-        };
+        ];
 
         for (int i = 0; i < faceCount; ++i)
         {
@@ -969,10 +970,10 @@ public static class Geometry
             IndexPushBack(indices, vbase + 4);
         }
 
-        ReverseWinding(indices.AsSpan());
+        ReverseWinding(CollectionsMarshal.AsSpan(indices));
 
         if (invertn)
-            InvertNormals(vertices.AsSpan());
+            InvertNormals(CollectionsMarshal.AsSpan(vertices));
 
         return (vertices, indices);
     }
@@ -999,8 +1000,8 @@ public static class Geometry
         float scale = size * (0.5f / MathF.Sqrt(1.0f + (phi * phi)));
 
         // 12 golden ratio rectangle vertices
-        ReadOnlySpan<Vector3> corners = stackalloc Vector3[]
-        {
+        ReadOnlySpan<Vector3> corners =
+        [
             new Vector3(-1,  phi, 0) * scale, // 0
             new Vector3( 1,  phi, 0) * scale, // 1
             new Vector3(-1, -phi, 0) * scale, // 2
@@ -1015,11 +1016,11 @@ public static class Geometry
             new Vector3( phi, 0,  1) * scale, // 9
             new Vector3(-phi, 0, -1) * scale, // 10
             new Vector3(-phi, 0,  1) * scale  // 11
-        };
+        ];
 
         // 20 triangular faces
-        ReadOnlySpan<int> faceIndices = stackalloc int[]
-        {
+        ReadOnlySpan<int> faceIndices =
+        [
             // 5 faces around vertex 0
             0, 11, 5,
             0, 5, 1,
@@ -1047,14 +1048,14 @@ public static class Geometry
             6, 2, 10,
             8, 6, 7,
             9, 8, 1
-        };
+        ];
 
-        ReadOnlySpan<Vector2> uvs = stackalloc Vector2[]
-        {
+        ReadOnlySpan<Vector2> uvs =
+        [
             new(0.0f, 0.0f),
             new(1.0f, 0.0f),
             new(0.5f, 1.0f)
-        };
+        ];
 
         for (int i = 0; i < faceCount; ++i)
         {
@@ -1075,10 +1076,10 @@ public static class Geometry
             vertices.Add(new(v2, normal, uvs[2]));
         }
 
-        ReverseWinding(indices.AsSpan());
+        ReverseWinding(CollectionsMarshal.AsSpan(indices));
 
         if (invertn)
-            InvertNormals(vertices.AsSpan());
+            InvertNormals(CollectionsMarshal.AsSpan(vertices));
 
         return (vertices, indices);
     }
@@ -1155,10 +1156,10 @@ public static class Geometry
             }
         }
 
-        ReverseWinding(indices.AsSpan());
+        ReverseWinding(CollectionsMarshal.AsSpan(indices));
 
         if (invertn)
-            InvertNormals(vertices.AsSpan());
+            InvertNormals(CollectionsMarshal.AsSpan(vertices));
 
         return (vertices, indices);
     }

@@ -86,11 +86,11 @@ public readonly record struct FormatInfo(
         new(Format.BC7_UNorm_Srgb,    16, 4, false, false),
     ];
 
-    public static ref readonly FormatInfo Get(Format format) => ref Table[(int)format];
+    public static FormatInfo Get(Format format) => Table[(int)format];
 
     public static void GetSurfaceInfo(Format format, uint width, uint height, out uint rowPitch, out uint slicePitch)
     {
-        ref readonly FormatInfo info = ref Table[(int)format];
+        FormatInfo info = Table[(int)format];
         if (info.BlockSize == 0)
         {
             rowPitch = 0;
@@ -98,8 +98,8 @@ public readonly record struct FormatInfo(
             return;
         }
 
-        uint numBlocksWide = System.Math.Max(1u, (width + info.BlockSize - 1u) / info.BlockSize);
-        uint numBlocksHigh = System.Math.Max(1u, (height + info.BlockSize - 1u) / info.BlockSize);
+        uint numBlocksWide = Math.Max(1u, (width + info.BlockSize - 1u) / info.BlockSize);
+        uint numBlocksHigh = Math.Max(1u, (height + info.BlockSize - 1u) / info.BlockSize);
 
         rowPitch = numBlocksWide * info.BytesPerBlock;
         slicePitch = rowPitch * numBlocksHigh;

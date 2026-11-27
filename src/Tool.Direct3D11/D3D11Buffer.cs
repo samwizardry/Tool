@@ -9,7 +9,7 @@ internal readonly struct D3D11Buffer
     public readonly ID3D11ShaderResourceView? Srv;
     public readonly ID3D11UnorderedAccessView? Uav;
 
-    private D3D11Buffer(in Graphics.BufferDescription desc, ID3D11Buffer buffer, ID3D11ShaderResourceView? srv = null, ID3D11UnorderedAccessView? uav = null)
+    private D3D11Buffer(Graphics.BufferDescription desc, ID3D11Buffer buffer, ID3D11ShaderResourceView? srv = null, ID3D11UnorderedAccessView? uav = null)
     {
         Desc = desc;
         Native = buffer;
@@ -24,10 +24,10 @@ internal readonly struct D3D11Buffer
         Native?.Dispose();
     }
 
-    public static unsafe D3D11Buffer Create<T>(ID3D11Device5 device, ReadOnlySpan<T> data, in Graphics.BufferDescription desc)
+    public static unsafe D3D11Buffer Create<T>(ID3D11Device5 device, ReadOnlySpan<T> data, Graphics.BufferDescription desc)
         where T : unmanaged
     {
-        BufferDescription nativeDesc = ToNativeBufferDescription(in desc, true);
+        BufferDescription nativeDesc = ToNativeBufferDescription(desc, true);
 
         uint vertexByteSize = (uint)sizeof(T);
 
@@ -56,10 +56,10 @@ internal readonly struct D3D11Buffer
             ByteStride = byteStride
         };
 
-        return new D3D11Buffer(in resolvedDesc, buffer);
+        return new D3D11Buffer(resolvedDesc, buffer);
     }
 
-    public static D3D11Buffer Create(ID3D11Device5 device, in Graphics.BufferDescription desc)
+    public static D3D11Buffer Create(ID3D11Device5 device, Graphics.BufferDescription desc)
     {
         BufferDescription nativeDesc = ToNativeBufferDescription(desc, false);
 
@@ -73,10 +73,10 @@ internal readonly struct D3D11Buffer
 
         ID3D11Buffer buffer = device.CreateBuffer(nativeDesc, initialData: null);
 
-        return new D3D11Buffer(in desc, buffer);
+        return new D3D11Buffer(desc, buffer);
     }
 
-    private static BufferDescription ToNativeBufferDescription(in Graphics.BufferDescription desc, bool hasInitialData)
+    private static BufferDescription ToNativeBufferDescription(Graphics.BufferDescription desc, bool hasInitialData)
     {
         ResourceUsage resourceUsage;
         CpuAccessFlags cpuAccessFlags = CpuAccessFlags.None;

@@ -34,16 +34,16 @@ public readonly record struct SamplerDescription
         BorderColor = borderColor.HasValue ? borderColor.Value : Colors.White;
     }
 
+    public readonly Color4 BorderColor { get; init; }
+    public readonly float MaxAnisotropy { get; init; }
+    public readonly float MipBias { get; init; }
     public readonly bool MinFilter { get; init; }
     public readonly bool MagFilter { get; init; }
     public readonly bool MipFilter { get; init; }
     public readonly SamplerAddressMode AddressU { get; init; }
     public readonly SamplerAddressMode AddressV { get; init; }
     public readonly SamplerAddressMode AddressW { get; init; }
-    public readonly float MaxAnisotropy { get; init; }
-    public readonly float MipBias { get; init; }
     public readonly SamplerReductionType ReductionType { get; init; }
-    public readonly Color4 BorderColor { get; init; }
 
     public static SamplerDescription PointClamp => new(false, false, false,
         SamplerAddressMode.Clamp, SamplerAddressMode.Clamp, SamplerAddressMode.Clamp);

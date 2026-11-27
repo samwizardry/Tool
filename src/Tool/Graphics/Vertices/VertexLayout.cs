@@ -49,7 +49,7 @@ public readonly record struct VertexLayout : IEquatable<VertexLayout>
     {
         var hash = new HashCode();
 
-        foreach (ref readonly var element in _elements.AsSpan())
+        foreach (var element in _elements.AsSpan())
             hash.Add(element);
 
         return hash.ToHashCode();

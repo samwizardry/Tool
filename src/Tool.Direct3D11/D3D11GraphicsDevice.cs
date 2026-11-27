@@ -1,8 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using SharpGen.Runtime;
-
 using Tool.Collections;
 using Tool.Core;
 using Tool.Logging;
@@ -145,17 +143,14 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
                 }
 #endif
 
-                ID3D11Device? device = null;
-                ID3D11DeviceContext? imContext = null;
-
                 if (D3D11CreateDevice(
                     adapter,
                     DriverType.Unknown,
                     deviceCreationFlags,
                     FeatureLevels,
-                    out device,
+                    out ID3D11Device? device,
                     out FeatureLevel featureLevel,
-                    out imContext).Failure)
+                    out ID3D11DeviceContext? imContext).Failure)
                 {
                     device?.Dispose();
                     imContext?.Dispose();
@@ -204,31 +199,16 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
                     effectiveSeverity = LogSeverity.None;
                 }
 
-                MessageSeverity[] denyList;
-
-                switch (effectiveSeverity)
+                MessageSeverity[] denyList = effectiveSeverity switch
                 {
-                    case LogSeverity.Message:
-                        denyList = [];
-                        break;
-                    case LogSeverity.Info:
-                        denyList = [MessageSeverity.Message];
-                        break;
-                    case LogSeverity.Warning:
-                        denyList = [MessageSeverity.Message, MessageSeverity.Info];
-                        break;
-                    case LogSeverity.Error:
-                        denyList = [MessageSeverity.Message, MessageSeverity.Info, MessageSeverity.Warning];
-                        break;
-                    case LogSeverity.Fatal:
-                        denyList = [MessageSeverity.Message, MessageSeverity.Info, MessageSeverity.Warning, MessageSeverity.Error];
-                        break;
-                    case LogSeverity.None:
-                        denyList = [MessageSeverity.Message, MessageSeverity.Info, MessageSeverity.Warning, MessageSeverity.Error, MessageSeverity.Corruption];
-                        break;
-                    default:
-                        throw new NotSupportedException();
-                }
+                    LogSeverity.Message => [],
+                    LogSeverity.Info => [MessageSeverity.Message],
+                    LogSeverity.Warning => [MessageSeverity.Message, MessageSeverity.Info],
+                    LogSeverity.Error => [MessageSeverity.Message, MessageSeverity.Info, MessageSeverity.Warning],
+                    LogSeverity.Fatal => [MessageSeverity.Message, MessageSeverity.Info, MessageSeverity.Warning, MessageSeverity.Error],
+                    LogSeverity.None => [MessageSeverity.Message, MessageSeverity.Info, MessageSeverity.Warning, MessageSeverity.Error, MessageSeverity.Corruption],
+                    _ => throw new NotSupportedException(),
+                };
 
                 _infoQueue.PushStorageFilter(new Vortice.Direct3D11.Debug.InfoQueueFilter
                 {
@@ -482,11 +462,11 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     }
 
     // Data Resources: owned by caller, destroyed via DeferredDeletionQueue
-    public override Graphics.BufferHandle CreateBuffer<T>(ReadOnlySpan<T> data, in Graphics.BufferDescription desc) =>
-        new(_buffers.Add(D3D11Buffer.Create(_device, data, in desc)));
+    public override Graphics.BufferHandle CreateBuffer<T>(ReadOnlySpan<T> data, Graphics.BufferDescription desc) =>
+        new(_buffers.Add(D3D11Buffer.Create(_device, data, desc)));
 
-    public override Graphics.BufferHandle CreateBuffer(in Graphics.BufferDescription desc) =>
-        new(_buffers.Add(D3D11Buffer.Create(_device, in desc)));
+    public override Graphics.BufferHandle CreateBuffer(Graphics.BufferDescription desc) =>
+        new(_buffers.Add(D3D11Buffer.Create(_device, desc)));
 
     public override Graphics.TextureHandle CreateTexture<T>(ReadOnlySpan<T> data, in Graphics.TextureDescription desc) =>
         new(_textures.Add(D3D11Texture.Create(_device, _imContext, data, in desc)));
@@ -497,18 +477,18 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     public override Graphics.ShaderHandle CreateShader(ReadOnlySpan<byte> source, in Graphics.ShaderDescription desc) =>
         new(_shaders.Add(D3D11Shader.Create(_device, source, in desc)));
 
-    public override Graphics.BindingSetHandle CreateBindingSet(in Graphics.BindingSetDescription desc, Graphics.BindingLayoutHandle layout)
+    public override Graphics.BindingSetHandle CreateBindingSet(Graphics.BindingSetDescription desc, Graphics.BindingLayoutHandle layout)
     {
-        ref readonly var layoutData = ref _bindingLayouts.Get(layout.Raw);
+        var layoutData = _bindingLayouts.Get(layout.Raw);
 #if GRAPHICS_DEBUG
-        return new(_bindingSets.Add(D3D11BindingSet.Create(layout, in desc, in layoutData, _buffers, _textures, _samplers)));
+        return new(_bindingSets.Add(D3D11BindingSet.Create(layout, desc, layoutData, _buffers, _textures, _samplers)));
 #else
         return new(_bindingSets.Add(D3D11BindingSet.Create(in desc, in layoutData, _buffers, _textures, _samplers)));
 #endif
     }
 
-    public override ref readonly Graphics.BufferDescription GetBufferDescription(Graphics.BufferHandle buffer) =>
-        ref _buffers.Get(buffer.Raw).Desc;
+    public override Graphics.BufferDescription GetBufferDescription(Graphics.BufferHandle buffer) =>
+        _buffers.Get(buffer.Raw).Desc;
 
     public override ref readonly Graphics.TextureDescription GetTextureDescription(Graphics.TextureHandle texture) =>
         ref _textures.Get(texture.Raw).Desc;
@@ -858,46 +838,47 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
         FlushDeferredDeletions();
 
         // Drain any leaked caller-owned resources
-        _bindingSets.DrainAll((handle, _) =>
+        _bindingSets.DrainAll(static (handle, res) =>
         {
             Log.Warning(D3D11LogCategories.D3D11, $"Leaked BindingSetHandle ({handle.Index}:{handle.Generation}) was not destroyed before device shutdown.");
+            res.Destroy();
         });
 
-        _buffers.DrainAll((handle, res) =>
+        _buffers.DrainAll(static (handle, res) =>
         {
             Log.Warning(D3D11LogCategories.D3D11, $"Leaked BufferHandle ({handle.Index}:{handle.Generation}) was not destroyed before device shutdown.");
             res.Destroy();
         });
 
-        _textures.DrainAll((handle, res) =>
+        _textures.DrainAll(static (handle, res) =>
         {
             Log.Warning(D3D11LogCategories.D3D11, $"Leaked TextureHandle ({handle.Index}:{handle.Generation}) was not destroyed before device shutdown.");
             res.Destroy();
         });
 
-        _shaders.DrainAll((handle, res) =>
+        _shaders.DrainAll(static (handle, res) =>
         {
             Log.Warning(D3D11LogCategories.D3D11, $"Leaked ShaderHandle ({handle.Index}:{handle.Generation}) was not destroyed before device shutdown.");
             res.Destroy();
         });
 
         // Free device-owned immutable state caches
-        _pipelines.DrainAll((_, _) => { });
+        _pipelines.DrainAll(static (_, res) => res.Destroy());
         _pipelineCache.Clear();
 
-        _bindingLayouts.DrainAll((_, _) => { });
+        _bindingLayouts.DrainAll(static (_, res) => res.Destroy());
         _bindingLayoutCache.Clear();
 
-        _inputLayouts.DrainAll((_, res) => res.Destroy());
+        _inputLayouts.DrainAll(static (_, res) => res.Destroy());
         _inputLayoutCache.Clear();
 
-        _rasterStates.DrainAll((_, res) => res.Destroy());
+        _rasterStates.DrainAll(static (_, res) => res.Destroy());
         _rasterStateCache.Clear();
 
-        _samplers.DrainAll((_, res) => res.Destroy());
+        _samplers.DrainAll(static (_, res) => res.Destroy());
         _samplerCache.Clear();
 
-        _blendStates.DrainAll((_, res) => res.Destroy());
+        _blendStates.DrainAll(static (_, res) => res.Destroy());
         _blendStateCache.Clear();
 
         // Release main interfaces and debug leak reports
@@ -1058,7 +1039,7 @@ public sealed class D3D11GraphicsDevice : Graphics.GraphicsDevice
     private static void ReportSharpGenLeaks()
     {
         var leaks = SharpGen.Runtime.Diagnostics.ObjectTracker.FindActiveObjects();
-        foreach (var leak in leaks)
+        foreach (var leak in CollectionsMarshal.AsSpan(leaks))
         {
             if (leak.TryGetTarget(out var target))
             {

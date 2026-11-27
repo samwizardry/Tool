@@ -9,11 +9,9 @@ namespace Tool.Assets;
 /// Central owner of loaded and procedural high-level assets, managing deduplication,
 /// reference-counted lifetimes, cascading release, and runtime material updates.
 /// </summary>
-public sealed class AssetManager : IDisposable
+public sealed class AssetManager(GraphicsDevice device, string rootDirectory = "") : IDisposable
 {
-    private readonly GraphicsDevice _device;
-    private readonly string _rootDirectory;
-
+    private readonly GraphicsDevice _device = device;
     private readonly AssetPool<ShaderAsset> _shaders = new();
     private readonly AssetPool<TextureAsset> _textures = new();
     private readonly AssetPool<MaterialAsset> _materials = new();
@@ -25,13 +23,7 @@ public sealed class AssetManager : IDisposable
 
     private bool _disposed;
 
-    public AssetManager(GraphicsDevice device, string rootDirectory = "")
-    {
-        _device = device;
-        _rootDirectory = rootDirectory;
-    }
-
-    public string RootDirectory => _rootDirectory;
+    public string RootDirectory { get; } = rootDirectory;
 
     public void RegisterShaderLoader(IShaderLoader loader) => _shaderLoader = loader;
     public void RegisterTextureLoader(ITextureLoader loader) => _textureLoader = loader;
@@ -39,10 +31,9 @@ public sealed class AssetManager : IDisposable
 
     public string ResolvePath(string virtualPath)
     {
-        if (string.IsNullOrEmpty(_rootDirectory) || Path.IsPathRooted(virtualPath))
-            return virtualPath;
-
-        return Path.Combine(_rootDirectory, virtualPath);
+        return string.IsNullOrEmpty(RootDirectory) || Path.IsPathRooted(virtualPath)
+            ? virtualPath
+            : Path.Combine(RootDirectory, virtualPath);
     }
 
     #region Acquire & Create
@@ -103,7 +94,7 @@ public sealed class AssetManager : IDisposable
         MaterialSamplerBinding[] samplers = desc.Samplers is { Length: > 0 } ? [.. desc.Samplers] : [];
 
         // Material retains its own RefCount on every texture it binds.
-        foreach (ref readonly var binding in textures.AsSpan())
+        foreach (var binding in textures.AsSpan())
         {
             if (binding.Texture.IsValid)
             {
@@ -175,7 +166,7 @@ public sealed class AssetManager : IDisposable
 
     #region Access & Runtime Editing
 
-    public ref readonly ShaderAsset Get(AssetHandle<ShaderAsset> handle) => ref _shaders.Get(handle);
+    public ShaderAsset Get(AssetHandle<ShaderAsset> handle) => _shaders.Get(handle);
     public ref readonly TextureAsset Get(AssetHandle<TextureAsset> handle) => ref _textures.Get(handle);
     public ref readonly ModelAsset Get(AssetHandle<ModelAsset> handle) => ref _models.Get(handle);
 
@@ -282,7 +273,7 @@ public sealed class AssetManager : IDisposable
             {
                 ref readonly MaterialAsset material = ref ResolveMaterial(materials[part.MaterialIndex]);
 
-                GraphicsState state = new GraphicsState(
+                GraphicsState state = new(
                     pipeline: material.Pipeline,
                     viewport: viewport,
                     blendConstantColor: Colors.White,
@@ -344,7 +335,7 @@ public sealed class AssetManager : IDisposable
         if (mat.BindingSet.IsValid) _device.Destroy(mat.BindingSet);
         if (mat.ConstantBuffer.IsValid) _device.Destroy(mat.ConstantBuffer);
 
-        foreach (ref readonly var binding in mat.Textures.AsSpan())
+        foreach (var binding in mat.Textures.AsSpan())
         {
             if (binding.Texture.IsValid)
             {
@@ -435,13 +426,13 @@ public sealed class AssetManager : IDisposable
             items[index++] = BindingSetItem.ConstantBuffer(mat.ConstantBufferSlot, mat.ConstantBuffer);
         }
 
-        foreach (ref readonly var tb in mat.Textures.AsSpan())
+        foreach (var tb in mat.Textures.AsSpan())
         {
             TextureHandle gpuTex = _textures.Get(tb.Texture).Handle;
             items[index++] = BindingSetItem.TextureSrv(tb.Slot, gpuTex);
         }
 
-        foreach (ref readonly var sb in mat.Samplers.AsSpan())
+        foreach (var sb in mat.Samplers.AsSpan())
         {
             items[index++] = BindingSetItem.Sampler(sb.Slot, sb.Sampler);
         }
