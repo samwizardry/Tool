@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 
 using Tool.Collections;
 
@@ -7,9 +7,9 @@ namespace Tool.Graphics;
 public readonly record struct BufferDescription
 {
     public readonly uint ByteSize;
-    public readonly uint ByteStride;
     public readonly BufferUsage Usage;
     public readonly CpuAccess CpuAccess;
+    public readonly uint ByteStride;
 
     public BufferDescription(
         uint byteSize,
@@ -35,13 +35,13 @@ public readonly record struct BufferDescription
     public uint Count => ByteStride > 0 ? ByteSize / ByteStride : 0;
 
     public static BufferDescription Vertex(uint byteSize, uint byteStride, bool isDynamic = false) =>
-        new(byteSize, BufferUsage.VertexBuffer, isDynamic ? CpuAccess.Write : CpuAccess.None, byteStride);
+        new BufferDescription(byteSize, BufferUsage.VertexBuffer, isDynamic ? CpuAccess.Write : CpuAccess.None, byteStride);
 
     public static BufferDescription Index(uint byteSize, bool isDynamic = false) =>
-        new(byteSize, BufferUsage.IndexBuffer, isDynamic ? CpuAccess.Write : CpuAccess.None);
+        new BufferDescription(byteSize, BufferUsage.IndexBuffer, isDynamic ? CpuAccess.Write : CpuAccess.None);
 
     public static BufferDescription Constant(uint byteSize, bool isDynamic) =>
-        new(Align16(byteSize), BufferUsage.ConstantBuffer, isDynamic ? CpuAccess.Write : CpuAccess.None);
+        new BufferDescription(Align16(byteSize), BufferUsage.ConstantBuffer, isDynamic ? CpuAccess.Write : CpuAccess.None);
 
     public static BufferDescription Constant<T>(bool isDynamic = true)
         where T : unmanaged =>
@@ -49,7 +49,7 @@ public readonly record struct BufferDescription
 
     public static BufferDescription Structured<T>(uint elementCount, bool isDynamic = false, bool allowUav = false)
         where T : unmanaged =>
-        new(
+        new BufferDescription(
             elementCount * (uint)Unsafe.SizeOf<T>(),
             BufferUsage.StructuredBuffer | BufferUsage.ShaderResource | (allowUav ? BufferUsage.UnorderedAccess : BufferUsage.None),
             isDynamic ? CpuAccess.Write : CpuAccess.None,
@@ -57,7 +57,7 @@ public readonly record struct BufferDescription
 
     public static BufferDescription IndirectArguments<T>(uint commandCount = 1u, bool allowUav = false)
         where T : unmanaged =>
-        new(
+        new BufferDescription(
             commandCount * (uint)Unsafe.SizeOf<T>(),
             BufferUsage.IndirectArguments | (allowUav ? BufferUsage.UnorderedAccess : BufferUsage.None),
             CpuAccess.None,

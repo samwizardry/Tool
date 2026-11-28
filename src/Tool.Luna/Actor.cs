@@ -1,4 +1,4 @@
-﻿using Tool.Assets;
+using Tool.Assets;
 using Tool.Graphics;
 
 namespace Tool.Luna;

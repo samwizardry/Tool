@@ -1,4 +1,4 @@
-﻿#if PLATFORM_WINDOWS
+#if PLATFORM_WINDOWS
 using System.Runtime.InteropServices;
 #endif
 

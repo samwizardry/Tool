@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 /* Copyright (c) 2024-2026 Eduard Gushchin.
  *
  * This software is provided 'as-is', without any express or implied warranty.

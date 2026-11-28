@@ -2,7 +2,19 @@ root = true
 
 # All files
 [*]
+charset = utf-8
+end_of_line = lf
 indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Windows scripts and legacy solution files
+[*.{bat,cmd,sln}]
+end_of_line = crlf
+
+# Keep trailing spaces in Markdown (used for line breaks)
+[*.md]
+trim_trailing_whitespace = false
 
 # Xml files
 [*.xml]
@@ -27,9 +39,6 @@ indent_size = 2
 # Indentation and spacing
 indent_size = 4
 tab_width = 4
-
-# New line preferences
-insert_final_newline = true
 
 #### .NET Coding Conventions ####
 [*.{cs,vb}]
@@ -396,3 +405,5 @@ dotnet_diagnostic.IDE0290.severity = none
 dotnet_diagnostic.IDE0130.severity = none
 # Use switch expression
 dotnet_diagnostic.IDE0066.severity = none
+# Simplify new expression
+dotnet_diagnostic.IDE0090.severity = none

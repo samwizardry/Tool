@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using System.Runtime.InteropServices;
 
 using Vortice.Mathematics.PackedVector;
@@ -8,7 +8,14 @@ namespace Tool.Graphics;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public record struct VertexPositionNormalTangentColorTextureSkinning
 {
-    public static readonly VertexLayout Layout;
+    public static readonly VertexLayout Layout = new VertexLayout(
+        VertexElement.Position,
+        VertexElement.Normal,
+        VertexElement.Tangent,
+        VertexElement.Color32,
+        VertexElement.TexCoord,
+        VertexElement.BlendIndices,
+        VertexElement.BlendWeight);
 
     public Vector3 Position;
     public Vector3 Normal;
@@ -18,19 +25,14 @@ public record struct VertexPositionNormalTangentColorTextureSkinning
     public UByte4 BlendIndices;
     public UByte4Normalized BlendWeight;
 
-    static VertexPositionNormalTangentColorTextureSkinning()
-    {
-        Layout = new VertexLayout(
-            new VertexElement(VertexElementSemantic.Position, VertexElementFormat.Float3),
-            new VertexElement(VertexElementSemantic.Normal, VertexElementFormat.Float3),
-            new VertexElement(VertexElementSemantic.Tangent, VertexElementFormat.Float4),
-            new VertexElement(VertexElementSemantic.Color, VertexElementFormat.UNormByte4),
-            new VertexElement(VertexElementSemantic.TexCoord, VertexElementFormat.Float2),
-            new VertexElement(VertexElementSemantic.BlendIndices, VertexElementFormat.UByte4),
-            new VertexElement(VertexElementSemantic.BlendWeight, VertexElementFormat.UNormByte4));
-    }
-
-    public VertexPositionNormalTangentColorTextureSkinning(Vector3 position, Vector3 normal, Vector4 tangent, UByte4Normalized color, Vector2 texCoord, UByte4 blendIndices, UByte4Normalized blendWeight)
+    public VertexPositionNormalTangentColorTextureSkinning(
+        Vector3 position,
+        Vector3 normal,
+        Vector4 tangent,
+        UByte4Normalized color,
+        Vector2 texCoord,
+        UByte4 blendIndices,
+        UByte4Normalized blendWeight)
     {
         Position = position;
         Normal = normal;

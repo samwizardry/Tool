@@ -1,3 +1,3 @@
-﻿namespace Tool.ImGui;
+namespace Tool.ImGui;
 
 public class ImGuiRenderer { }

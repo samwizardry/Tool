@@ -1,4 +1,4 @@
-﻿namespace Tool.Graphics;
+namespace Tool.Graphics;
 
 /// <summary>
 /// Represents a drawable sub-region of a <see cref="Mesh"/> associated with a material slot.

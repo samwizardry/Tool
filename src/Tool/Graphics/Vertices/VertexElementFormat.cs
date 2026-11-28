@@ -1,4 +1,4 @@
-﻿namespace Tool.Graphics;
+namespace Tool.Graphics;
 
 public enum VertexElementFormat : byte
 {

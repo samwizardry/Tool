@@ -1,4 +1,4 @@
-﻿using Tool.Collections;
+using Tool.Collections;
 
 namespace Tool.Graphics;
 
@@ -29,21 +29,21 @@ public readonly record struct ShaderDescription
         bool packAsRowMajor = true,
         bool debug = false,
         string? debugName = null) =>
-        new(ShaderType.Vertex, entryPoint, packAsRowMajor, debug, debugName);
+        new ShaderDescription(ShaderType.Vertex, entryPoint, packAsRowMajor, debug, debugName);
 
     public static ShaderDescription Pixel(
         string entryPoint = "PSMain",
         bool packAsRowMajor = true,
         bool debug = false,
         string? debugName = null) =>
-        new(ShaderType.Pixel, entryPoint, packAsRowMajor, debug, debugName);
+        new ShaderDescription(ShaderType.Pixel, entryPoint, packAsRowMajor, debug, debugName);
 
     public static ShaderDescription Compute(
         string entryPoint = "CSMain",
         bool packAsRowMajor = true,
         bool debug = false,
         string? debugName = null) =>
-        new(ShaderType.Compute, entryPoint, packAsRowMajor, debug, debugName);
+        new ShaderDescription(ShaderType.Compute, entryPoint, packAsRowMajor, debug, debugName);
 }
 
 public readonly record struct ShaderHandle

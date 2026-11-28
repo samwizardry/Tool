@@ -1,4 +1,4 @@
-﻿namespace Tool.Vulkan;
+namespace Tool.Vulkan;
 
 public sealed class VulkanGraphicsDevice
 {

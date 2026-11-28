@@ -1,4 +1,4 @@
-﻿using Tool.Graphics;
+using Tool.Graphics;
 
 using Vortice.Direct3D11;
 

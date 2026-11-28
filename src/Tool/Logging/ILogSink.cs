@@ -1,4 +1,4 @@
-﻿namespace Tool.Logging;
+namespace Tool.Logging;
 
 public interface ILogSink : IDisposable
 {

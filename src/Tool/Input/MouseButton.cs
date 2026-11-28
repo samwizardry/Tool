@@ -1,4 +1,4 @@
-﻿namespace Tool.Input;
+namespace Tool.Input;
 
 [Flags]
 public enum MouseButton : uint

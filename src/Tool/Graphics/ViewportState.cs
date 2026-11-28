@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 using Vortice.Mathematics;
@@ -134,7 +134,7 @@ public readonly record struct ViewportState : IEquatable<ViewportState>
         ScissorRectCount = (byte)scissorRects.Length;
     }
 
-    public ViewportState(in Viewport viewport)
+    public ViewportState(Viewport viewport)
     {
         Viewports = new ViewportArray(viewport);
         ScissorRects = default;
@@ -157,22 +157,6 @@ public readonly record struct ViewportState : IEquatable<ViewportState>
 
         return true;
     }
-
-    //public bool Equals(in ViewportState other)
-    //{
-    //    if (ViewportCount != other.ViewportCount || ScissorRectCount != other.ScissorRectCount)
-    //        return false;
-
-    //    for (int i = 0; i < ViewportCount; i++)
-    //        if (Viewports[i] != other.Viewports[i])
-    //            return false;
-
-    //    for (int i = 0; i < ScissorRectCount; i++)
-    //        if (ScissorRects[i] != other.ScissorRects[i])
-    //            return false;
-
-    //    return true;
-    //}
 
     public override int GetHashCode()
     {

@@ -1,4 +1,4 @@
-﻿// Portions of this file are derived from DirectX Tool Kit (https://github.com/microsoft/DirectXTK)
+// Portions of this file are derived from DirectX Tool Kit (https://github.com/microsoft/DirectXTK)
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See THIRD-PARTY-NOTICES.md in the project root for license information.
 

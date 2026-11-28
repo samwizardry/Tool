@@ -1,7 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-
-using Tool.Collections;
 
 namespace Tool.Graphics;
 
@@ -43,7 +41,7 @@ public readonly record struct BlendStateDescription
         /// </summary>
         public RenderTarget() : this(blendEnable: false) { }
 
-        public static RenderTarget Opaque => new();
+        public static RenderTarget Opaque => new RenderTarget();
     }
 
     [InlineArray(Constants.MaxRenderTargets)]
@@ -106,13 +104,11 @@ public readonly record struct BlendStateDescription
 
         public override readonly int GetHashCode()
         {
-            HashCode hash = default;
-
+            HashCode hash = new HashCode();
             for (int i = 0; i < Constants.MaxRenderTargets; i++)
             {
                 hash.Add(this[i]);
             }
-
             return hash.ToHashCode();
         }
 
@@ -139,7 +135,7 @@ public readonly record struct BlendStateDescription
         AlphaToCoverageEnable = false;
     }
 
-    public BlendStateDescription(in RenderTargetArray renderTargets, bool alphaToCoverageEnable = false)
+    public BlendStateDescription(RenderTargetArray renderTargets, bool alphaToCoverageEnable = false)
     {
         RenderTargets = renderTargets;
         AlphaToCoverageEnable = alphaToCoverageEnable;
@@ -147,7 +143,7 @@ public readonly record struct BlendStateDescription
 
     public BlendStateDescription(BlendFactor srcBlend, BlendFactor destBlend, BlendFactor srcBlendAlpha, BlendFactor destBlendAlpha)
     {
-        RenderTarget rt = new(blendEnable: IsBlendEnabled(srcBlend, destBlend, srcBlendAlpha, destBlendAlpha),
+        var rt = new RenderTarget(blendEnable: IsBlendEnabled(srcBlend, destBlend, srcBlendAlpha, destBlendAlpha),
             srcBlend: srcBlend,
             destBlend: destBlend,
             blendOp: BlendOp.Add,
@@ -160,12 +156,13 @@ public readonly record struct BlendStateDescription
         AlphaToCoverageEnable = false;
     }
 
-    public static BlendStateDescription Opaque => new();
-    public static BlendStateDescription NonPremultiplied => new(BlendFactor.SrcAlpha, BlendFactor.InvSrcAlpha, BlendFactor.One, BlendFactor.InvSrcAlpha);
-    public static BlendStateDescription PremultipliedAlpha => new(BlendFactor.One, BlendFactor.InvSrcAlpha, BlendFactor.One, BlendFactor.InvSrcAlpha);
-    public static BlendStateDescription Additive => new(BlendFactor.SrcAlpha, BlendFactor.One, BlendFactor.One, BlendFactor.One);
+    public static BlendStateDescription Opaque => new BlendStateDescription();
+    public static BlendStateDescription NonPremultiplied => new BlendStateDescription(BlendFactor.SrcAlpha, BlendFactor.InvSrcAlpha, BlendFactor.One, BlendFactor.InvSrcAlpha);
+    public static BlendStateDescription PremultipliedAlpha => new BlendStateDescription(BlendFactor.One, BlendFactor.InvSrcAlpha, BlendFactor.One, BlendFactor.InvSrcAlpha);
+    public static BlendStateDescription Additive => new BlendStateDescription(BlendFactor.SrcAlpha, BlendFactor.One, BlendFactor.One, BlendFactor.One);
+
     public static BlendStateDescription Uniform(RenderTarget renderTarget, bool alphaToCoverageEnable = false) =>
-        new(RenderTargetArray.CreateUniform(renderTarget), alphaToCoverageEnable);
+        new BlendStateDescription(RenderTargetArray.CreateUniform(renderTarget), alphaToCoverageEnable);
 
     private static bool IsBlendEnabled(BlendFactor srcBlend, BlendFactor destBlend, BlendFactor srcBlendAlpha, BlendFactor destBlendAlpha) =>
         srcBlendAlpha != BlendFactor.One ||
@@ -174,17 +171,4 @@ public readonly record struct BlendStateDescription
         destBlend != BlendFactor.Zero;
 }
 
-public readonly record struct BlendStateHandle
-{
-    public readonly SlotHandle Raw;
 
-    public BlendStateHandle(SlotHandle raw)
-    {
-        Raw = raw;
-    }
-
-    public static BlendStateHandle Invalid => default;
-    public bool IsValid => Raw.IsValid;
-    public uint Index => Raw.Index;
-    public uint Generation => Raw.Generation;
-}

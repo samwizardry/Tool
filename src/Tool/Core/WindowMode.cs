@@ -1,4 +1,4 @@
-﻿namespace Tool.Core;
+namespace Tool.Core;
 
 /// <summary>
 /// Specifies the display mode of the application window.

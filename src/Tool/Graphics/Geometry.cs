@@ -1,4 +1,4 @@
-﻿// Portions of this file are derived from DirectX Tool Kit (https://github.com/microsoft/DirectXTK)
+// Portions of this file are derived from DirectX Tool Kit (https://github.com/microsoft/DirectXTK)
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See THIRD-PARTY-NOTICES.md in the project root for license information.
 
@@ -12,28 +12,28 @@ namespace Tool.Graphics;
 public static class Geometry
 {
     private static readonly Vector3[] FaceNormals = [
-        new(0, 0, 1),
-        new(0, 0, -1),
-        new(1, 0, 0),
-        new(-1, 0, 0),
-        new(0, 1, 0),
-        new(0, -1, 0)];
+        new Vector3(0, 0, 1),
+        new Vector3(0, 0, -1),
+        new Vector3(1, 0, 0),
+        new Vector3(-1, 0, 0),
+        new Vector3(0, 1, 0),
+        new Vector3(0, -1, 0)];
 
     private static readonly Vector2[] TexCoords = [
-        new(1, 0),
-        new(1, 1),
-        new(0, 1),
-        new(0, 0)];
+        new Vector2(1, 0),
+        new Vector2(1, 1),
+        new Vector2(0, 1),
+        new Vector2(0, 0)];
 
     private static readonly Vector3[] OctahedronVertices =
     [
         // when looking down the negative z-axis (into the screen)
-        new(0, 1, 0),  // 0 top
-        new(0, 0, -1), // 1 front
-        new(1, 0, 0),  // 2 right
-        new(0, 0, 1),  // 3 back
-        new(-1, 0, 0), // 4 left
-        new(0, -1, 0), // 5 bottom
+        new Vector3(0, 1, 0),  // 0 top
+        new Vector3(0, 0, -1), // 1 front
+        new Vector3(1, 0, 0),  // 2 right
+        new Vector3(0, 0, 1),  // 3 back
+        new Vector3(-1, 0, 0), // 4 left
+        new Vector3(0, -1, 0), // 5 bottom
     ];
 
     private static readonly ushort[] OctahedronIndices =
@@ -90,13 +90,13 @@ public static class Geometry
 
             // Four vertices per face.
             // (normal - side1 - side2) * tsize // normal // t0
-            vertices.Add(new((normal - side1 - side2) * tsize, normal, TexCoords[0]));
+            vertices.Add(new VertexPositionNormalTexture((normal - side1 - side2) * tsize, normal, TexCoords[0]));
             // (normal - side1 + side2) * tsize // normal // t1
-            vertices.Add(new((normal - side1 + side2) * tsize, normal, TexCoords[1]));
+            vertices.Add(new VertexPositionNormalTexture((normal - side1 + side2) * tsize, normal, TexCoords[1]));
             // (normal + side1 + side2) * tsize // normal // t2
-            vertices.Add(new((normal + side1 + side2) * tsize, normal, TexCoords[2]));
+            vertices.Add(new VertexPositionNormalTexture((normal + side1 + side2) * tsize, normal, TexCoords[2]));
             // (normal + side1 - side2) * tsize // normal // t3
-            vertices.Add(new((normal + side1 - side2) * tsize, normal, TexCoords[3]));
+            vertices.Add(new VertexPositionNormalTexture((normal + side1 - side2) * tsize, normal, TexCoords[3]));
         }
 
         ReverseWinding(CollectionsMarshal.AsSpan(indices));
@@ -150,10 +150,10 @@ public static class Geometry
                 dx *= dxz;
                 dz *= dxz;
 
-                Vector3 normal = new(dx, dy, dz);
-                Vector2 textureCoords = new(u, v);
+                Vector3 normal = new Vector3(dx, dy, dz);
+                Vector2 texCoords = new Vector2(u, v);
 
-                vertices.Add(new(normal * radius, normal, textureCoords));
+                vertices.Add(new VertexPositionNormalTexture(normal * radius, normal, texCoords));
             }
         }
 
@@ -308,8 +308,8 @@ public static class Geometry
             float u = (longitude / MathF.Tau) + 0.5f;
             float v = latitude / MathF.PI;
 
-            Vector2 texCoord = new(1.0f - u, v);
-            vertices.Add(new(pos, normal, texCoord));
+            Vector2 texCoord = new Vector2(1.0f - u, v);
+            vertices.Add(new VertexPositionNormalTexture(pos, normal, texCoord));
         }
 
         // There are a couple of fixes to do. One is a texture coordinate wraparound fixup. At some point, there will be
@@ -481,19 +481,19 @@ public static class Geometry
         indices.EnsureCapacity(indexCount);
 
         // Create a ring of vertices around the outside of the cylinder.
-        Vector3 topOffset = new(0, halfHeight, 0);
+        Vector3 topOffset = new Vector3(0, halfHeight, 0);
 
         for (int i = 0; i <= tessellation; ++i)
         {
             float angle = i * MathF.Tau / tessellation;
             (float sin, float cos) = MathF.SinCos(angle);
 
-            Vector3 normal = new(cos, 0, sin);
+            Vector3 normal = new Vector3(cos, 0, sin);
             Vector3 sideOffset = normal * radius;
             float u = 1.0f - (i / (float)tessellation);
 
-            vertices.Add(new(sideOffset + topOffset, normal, new(u, 0)));
-            vertices.Add(new(sideOffset - topOffset, normal, new(u, 1)));
+            vertices.Add(new VertexPositionNormalTexture(sideOffset + topOffset, normal, new Vector2(u, 0)));
+            vertices.Add(new VertexPositionNormalTexture(sideOffset - topOffset, normal, new Vector2(u, 1)));
         }
 
         // Fill index buffer for side of cylinder
@@ -521,7 +521,7 @@ public static class Geometry
             Vector3 yOffset = normal * halfHeight;
             int centerIndex = vertices.Count;
 
-            vertices.Add(new(yOffset, normal, new(0.5f, 0.5f)));
+            vertices.Add(new VertexPositionNormalTexture(yOffset, normal, new Vector2(0.5f, 0.5f)));
 
             // Create a ring of vertices around the outside of the cap.
             for (int i = 0; i <= tessellation; ++i)
@@ -535,7 +535,7 @@ public static class Geometry
                     ? new Vector2(0.5f + (cos * 0.5f), 0.5f - (sin * 0.5f))
                     : new Vector2(0.5f + (cos * 0.5f), 0.5f + (sin * 0.5f));
 
-                vertices.Add(new(pos, normal, texCoord));
+                vertices.Add(new VertexPositionNormalTexture(pos, normal, texCoord));
             }
 
             for (int i = 0; i < tessellation; ++i)
@@ -592,9 +592,9 @@ public static class Geometry
         // Create flat bottom cap (base disk)
         int centerIndex = vertices.Count;
         Vector3 bottomNormal = -Vector3.UnitY;
-        Vector3 bottomCenter = new(0, -halfHeight, 0);
+        Vector3 bottomCenter = new Vector3(0, -halfHeight, 0);
 
-        vertices.Add(new(bottomCenter, bottomNormal, new(0.5f, 0.5f)));
+        vertices.Add(new VertexPositionNormalTexture(bottomCenter, bottomNormal, new Vector2(0.5f, 0.5f)));
 
         int baseRimStart = vertices.Count;
         for (int i = 0; i <= tessellation; ++i)
@@ -602,10 +602,10 @@ public static class Geometry
             float angle = i * MathF.Tau / tessellation;
             (float sin, float cos) = MathF.SinCos(angle);
 
-            Vector3 pos = new(cos * radius, -halfHeight, sin * radius);
-            Vector2 texCoord = new(0.5f + (cos * 0.5f), 0.5f + (sin * 0.5f));
+            Vector3 pos = new Vector3(cos * radius, -halfHeight, sin * radius);
+            Vector2 texCoord = new Vector2(0.5f + (cos * 0.5f), 0.5f + (sin * 0.5f));
 
-            vertices.Add(new(pos, bottomNormal, texCoord));
+            vertices.Add(new VertexPositionNormalTexture(pos, bottomNormal, texCoord));
         }
 
         for (int i = 0; i < tessellation; ++i)
@@ -624,24 +624,24 @@ public static class Geometry
             float angle = i * MathF.Tau / tessellation;
             (float sin, float cos) = MathF.SinCos(angle);
 
-            Vector3 pos = new(cos * radius, -halfHeight, sin * radius);
-            Vector3 normal = Vector3.Normalize(new(cos, normalSlope, sin));
+            Vector3 pos = new Vector3(cos * radius, -halfHeight, sin * radius);
+            Vector3 normal = Vector3.Normalize(new Vector3(cos, normalSlope, sin));
             float u = 1.0f - (i / (float)tessellation);
 
-            vertices.Add(new(pos, normal, new(u, 1.0f)));
+            vertices.Add(new VertexPositionNormalTexture(pos, normal, new Vector2(u, 1.0f)));
         }
 
-        Vector3 topApex = new(0, halfHeight, 0);
+        Vector3 topApex = new Vector3(0, halfHeight, 0);
         for (int i = 0; i < tessellation; ++i)
         {
             float midAngle = (i + 0.5f) * MathF.Tau / tessellation;
             (float midSin, float midCos) = MathF.SinCos(midAngle);
 
-            Vector3 apexNormal = Vector3.Normalize(new(midCos, normalSlope, midSin));
+            Vector3 apexNormal = Vector3.Normalize(new Vector3(midCos, normalSlope, midSin));
             float uMid = 1.0f - ((i + 0.5f) / tessellation);
 
             int apexIndex = vertices.Count;
-            vertices.Add(new(topApex, apexNormal, new(uMid, 0.0f)));
+            vertices.Add(new VertexPositionNormalTexture(topApex, apexNormal, new Vector2(uMid, 0.0f)));
 
             IndexPushBack(indices, apexIndex);
             IndexPushBack(indices, mantleRimStart + i + 1);
@@ -696,14 +696,14 @@ public static class Geometry
                 (float dy, float dx) = MathF.SinCos(innerAngle);
 
                 // Create a vertex.
-                Vector3 normal = new(dx, dy, 0);
+                Vector3 normal = new Vector3(dx, dy, 0);
                 Vector3 position = normal * (thickness * 0.5f);
-                Vector2 textureCoordinate = new(u, v);
+                Vector2 textureCoordinate = new Vector2(u, v);
 
                 position = Vector3.Transform(position, transform);
                 normal = Vector3.Normalize(Vector3.TransformNormal(normal, transform));
 
-                vertices.Add(new(position, normal, textureCoordinate));
+                vertices.Add(new VertexPositionNormalTexture(position, normal, textureCoordinate));
             }
         }
 
@@ -756,10 +756,10 @@ public static class Geometry
 
         ReadOnlySpan<Vector3> cornerPositions =
         [
-            new( s,  s,  s), // 0
-            new(-s, -s,  s), // 1
-            new(-s,  s, -s), // 2
-            new( s, -s, -s), // 3
+            new Vector3( s,  s,  s), // 0
+            new Vector3(-s, -s,  s), // 1
+            new Vector3(-s,  s, -s), // 2
+            new Vector3( s, -s, -s), // 3
         ];
 
         ReadOnlySpan<int> faceIndices =
@@ -772,9 +772,9 @@ public static class Geometry
 
         ReadOnlySpan<Vector2> uvs =
         [
-            new(0.0f, 0.0f),
-            new(1.0f, 0.0f),
-            new(0.5f, 1.0f)
+            new Vector2(0.0f, 0.0f),
+            new Vector2(1.0f, 0.0f),
+            new Vector2(0.5f, 1.0f)
         ];
 
         for (int i = 0; i < faceCount; ++i)
@@ -791,9 +791,9 @@ public static class Geometry
             IndexPushBack(indices, vbase + 1);
             IndexPushBack(indices, vbase + 2);
 
-            vertices.Add(new(v0, normal, uvs[0]));
-            vertices.Add(new(v1, normal, uvs[1]));
-            vertices.Add(new(v2, normal, uvs[2]));
+            vertices.Add(new VertexPositionNormalTexture(v0, normal, uvs[0]));
+            vertices.Add(new VertexPositionNormalTexture(v1, normal, uvs[1]));
+            vertices.Add(new VertexPositionNormalTexture(v2, normal, uvs[2]));
         }
 
         ReverseWinding(CollectionsMarshal.AsSpan(indices));
@@ -826,9 +826,9 @@ public static class Geometry
 
         ReadOnlySpan<Vector2> uvs =
         [
-            new(0.0f, 0.0f),
-            new(1.0f, 0.0f),
-            new(0.5f, 1.0f)
+            new Vector2(0.0f, 0.0f),
+            new Vector2(1.0f, 0.0f),
+            new Vector2(0.5f, 1.0f)
         ];
 
         for (int i = 0; i < faceCount; ++i)
@@ -845,9 +845,9 @@ public static class Geometry
             IndexPushBack(indices, vbase + 1);
             IndexPushBack(indices, vbase + 2);
 
-            vertices.Add(new(v0, normal, uvs[0]));
-            vertices.Add(new(v1, normal, uvs[1]));
-            vertices.Add(new(v2, normal, uvs[2]));
+            vertices.Add(new VertexPositionNormalTexture(v0, normal, uvs[0]));
+            vertices.Add(new VertexPositionNormalTexture(v1, normal, uvs[1]));
+            vertices.Add(new VertexPositionNormalTexture(v2, normal, uvs[2]));
         }
 
         ReverseWinding(CollectionsMarshal.AsSpan(indices));
@@ -930,11 +930,11 @@ public static class Geometry
         // Planar UV layout for a regular pentagon
         ReadOnlySpan<Vector2> pentagonUVs =
         [
-            new(0.5f + (0.5f * MathF.Cos(0 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(0 * MathF.Tau / 5.0f - Maths.Math.HalfPI))),
-            new(0.5f + (0.5f * MathF.Cos(1 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(1 * MathF.Tau / 5.0f - Maths.Math.HalfPI))),
-            new(0.5f + (0.5f * MathF.Cos(2 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(2 * MathF.Tau / 5.0f - Maths.Math.HalfPI))),
-            new(0.5f + (0.5f * MathF.Cos(3 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(3 * MathF.Tau / 5.0f - Maths.Math.HalfPI))),
-            new(0.5f + (0.5f * MathF.Cos(4 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(4 * MathF.Tau / 5.0f - Maths.Math.HalfPI)))
+            new Vector2(0.5f + (0.5f * MathF.Cos(0 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(0 * MathF.Tau / 5.0f - Maths.Math.HalfPI))),
+            new Vector2(0.5f + (0.5f * MathF.Cos(1 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(1 * MathF.Tau / 5.0f - Maths.Math.HalfPI))),
+            new Vector2(0.5f + (0.5f * MathF.Cos(2 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(2 * MathF.Tau / 5.0f - Maths.Math.HalfPI))),
+            new Vector2(0.5f + (0.5f * MathF.Cos(3 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(3 * MathF.Tau / 5.0f - Maths.Math.HalfPI))),
+            new Vector2(0.5f + (0.5f * MathF.Cos(4 * MathF.Tau / 5.0f - Maths.Math.HalfPI)), 0.5f + (0.5f * MathF.Sin(4 * MathF.Tau / 5.0f - Maths.Math.HalfPI)))
         ];
 
         for (int i = 0; i < faceCount; ++i)
@@ -952,7 +952,7 @@ public static class Geometry
             // 5 vertices per pentagon face
             for (int j = 0; j < 5; ++j)
             {
-                vertices.Add(new(corners[pentagonFaces[baseFaceIdx + j]], normal, pentagonUVs[j]));
+                vertices.Add(new VertexPositionNormalTexture(corners[pentagonFaces[baseFaceIdx + j]], normal, pentagonUVs[j]));
             }
 
             // 3 triangles per pentagon: (0, 1, 2), (0, 2, 3), (0, 3, 4)
@@ -1051,9 +1051,9 @@ public static class Geometry
 
         ReadOnlySpan<Vector2> uvs =
         [
-            new(0.0f, 0.0f),
-            new(1.0f, 0.0f),
-            new(0.5f, 1.0f)
+            new Vector2(0.0f, 0.0f),
+            new Vector2(1.0f, 0.0f),
+            new Vector2(0.5f, 1.0f)
         ];
 
         for (int i = 0; i < faceCount; ++i)
@@ -1070,9 +1070,9 @@ public static class Geometry
             IndexPushBack(indices, vbase + 1);
             IndexPushBack(indices, vbase + 2);
 
-            vertices.Add(new(v0, normal, uvs[0]));
-            vertices.Add(new(v1, normal, uvs[1]));
-            vertices.Add(new(v2, normal, uvs[2]));
+            vertices.Add(new VertexPositionNormalTexture(v0, normal, uvs[0]));
+            vertices.Add(new VertexPositionNormalTexture(v1, normal, uvs[1]));
+            vertices.Add(new VertexPositionNormalTexture(v2, normal, uvs[2]));
         }
 
         ReverseWinding(CollectionsMarshal.AsSpan(indices));
@@ -1128,9 +1128,9 @@ public static class Geometry
                     var (position, normal) = Bezier.BezierPatchEvaluate(patch, u, v);
 
                     position *= scale;
-                    Vector2 texCoord = new(u, v);
+                    Vector2 texCoord = new Vector2(u, v);
 
-                    vertices.Add(new(position, normal, texCoord));
+                    vertices.Add(new VertexPositionNormalTexture(position, normal, texCoord));
                 }
             }
 

@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 using System.Runtime.InteropServices;
 
 using Vortice.Mathematics.PackedVector;
@@ -8,7 +8,12 @@ namespace Tool.Graphics;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public record struct VertexPositionNormalTangentColorTexture
 {
-    public static readonly VertexLayout Layout;
+    public static readonly VertexLayout Layout = new VertexLayout(
+        VertexElement.Position,
+        VertexElement.Normal,
+        VertexElement.Tangent,
+        VertexElement.Color32,
+        VertexElement.TexCoord);
 
     public Vector3 Position;
     public Vector3 Normal;
@@ -16,17 +21,12 @@ public record struct VertexPositionNormalTangentColorTexture
     public UByte4Normalized Color;
     public Vector2 TexCoord;
 
-    static VertexPositionNormalTangentColorTexture()
-    {
-        Layout = new VertexLayout(
-            new VertexElement(VertexElementSemantic.Position, VertexElementFormat.Float3),
-            new VertexElement(VertexElementSemantic.Normal, VertexElementFormat.Float3),
-            new VertexElement(VertexElementSemantic.Tangent, VertexElementFormat.Float4),
-            new VertexElement(VertexElementSemantic.Color, VertexElementFormat.UNormByte4),
-            new VertexElement(VertexElementSemantic.TexCoord, VertexElementFormat.Float2));
-    }
-
-    public VertexPositionNormalTangentColorTexture(Vector3 position, Vector3 normal, Vector4 tangent, UByte4Normalized color, Vector2 texCoord)
+    public VertexPositionNormalTangentColorTexture(
+        Vector3 position,
+        Vector3 normal,
+        Vector4 tangent,
+        UByte4Normalized color,
+        Vector2 texCoord)
     {
         Position = position;
         Normal = normal;

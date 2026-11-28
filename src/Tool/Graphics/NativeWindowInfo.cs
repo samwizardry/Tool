@@ -1,4 +1,4 @@
-﻿using Vortice.Mathematics;
+using Vortice.Mathematics;
 
 namespace Tool.Graphics;
 

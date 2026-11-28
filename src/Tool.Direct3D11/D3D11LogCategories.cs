@@ -1,4 +1,4 @@
-﻿using Tool.Logging;
+using Tool.Logging;
 
 namespace Tool.Direct3D11;
 

@@ -1,4 +1,4 @@
-﻿using Tool.Collections;
+using Tool.Collections;
 using Tool.Graphics;
 
 using Vortice.Direct3D11;
@@ -24,7 +24,7 @@ internal readonly struct D3D11BindingSet
         public readonly uint Slot;
         public readonly ID3D11ShaderResourceView? Srv;
 
-        public SrvSlot(uint slot, ID3D11ShaderResourceView srv)
+        public SrvSlot(uint slot, ID3D11ShaderResourceView? srv)
         {
             Slot = slot;
             Srv = srv;
@@ -36,7 +36,7 @@ internal readonly struct D3D11BindingSet
         public readonly uint Slot;
         public readonly ID3D11UnorderedAccessView? Uav;
 
-        public UavSlot(uint slot, ID3D11UnorderedAccessView uav)
+        public UavSlot(uint slot, ID3D11UnorderedAccessView? uav)
         {
             Slot = slot;
             Uav = uav;

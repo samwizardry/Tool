@@ -1,4 +1,4 @@
-﻿using Tool.Graphics;
+using Tool.Graphics;
 
 namespace Tool.Direct3D11;
 

@@ -1,4 +1,4 @@
-﻿using StbImageSharp;
+using StbImageSharp;
 
 using Tool.Assets;
 using Tool.Graphics;

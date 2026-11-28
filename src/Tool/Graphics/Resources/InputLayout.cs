@@ -1,4 +1,4 @@
-﻿using Tool.Collections;
+using Tool.Collections;
 
 namespace Tool.Graphics;
 

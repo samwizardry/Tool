@@ -1,4 +1,4 @@
-﻿// Portions of this file are derived from NVRHI (https://github.com/NVIDIA-RTX/NVRHI)
+// Portions of this file are derived from NVRHI (https://github.com/NVIDIA-RTX/NVRHI)
 // Copyright (c) 2014-2026 NVIDIA Corporation. All rights reserved.
 // Licensed under the MIT License. See THIRD-PARTY-NOTICES.md in the project root for license information.
 

@@ -1,4 +1,4 @@
-﻿using Tool.Collections;
+using Tool.Collections;
 using Tool.Logging;
 
 namespace Tool.Assets;

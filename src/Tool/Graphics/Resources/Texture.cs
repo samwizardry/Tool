@@ -1,4 +1,4 @@
-﻿// Portions of this file are derived from NVRHI (https://github.com/NVIDIA-RTX/NVRHI)
+// Portions of this file are derived from NVRHI (https://github.com/NVIDIA-RTX/NVRHI)
 // Copyright (c) 2014-2026 NVIDIA Corporation. All rights reserved.
 // Licensed under the MIT License. See THIRD-PARTY-NOTICES.md in the project root for license information.
 
@@ -55,7 +55,7 @@ public readonly record struct TextureDescription
         uint mipLevels = 1,
         TextureUsage usage = TextureUsage.ShaderResource,
         CpuAccess cpuAccess = CpuAccess.None) =>
-        new(
+        new TextureDescription(
             width: width,
             height: height,
             depth: 1,
@@ -73,7 +73,7 @@ public readonly record struct TextureDescription
         Format format = Format.RGBA8_UNorm,
         uint mipLevels = 1,
         TextureUsage usage = TextureUsage.ShaderResource) =>
-        new(
+        new TextureDescription(
             width: size,
             height: size,
             depth: 1,
@@ -93,7 +93,7 @@ public readonly record struct TextureDescription
         Format format = Format.RGBA8_UNorm,
         uint mipLevels = 1,
         TextureUsage usage = TextureUsage.ShaderResource) =>
-        new(
+        new TextureDescription(
             width: width,
             height: height,
             depth: depth,

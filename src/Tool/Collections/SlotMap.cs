@@ -1,4 +1,4 @@
-﻿namespace Tool.Collections;
+namespace Tool.Collections;
 
 public readonly record struct SlotHandle
 {

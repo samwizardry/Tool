@@ -1,4 +1,4 @@
-﻿namespace Tool.Maths;
+namespace Tool.Maths;
 
 public static class Math
 {

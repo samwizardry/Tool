@@ -1,4 +1,4 @@
-﻿// Portions of this file are derived from NVRHI (https://github.com/NVIDIA-RTX/NVRHI)
+// Portions of this file are derived from NVRHI (https://github.com/NVIDIA-RTX/NVRHI)
 // Copyright (c) 2014-2026 NVIDIA Corporation. All rights reserved.
 // Licensed under the MIT License. See THIRD-PARTY-NOTICES.md in the project root for license information.
 
@@ -49,10 +49,10 @@ public readonly record struct RasterStateDescription
         ConservativeRasterEnable = conservativeRasterEnable;
     }
 
-    public static RasterStateDescription CullBack => new(fillMode: RasterFillMode.Solid, cullMode: RasterCullMode.Back);
-    public static RasterStateDescription CullFront => new(fillMode: RasterFillMode.Solid, cullMode: RasterCullMode.Front);
-    public static RasterStateDescription CullNone => new(fillMode: RasterFillMode.Solid, cullMode: RasterCullMode.None);
-    public static RasterStateDescription Wireframe => new(fillMode: RasterFillMode.Wireframe, cullMode: RasterCullMode.None);
+    public static RasterStateDescription CullBack => new RasterStateDescription(fillMode: RasterFillMode.Solid, cullMode: RasterCullMode.Back);
+    public static RasterStateDescription CullFront => new RasterStateDescription(fillMode: RasterFillMode.Solid, cullMode: RasterCullMode.Front);
+    public static RasterStateDescription CullNone => new RasterStateDescription(fillMode: RasterFillMode.Solid, cullMode: RasterCullMode.None);
+    public static RasterStateDescription Wireframe => new RasterStateDescription(fillMode: RasterFillMode.Wireframe, cullMode: RasterCullMode.None);
 }
 
 public readonly record struct RasterStateHandle

@@ -1,4 +1,4 @@
-﻿using Tool.Collections;
+using Tool.Collections;
 
 using Vortice.Direct3D;
 using Vortice.Direct3D11;

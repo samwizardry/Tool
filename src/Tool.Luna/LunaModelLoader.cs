@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 
 using Tool.Assets;
 using Tool.Graphics;

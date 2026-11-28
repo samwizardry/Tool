@@ -1,4 +1,4 @@
-﻿using Tool.Core;
+using Tool.Core;
 
 using Vortice.Mathematics;
 

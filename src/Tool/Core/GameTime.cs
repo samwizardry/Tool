@@ -1,4 +1,4 @@
-﻿namespace Tool.Core;
+namespace Tool.Core;
 
 /// <summary>
 /// Holds the time state of the application loop.

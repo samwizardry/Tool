@@ -1,10 +1,70 @@
-﻿// Portions of this file are derived from NVRHI (https://github.com/NVIDIA-RTX/NVRHI)
+// Portions of this file are derived from NVRHI (https://github.com/NVIDIA-RTX/NVRHI)
 // Copyright (c) 2014-2026 NVIDIA Corporation. All rights reserved.
 // Licensed under the MIT License. See THIRD-PARTY-NOTICES.md in the project root for license information.
+
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 using Vortice.Mathematics;
 
 namespace Tool.Graphics;
+
+[InlineArray(Constants.MaxBindingLayouts)]
+public struct BindingSetArray : IEquatable<BindingSetArray>
+{
+    private BindingSetHandle _binding0;
+
+    public BindingSetArray(params ReadOnlySpan<BindingSetHandle> bindings)
+    {
+        if (bindings.Length > Constants.MaxBindingLayouts)
+        {
+            throw new ArgumentOutOfRangeException(nameof(bindings));
+        }
+
+        for (int i = 0; i < bindings.Length; i++)
+        {
+            this[i] = bindings[i];
+        }
+    }
+
+    public readonly bool Equals(BindingSetArray other)
+    {
+        for (int i = 0; i < Constants.MaxBindingLayouts; i++)
+        {
+            if (this[i] != other[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public override readonly bool Equals([NotNullWhen(true)] object? obj) =>
+        obj is BindingSetArray other && Equals(other);
+
+    public override readonly int GetHashCode()
+    {
+        HashCode hash = default;
+
+        for (int i = 0; i < Constants.MaxBindingLayouts; i++)
+        {
+            hash.Add(this[i]);
+        }
+
+        return hash.ToHashCode();
+    }
+
+    public static bool operator ==(BindingSetArray left, BindingSetArray right)
+    {
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(BindingSetArray left, BindingSetArray right)
+    {
+        return !(left == right);
+    }
+}
 
 public readonly record struct VertexBufferBinding
 {
@@ -50,10 +110,10 @@ public readonly record struct GraphicsState
     public readonly IndexBufferBinding IndexBuffer;
 
     public GraphicsState(
-        GraphicsPipelineHandle pipeline = default,
-        in ViewportState viewport = default,
+        GraphicsPipelineHandle pipeline,
+        ViewportState viewport = default,
         Color4 blendConstantColor = default,
-        in BindingSetArray bindings = default,
+        BindingSetArray bindings = default,
         VertexBufferBinding vertexBuffer = default,
         IndexBufferBinding indexBuffer = default)
     {
